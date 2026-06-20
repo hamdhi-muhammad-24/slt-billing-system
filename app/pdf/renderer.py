@@ -91,22 +91,20 @@ def _draw_header(c: rl_canvas.Canvas) -> None:
     c.drawString(LEFT, y + 21, "Sri Lanka Telecom PLC")
     c.drawString(LEFT, y + 12, "Lotus Road, P.O Box 503, Colombo 01.")
 
-    # Logo — right side
-    logo_w, logo_h = 100.0, 42.0
-    logo_x = RIGHT - logo_w
-    logo_y = y + (HEADER_H - logo_h) / 2
+    # Logo — transparent-background PNG placed directly on the blue band
+    logo_h  = HEADER_H - 14.0               # 56 pt — leaves 7 pt top/bottom breathing room
+    logo_w  = 140.0                          # wide enough for the full SLT MOBITEL lockup
+    logo_x  = RIGHT - logo_w
+    logo_y  = y + (HEADER_H - logo_h) / 2
+
     try:
         c.drawImage(L.LOGO_PATH, logo_x, logo_y,
                     width=logo_w, height=logo_h,
-                    preserveAspectRatio=True, mask="auto")
+                    preserveAspectRatio=True, anchor="c", mask="auto")
     except Exception:
         c.setFont("Noto-Bold", 10)
+        c.setFillColor(L.WHITE)
         c.drawRightString(RIGHT, y + 30, "SLT MOBITEL")
-
-    # "The Connection" byline below logo
-    c.setFont("Noto", 6)
-    c.setFillColor(L.WHITE)
-    c.drawRightString(RIGHT, y + 5, "The Connection")
 
 
 # ---------------------------------------------------------------------------
