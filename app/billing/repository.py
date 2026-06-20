@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import extract, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -243,4 +244,39 @@ def get_bill_inputs(
         service_accounts=service_accounts,
         line_items=line_items,
         payments=payments,
+    )
+
+
+def find_invoice_period(
+    account_number: str,
+    billing_year: int,
+    billing_month: int,
+    session: Session,
+) -> tuple[int, date, date]:
+    """Return (invoice_id, period_start, period_end) for the invoice billed in billing_year/month.
+
+    Raises ValueError when no matching invoice is found.
+    """
+    row = session.execute(
+        select(Invoice.id, Invoice.period_start, Invoice.period_end)
+        .join(Account, Invoice.account_id == Account.id)
+        .where(
+            Account.account_number == account_number,
+            extract("year",  Invoice.billing_date) == billing_year,
+            extract("month", Invoice.billing_date) == billing_month,
+        )
+    ).one_or_none()
+
+    if row is None:
+        raise ValueError(
+            f"No invoice for {account_number!r} billed in "
+            f"{billing_year:04d}-{billing_month:02d}"
+        )
+    return row.id, row.period_start, row.period_end
+
+
+def update_invoice_status(invoice_id: int, status: str, session: Session) -> None:
+    """Set invoices.status for a single invoice (caller must commit)."""
+    session.execute(
+        sa_update(Invoice).where(Invoice.id == invoice_id).values(status=status)
     )

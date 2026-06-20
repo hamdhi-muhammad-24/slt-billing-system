@@ -1,0 +1,99 @@
+"""
+app/cli.py — SLT E-Bill command-line interface (Phase 0).
+
+Usage:
+    python -m app.cli generate-one --account "004 152 4075" --period 2024-02
+"""
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+
+import typer
+
+from app.core.logging import configure_logging, get_logger
+
+configure_logging()
+log = get_logger(__name__)
+
+app = typer.Typer(add_completion=False, no_args_is_help=True)
+
+
+@app.callback()
+def _callback() -> None:
+    """SLT E-Bill CLI."""
+
+
+@app.command("generate-one")
+def generate_one(
+    account: str = typer.Option(
+        ..., "--account", help="Account number, e.g. '004 152 4075'"
+    ),
+    period: str = typer.Option(
+        ..., "--period", help="Billing month as YYYY-MM, e.g. 2024-02"
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output-dir", help="Directory to write the PDF"
+    ),
+) -> None:
+    """Generate one PDF bill (DB -> engine -> PDF) and mark the invoice as GENERATED."""
+
+    # ── Parse --period ────────────────────────────────────────────────────────
+    try:
+        dt = datetime.strptime(period, "%Y-%m")
+    except ValueError:
+        typer.echo(f"Error: --period {period!r} must be YYYY-MM (e.g. 2024-02)", err=True)
+        raise typer.Exit(1)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Lazy imports (keep startup fast; avoid circular issues at module level) ─
+    from app.db.base import SessionLocal
+    from app.billing import engine as billing_engine, repository
+    from app.pdf.renderer import render_bill
+
+    session = SessionLocal()
+    try:
+        # 1. Resolve billing month → exact period dates stored on the invoice
+        try:
+            inv_id, period_start, period_end = repository.find_invoice_period(
+                account, dt.year, dt.month, session
+            )
+        except ValueError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(1)
+
+        log.info(
+            "Generating bill for %r  period %s – %s  (invoice id=%d)",
+            account, period_start, period_end, inv_id,
+        )
+
+        # 2. Run the billing engine (pure: fetches rows, assembles Bill)
+        bill = billing_engine.build_bill(session, account, period_start, period_end)
+
+        # 3. Render to PDF
+        safe = account.replace(" ", "-")
+        out_path = str(output_dir / f"{safe}_{period_start}_{period_end}.pdf")
+        render_bill(bill, out_path)
+        log.info("PDF written: %s", out_path)
+
+        # 4. Persist: mark invoice as GENERATED
+        repository.update_invoice_status(inv_id, "GENERATED", session)
+        session.commit()
+        log.info("Invoice %d marked GENERATED", inv_id)
+
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        session.rollback()
+        log.exception("generate-one failed")
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    finally:
+        session.close()
+
+    typer.echo(f"Done: {out_path}")
+
+
+if __name__ == "__main__":
+    app()
