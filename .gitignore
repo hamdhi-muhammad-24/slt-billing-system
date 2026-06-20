@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Secrets — never commit
+.env
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated output (bills)
+output/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic compiled
+migrations/versions/__pycache__/
