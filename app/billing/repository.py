@@ -1,0 +1,246 @@
+"""
+The ONLY file that contains SQL for the billing engine.
+
+Swapping to SLT's real database later = rewriting only this file.
+All functions return plain dataclasses — no SQLAlchemy types leak out.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import (
+    Account,
+    Customer,
+    Invoice,
+    InvoiceLineItem,
+    Payment,
+    ServiceAccount,
+)
+
+
+# ---------------------------------------------------------------------------
+# Row types — plain data, safe to pass to the engine / tests / renderer
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ServiceAccountRow:
+    id:             int
+    service_number: str
+    service_type:   str    # string value, e.g. "BROADBAND"
+    label:          str | None
+
+
+@dataclass
+class LineItemRow:
+    service_account_id: int | None
+    service_number:     str | None   # None for global lines (TAX, FEE, …)
+    service_type:       str | None
+    line_type:          str          # e.g. "RENTAL", "TAX", "DISCOUNT"
+    description:        str
+    period_start:       date | None
+    period_end:         date | None
+    amount:             Decimal
+    sort_order:         int
+
+
+@dataclass
+class PaymentRow:
+    payment_date: date
+    method:       str
+    amount:       Decimal
+    reference:    str | None
+
+
+@dataclass
+class BillInputs:
+    # From accounts + customers
+    account_number:   str
+    telephone_number: str | None
+    service_label:    str | None
+    customer_name:    str
+    address_line1:    str | None
+    address_line2:    str | None
+    city:             str | None
+    postal_code:      str | None
+    # From invoices (stored snapshot carries the pre-computed balance_bf)
+    invoice_number: str
+    billing_date:   date
+    period_start:   date
+    period_end:     date
+    due_date:       date
+    balance_bf:     Decimal
+    # Nested rows
+    service_accounts: list[ServiceAccountRow]
+    line_items:       list[LineItemRow]
+    payments:         list[PaymentRow]
+
+
+# ---------------------------------------------------------------------------
+# Public query
+# ---------------------------------------------------------------------------
+
+def get_bill_inputs(
+    account_number: str,
+    period_start: date,
+    period_end: date,
+    session: Session,
+) -> BillInputs:
+    """
+    Fetch everything the engine needs for one bill.
+    Raises ValueError for unknown accounts or missing invoices.
+    """
+
+    # ── 1. Account + Customer ─────────────────────────────────────────────
+    acct_row = session.execute(
+        select(
+            Account.id,
+            Account.account_number,
+            Account.telephone_number,
+            Account.service_label,
+            Customer.full_name,
+            Customer.address_line1,
+            Customer.address_line2,
+            Customer.city,
+            Customer.postal_code,
+        )
+        .join(Customer, Account.customer_id == Customer.id)
+        .where(Account.account_number == account_number)
+    ).one_or_none()
+
+    if acct_row is None:
+        raise ValueError(f"Account not found: {account_number!r}")
+
+    account_id = acct_row.id
+
+    # ── 2. Service sub-accounts (ordered for consistent PDF grouping) ─────
+    svc_rows = session.execute(
+        select(
+            ServiceAccount.id,
+            ServiceAccount.service_number,
+            ServiceAccount.service_type,
+            ServiceAccount.label,
+        )
+        .where(ServiceAccount.account_id == account_id)
+        .order_by(ServiceAccount.id)
+    ).all()
+
+    service_accounts = [
+        ServiceAccountRow(
+            id=r.id,
+            service_number=r.service_number,
+            service_type=r.service_type.value,   # ServiceType enum → str
+            label=r.label,
+        )
+        for r in svc_rows
+    ]
+
+    # ── 3. Invoice for this period ────────────────────────────────────────
+    inv_row = session.execute(
+        select(
+            Invoice.id,
+            Invoice.invoice_number,
+            Invoice.billing_date,
+            Invoice.period_start,
+            Invoice.period_end,
+            Invoice.due_date,
+            Invoice.balance_bf,
+        )
+        .where(
+            Invoice.account_id == account_id,
+            Invoice.period_start == period_start,
+            Invoice.period_end == period_end,
+        )
+    ).one_or_none()
+
+    if inv_row is None:
+        raise ValueError(
+            f"No invoice for {account_number!r} "
+            f"in period {period_start}–{period_end}"
+        )
+
+    # ── 4. Line items (LEFT JOIN to resolve service_number) ───────────────
+    line_rows = session.execute(
+        select(
+            InvoiceLineItem.service_account_id,
+            ServiceAccount.service_number,
+            ServiceAccount.service_type,
+            InvoiceLineItem.line_type,
+            InvoiceLineItem.description,
+            InvoiceLineItem.period_start,
+            InvoiceLineItem.period_end,
+            InvoiceLineItem.amount,
+            InvoiceLineItem.sort_order,
+        )
+        .outerjoin(
+            ServiceAccount,
+            InvoiceLineItem.service_account_id == ServiceAccount.id,
+        )
+        .where(InvoiceLineItem.invoice_id == inv_row.id)
+        .order_by(InvoiceLineItem.sort_order, InvoiceLineItem.id)
+    ).all()
+
+    line_items = [
+        LineItemRow(
+            service_account_id=r.service_account_id,
+            service_number=r.service_number,
+            service_type=r.service_type.value if r.service_type is not None else None,
+            line_type=r.line_type.value,          # LineType enum → str
+            description=r.description,
+            period_start=r.period_start,
+            period_end=r.period_end,
+            amount=r.amount,                       # Numeric(12,2) → Decimal
+            sort_order=r.sort_order,
+        )
+        for r in line_rows
+    ]
+
+    # ── 5. Payments whose payment_date falls within the billing period ─────
+    pmt_rows = session.execute(
+        select(
+            Payment.payment_date,
+            Payment.method,
+            Payment.amount,
+            Payment.reference,
+        )
+        .where(
+            Payment.account_id == account_id,
+            Payment.payment_date >= period_start,
+            Payment.payment_date <= period_end,
+        )
+        .order_by(Payment.payment_date)
+    ).all()
+
+    payments = [
+        PaymentRow(
+            payment_date=r.payment_date,
+            method=r.method.value,                 # PaymentMethod enum → str
+            amount=r.amount,
+            reference=r.reference,
+        )
+        for r in pmt_rows
+    ]
+
+    return BillInputs(
+        account_number=acct_row.account_number,
+        telephone_number=acct_row.telephone_number,
+        service_label=acct_row.service_label,
+        customer_name=acct_row.full_name,
+        address_line1=acct_row.address_line1,
+        address_line2=acct_row.address_line2,
+        city=acct_row.city,
+        postal_code=acct_row.postal_code,
+        invoice_number=inv_row.invoice_number,
+        billing_date=inv_row.billing_date,
+        period_start=inv_row.period_start,
+        period_end=inv_row.period_end,
+        due_date=inv_row.due_date,
+        balance_bf=inv_row.balance_bf,
+        service_accounts=service_accounts,
+        line_items=line_items,
+        payments=payments,
+    )
