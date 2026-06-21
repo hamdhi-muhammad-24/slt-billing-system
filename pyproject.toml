@@ -21,6 +21,9 @@ dependencies = [
     "Pillow>=10.3",
     # CLI
     "typer>=0.12",
+    # API
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
 ]
 
 [project.optional-dependencies]
