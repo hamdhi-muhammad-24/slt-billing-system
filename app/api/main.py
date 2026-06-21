@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routers import health
+from app.api.routers import accounts, customers, health, invoices
 
 
 def create_app() -> FastAPI:
@@ -10,6 +10,9 @@ def create_app() -> FastAPI:
         description="REST API for the SLT e-billing system.",
     )
     application.include_router(health.router)
+    application.include_router(customers.router)
+    application.include_router(accounts.router)
+    application.include_router(invoices.router)
     return application
 
 
