@@ -10,16 +10,20 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import extract, select
+from sqlalchemy import extract, func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Account,
+    AccountStatus,
+    BillingRun,
+    BillingRunFailure,
     Customer,
     Invoice,
     InvoiceLineItem,
     Payment,
+    RunStatus,
     ServiceAccount,
 )
 
@@ -279,4 +283,122 @@ def update_invoice_status(invoice_id: int, status: str, session: Session) -> Non
     """Set invoices.status for a single invoice (caller must commit)."""
     session.execute(
         sa_update(Invoice).where(Invoice.id == invoice_id).values(status=status)
+    )
+
+
+def update_invoice_pdf_path(invoice_id: int, pdf_path: str, session: Session) -> None:
+    """Record the rendered PDF path on the invoice row (caller must commit)."""
+    session.execute(
+        sa_update(Invoice).where(Invoice.id == invoice_id).values(pdf_path=pdf_path)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Batch-run queries
+# ---------------------------------------------------------------------------
+
+@dataclass
+class InvoiceForRun:
+    inv_id:         int
+    period_start:   date
+    period_end:     date
+    inv_status:     str          # InvoiceStatus enum value
+    pdf_path:       str | None
+    account_id:     int
+    account_number: str
+
+
+def list_invoices_for_billing_month(
+    year: int, month: int, session: Session
+) -> list[InvoiceForRun]:
+    """Return one row per ACTIVE account that has an invoice billed in year/month."""
+    rows = session.execute(
+        select(
+            Invoice.id.label("inv_id"),
+            Invoice.period_start,
+            Invoice.period_end,
+            Invoice.status,
+            Invoice.pdf_path,
+            Account.id.label("account_id"),
+            Account.account_number,
+        )
+        .join(Account, Invoice.account_id == Account.id)
+        .where(
+            Account.status == AccountStatus.ACTIVE,
+            extract("year",  Invoice.billing_date) == year,
+            extract("month", Invoice.billing_date) == month,
+        )
+        .order_by(Account.account_number)
+    ).all()
+    return [
+        InvoiceForRun(
+            inv_id=r.inv_id,
+            period_start=r.period_start,
+            period_end=r.period_end,
+            inv_status=r.status.value,
+            pdf_path=r.pdf_path,
+            account_id=r.account_id,
+            account_number=r.account_number,
+        )
+        for r in rows
+    ]
+
+
+def create_billing_run(
+    period_start: date,
+    period_end: date,
+    total_accounts: int,
+    session: Session,
+) -> int:
+    """Insert a RUNNING billing_run row; flush to get the id (caller must commit)."""
+    run = BillingRun(
+        period_start=period_start,
+        period_end=period_end,
+        status=RunStatus.RUNNING,
+        total_accounts=total_accounts,
+        succeeded=0,
+        failed=0,
+    )
+    session.add(run)
+    session.flush()
+    return run.id
+
+
+def record_run_failure(
+    run_id: int,
+    account_id: int | None,
+    error_message: str,
+    session: Session,
+) -> None:
+    """Append a failure row for one account in this billing run."""
+    session.add(BillingRunFailure(
+        billing_run_id=run_id,
+        account_id=account_id,
+        error_message=error_message,
+    ))
+
+
+def finish_billing_run(
+    run_id: int,
+    succeeded: int,
+    failed: int,
+    session: Session,
+) -> None:
+    """Update the billing_run row with final counts and status (caller must commit)."""
+    if failed == 0:
+        final_status = RunStatus.DONE
+    elif succeeded > 0:
+        final_status = RunStatus.PARTIAL
+    else:
+        final_status = RunStatus.FAILED
+
+    session.execute(
+        sa_update(BillingRun)
+        .where(BillingRun.id == run_id)
+        .values(
+            status=final_status,
+            succeeded=succeeded,
+            failed=failed,
+            finished_at=func.now(),
+        )
     )
