@@ -11,8 +11,9 @@ A production-style telecom billing system that generates SLT-style PDF e-bills f
 database, one per account, in batch. Full system eventually = DB + billing engine + PDF +
 FastAPI + React portals + auth + scheduler + notifications + AWS. **Build in phases.**
 
-**Current phase: Phase 0 — Core Engine only** (DB → billing engine → PDF → batch CLI).
-Everything else is LATER. Do not build API/frontend/AWS yet.
+**Current phase: Phase 1 — FastAPI backend** (REST API over the existing engine).
+Phase 0 (engine + PDF + CLI) is COMPLETE. Do not build frontend/auth/AWS yet.
+The engine, repository, and PDF code are FROZEN — the API only calls them, never edits them.
 
 ---
 
@@ -61,7 +62,8 @@ Later phases add: FastAPI, React+Vite+TS, JWT auth, Celery+Redis, AWS (ECS/RDS/S
 | Database schema + seed | `docs/DATABASE.md` |
 | Billing engine logic + math | `docs/BILLING.md` |
 | PDF layout, fonts, assets | `docs/PDF.md` |
-| (later) system + AWS, API, frontend, deploy | `docs/ARCHITECTURE.md`, `API.md`, `FRONTEND.md`, `DEPLOYMENT.md` |
+| Phase 1 API spec (endpoints, schemas) | `docs/API.md` |
+| (later) system + AWS, frontend, deploy | `docs/ARCHITECTURE.md`, `FRONTEND.md`, `DEPLOYMENT.md` |
 
 ---
 
