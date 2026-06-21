@@ -448,6 +448,168 @@ class TestSchemaValidation:
 
 
 # ---------------------------------------------------------------------------
+# Edge case: discount-ONLY period (no rental line at all)
+# ---------------------------------------------------------------------------
+
+class TestDiscountOnly:
+    """A billing period where the sole non-TAX entry is a negative DISCOUNT."""
+
+    def _inputs(self) -> BillInputs:
+        return _base(
+            balance_bf=Decimal("500.00"),
+            payments=[],
+            service_accounts=[
+                ServiceAccountRow(99, "0990000000", "BROADBAND", "Test Broadband"),
+            ],
+            line_items=[
+                LineItemRow(
+                    99, "0990000000", "BROADBAND", "DISCOUNT",
+                    "Service credit",
+                    None, None, Decimal("-250.00"), 1,
+                ),
+            ],
+        )
+
+    def test_charges_total_is_negative(self):
+        bill = assemble_bill(self._inputs())
+        assert bill.charges_total == Decimal("-250.00")
+
+    def test_taxes_total_is_zero(self):
+        bill = assemble_bill(self._inputs())
+        assert bill.taxes_total == Decimal("0.00")
+
+    def test_charges_for_period_is_negative(self):
+        bill = assemble_bill(self._inputs())
+        assert bill.summary.charges_for_period == Decimal("-250.00")
+
+    def test_total_payable_correct(self):
+        # arrears = 500 - 0 = 500; total = 500 + (-250) = 250
+        bill = assemble_bill(self._inputs())
+        assert bill.summary.arrears == Decimal("500.00")
+        assert bill.summary.total_payable == Decimal("250.00")
+
+    def test_discount_line_appears_in_group(self):
+        bill = assemble_bill(self._inputs())
+        assert len(bill.groups) == 1
+        assert len(bill.groups[0].lines) == 1
+        assert bill.groups[0].lines[0].line_type == "DISCOUNT"
+        assert bill.groups[0].lines[0].amount == Decimal("-250.00")
+
+    def test_summary_invariant_holds(self):
+        bill = assemble_bill(self._inputs())
+        assert bill.summary.total_payable == (
+            bill.summary.arrears + bill.summary.charges_for_period
+        )
+
+    def test_net_credit_when_balance_zero(self):
+        """Discount alone with zero balance_bf produces a negative total_payable (credit)."""
+        inputs = _base(
+            balance_bf=Decimal("0.00"),
+            payments=[],
+            line_items=[
+                LineItemRow(
+                    99, "0990000000", "BROADBAND", "DISCOUNT",
+                    "Full service credit",
+                    None, None, Decimal("-300.00"), 1,
+                ),
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.total_payable == Decimal("-300.00")
+        assert bill.summary.total_payable == (
+            bill.summary.arrears + bill.summary.charges_for_period
+        )
+
+
+# ---------------------------------------------------------------------------
+# Edge case: multiple payments in the same period
+# ---------------------------------------------------------------------------
+
+class TestMultiplePayments:
+    def test_two_payments_are_summed(self):
+        inputs = _base(
+            balance_bf=Decimal("1000.00"),
+            payments=[
+                PaymentRow(date(2024, 2, 5),  "PHYSICAL", Decimal("400.00"), "Receipt 1"),
+                PaymentRow(date(2024, 2, 18), "ONLINE",   Decimal("600.00"), "Receipt 2"),
+            ],
+            line_items=[
+                LineItemRow(99, "0990000000", "BROADBAND", "RENTAL", "Rental",
+                            _PERIOD_START, _PERIOD_END, Decimal("1800.00"), 1),
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.payments_received == Decimal("1000.00")
+        assert bill.summary.arrears == Decimal("0.00")
+        assert len(bill.payments) == 2
+
+    def test_three_payments_all_counted(self):
+        inputs = _base(
+            balance_bf=Decimal("0.00"),
+            payments=[
+                PaymentRow(date(2024, 2, 1), "PHYSICAL", Decimal("100.00"), None),
+                PaymentRow(date(2024, 2, 8), "CARD",     Decimal("200.00"), None),
+                PaymentRow(date(2024, 2, 15), "ONLINE",  Decimal("300.00"), None),
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.payments_received == Decimal("600.00")
+        assert len(bill.payments) == 3
+
+    def test_payment_rounding_does_not_accumulate(self):
+        """Summing many small Decimal payments must not drift from the exact total."""
+        inputs = _base(
+            balance_bf=Decimal("0.00"),
+            payments=[
+                PaymentRow(date(2024, 2, i + 1), "PHYSICAL", Decimal("0.01"), None)
+                for i in range(10)
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.payments_received == Decimal("0.10")
+
+
+# ---------------------------------------------------------------------------
+# Edge case: overpayment (payment exceeds balance_bf → negative arrears)
+# ---------------------------------------------------------------------------
+
+class TestOverpayment:
+    def test_negative_arrears(self):
+        inputs = _base(
+            balance_bf=Decimal("300.00"),
+            payments=[PaymentRow(date(2024, 2, 10), "ONLINE", Decimal("500.00"), None)],
+            line_items=[
+                LineItemRow(99, "0990000000", "BROADBAND", "RENTAL", "Rental",
+                            _PERIOD_START, _PERIOD_END, Decimal("1200.00"), 1),
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.payments_received == Decimal("500.00")
+        assert bill.summary.arrears == Decimal("-200.00")
+        assert bill.summary.total_payable == Decimal("1000.00")  # -200 + 1200
+        assert bill.summary.total_payable == (
+            bill.summary.arrears + bill.summary.charges_for_period
+        )
+
+    def test_full_overpayment_gives_credit(self):
+        """If payment covers balance AND period charges the bill shows a credit."""
+        inputs = _base(
+            balance_bf=Decimal("500.00"),
+            payments=[PaymentRow(date(2024, 2, 10), "ONLINE", Decimal("1500.00"), None)],
+            line_items=[
+                LineItemRow(99, "0990000000", "BROADBAND", "RENTAL", "Rental",
+                            _PERIOD_START, _PERIOD_END, Decimal("800.00"), 1),
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert bill.summary.arrears == Decimal("-1000.00")
+        assert bill.summary.total_payable == Decimal("-200.00")   # credit
+        assert bill.summary.total_payable == (
+            bill.summary.arrears + bill.summary.charges_for_period
+        )
+
+
+# ---------------------------------------------------------------------------
 # Address formatting
 # ---------------------------------------------------------------------------
 
