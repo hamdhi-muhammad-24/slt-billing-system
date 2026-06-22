@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import { EmptyState } from './EmptyState'
 
 export interface ColumnDef<T> {
@@ -20,6 +21,7 @@ interface Props<T extends object> {
   data: T[]
   keyExtractor: (row: T) => string | number
   emptyLabel?: string
+  onRowClick?: (row: T) => void
 }
 
 export function DataTable<T extends object>({
@@ -27,6 +29,7 @@ export function DataTable<T extends object>({
   data,
   keyExtractor,
   emptyLabel = 'No data.',
+  onRowClick,
 }: Props<T>) {
   if (data.length === 0) return <EmptyState title={emptyLabel} />
 
@@ -44,7 +47,11 @@ export function DataTable<T extends object>({
         </TableHeader>
         <TableBody>
           {data.map((row) => (
-            <TableRow key={keyExtractor(row)}>
+            <TableRow
+              key={keyExtractor(row)}
+              className={cn(onRowClick && 'cursor-pointer')}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+            >
               {columns.map((col, i) => (
                 <TableCell key={i} className={col.numeric ? 'text-right' : ''}>
                   {col.cell(row)}

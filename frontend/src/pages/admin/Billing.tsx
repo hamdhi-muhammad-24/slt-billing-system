@@ -1,41 +1,56 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { generateOne, generateBatch, getBillingRun, ApiError } from '../../lib/api'
-import type { Invoice, BillingRun } from '../../types'
+import type { BillingRun, BillingRunFailure } from '../../types'
+import type { ColumnDef } from '../../components/ui-kit/DataTable'
+import { PageHeader } from '../../components/ui-kit/PageHeader'
+import { DataTable } from '../../components/ui-kit/DataTable'
+import { StatusBadge } from '../../components/ui-kit/StatusBadge'
+import { ErrorState } from '../../components/states'
+import { CardSkeleton } from '../../components/ui-kit/Skeletons'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loading, ErrorState } from '../../components/states'
-import { formatLKR } from '../../lib/money'
 
-function errorDetail(err: unknown): string {
+function errDetail(err: unknown): string {
   return err instanceof ApiError ? err.detail : String(err)
 }
 
-// ── Section 1: Generate one invoice ──────────────────────────────────────────
+// ── Section 1: Generate one ───────────────────────────────────────────────────
 
 function GenerateOneCard() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [accountId, setAccountId] = useState(1)
   const [period, setPeriod] = useState('2024-01')
-  const [result, setResult] = useState<Invoice | null>(null)
 
   const mutation = useMutation({
     mutationFn: () => generateOne({ account_id: accountId, period }),
     onSuccess: (inv) => {
-      setResult(inv)
       qc.invalidateQueries({ queryKey: ['invoices', accountId] })
+      toast.success(`Invoice ${inv.id} created — ${inv.period}`, {
+        action: { label: 'View', onClick: () => navigate(`/admin/invoices/${inv.id}`) },
+      })
     },
-    onError: () => setResult(null),
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.info(`Invoice for account ${accountId} / ${period} already exists.`)
+      } else if (err instanceof ApiError && err.status === 404) {
+        toast.info(`Account ${accountId} not found or has no billing data for ${period}.`)
+      } else {
+        toast.error(errDetail(err))
+      }
+    },
   })
 
   return (
     <Card>
       <CardHeader><CardTitle>Generate One Invoice</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 max-w-sm">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="gen1-account">Account ID</Label>
             <Input
@@ -43,7 +58,7 @@ function GenerateOneCard() {
               type="number"
               min={1}
               value={accountId}
-              onChange={(e) => { setAccountId(Number(e.target.value)); setResult(null); mutation.reset() }}
+              onChange={(e) => { setAccountId(Number(e.target.value)); mutation.reset() }}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -51,37 +66,13 @@ function GenerateOneCard() {
             <Input
               id="gen1-period"
               value={period}
-              onChange={(e) => { setPeriod(e.target.value); setResult(null); mutation.reset() }}
+              onChange={(e) => { setPeriod(e.target.value); mutation.reset() }}
             />
           </div>
         </div>
-
-        <Button
-          onClick={() => mutation.mutate()}
-          disabled={mutation.isPending}
-          className="w-fit"
-        >
+        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="w-fit">
           {mutation.isPending ? 'Generating…' : 'Generate'}
         </Button>
-
-        {mutation.isSuccess && result && (
-          <p className="text-sm text-green-700 dark:text-green-400">
-            Invoice created —{' '}
-            <Link to={`/admin/invoices/${result.id}`} className="underline font-medium">
-              View invoice {result.id} ({result.period}, {formatLKR(result.total_payable)})
-            </Link>
-          </p>
-        )}
-
-        {mutation.isError && (
-          <div className="rounded-md bg-muted px-4 py-3 text-sm text-foreground">
-            {mutation.error instanceof ApiError && mutation.error.status === 409
-              ? <>Invoice for account {accountId} / {period} already exists.</>
-              : mutation.error instanceof ApiError && mutation.error.status === 404
-              ? <>Account {accountId} not found or has no billing data for {period}.</>
-              : errorDetail(mutation.error)}
-          </div>
-        )}
       </CardContent>
     </Card>
   )
@@ -89,16 +80,20 @@ function GenerateOneCard() {
 
 // ── Section 2: Generate batch ─────────────────────────────────────────────────
 
-interface GenerateBatchCardProps {
+interface BatchCardProps {
   onRunStarted: (run: BillingRun) => void
 }
 
-function GenerateBatchCard({ onRunStarted }: GenerateBatchCardProps) {
+function GenerateBatchCard({ onRunStarted }: BatchCardProps) {
   const [period, setPeriod] = useState('2024-01')
 
   const mutation = useMutation({
     mutationFn: () => generateBatch({ period }),
-    onSuccess: (run) => onRunStarted(run),
+    onSuccess: (run) => {
+      onRunStarted(run)
+      toast.success(`Batch run #${run.id} started for ${period}.`)
+    },
+    onError: (err) => toast.error(errDetail(err)),
   })
 
   return (
@@ -113,20 +108,9 @@ function GenerateBatchCard({ onRunStarted }: GenerateBatchCardProps) {
             onChange={(e) => { setPeriod(e.target.value); mutation.reset() }}
           />
         </div>
-
-        <Button
-          onClick={() => mutation.mutate()}
-          disabled={mutation.isPending}
-          className="w-fit"
-        >
+        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="w-fit">
           {mutation.isPending ? 'Starting…' : 'Run batch'}
         </Button>
-
-        {mutation.isError && (
-          <div className="rounded-md bg-muted px-4 py-3 text-sm text-foreground">
-            {errorDetail(mutation.error)}
-          </div>
-        )}
       </CardContent>
     </Card>
   )
@@ -136,63 +120,58 @@ function GenerateBatchCard({ onRunStarted }: GenerateBatchCardProps) {
 
 const ACTIVE_STATUSES = new Set(['pending', 'running'])
 
-interface RunStatusCardProps {
-  runId: number
-}
+const FAILURE_COLS: ColumnDef<BillingRunFailure>[] = [
+  { header: 'Account ID', cell: (f) => f.account_id },
+  { header: 'Reason',     cell: (f) => <span className="text-muted-foreground">{f.error}</span> },
+]
 
-function RunStatusCard({ runId }: RunStatusCardProps) {
+function RunStatusCard({ runId }: { runId: number }) {
   const { data, isPending, error } = useQuery({
     queryKey: ['billingRun', runId],
     queryFn: () => getBillingRun(runId),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status
-      return status && ACTIVE_STATUSES.has(status) ? 1500 : false
+    refetchInterval: (q) => {
+      const s = q.state.data?.status
+      return s && ACTIVE_STATUSES.has(s) ? 1500 : false
     },
   })
 
-  if (isPending) return <Loading />
-  if (error) return <ErrorState detail={errorDetail(error)} />
+  if (isPending) return <CardSkeleton />
+  if (error) return <ErrorState detail={errDetail(error)} />
 
   const run = data
 
   return (
     <Card>
-      <CardHeader><CardTitle>Run Status — #{run.id}</CardTitle></CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Status</dt>
-          <dd className="capitalize font-medium">{run.status}</dd>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3">
+          Run #{run.id}
+          <StatusBadge status={run.status} />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Period</dt><dd>{run.period}</dd>
           <dt className="text-muted-foreground">Total</dt><dd>{run.total}</dd>
-          <dt className="text-muted-foreground">Succeeded</dt><dd>{run.succeeded}</dd>
-          <dt className="text-muted-foreground">Failed</dt><dd>{run.failed}</dd>
+          <dt className="text-muted-foreground">Succeeded</dt>
+          <dd className="text-success font-medium">{run.succeeded}</dd>
+          <dt className="text-muted-foreground">Failed</dt>
+          <dd className={run.failed > 0 ? 'text-muted-foreground' : ''}>{run.failed}</dd>
           <dt className="text-muted-foreground">Started</dt><dd>{run.started_at ?? '—'}</dd>
           <dt className="text-muted-foreground">Finished</dt><dd>{run.finished_at ?? '—'}</dd>
         </dl>
 
         {run.failures.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">
-              Per-account outcomes ({run.failures.length} accounts not billed this run):
+            <p className="text-sm font-medium text-muted-foreground">
+              {run.failures.length} account{run.failures.length !== 1 ? 's' : ''} not billed this run
+              (e.g. invoice already exists for this period):
             </p>
-            <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">Account ID</th>
-                    <th className="px-4 py-2 text-left font-medium">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {run.failures.map((f) => (
-                    <tr key={f.id} className="border-t border-foreground/5">
-                      <td className="px-4 py-2">{f.account_id}</td>
-                      <td className="px-4 py-2 text-muted-foreground">{f.error}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={FAILURE_COLS}
+              data={run.failures}
+              keyExtractor={(f) => f.id}
+              emptyLabel="No failures."
+            />
           </div>
         )}
       </CardContent>
@@ -207,7 +186,7 @@ export default function Billing() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Billing</h1>
+      <PageHeader title="Billing" description="Generate invoices for one account or all active accounts." />
       <GenerateOneCard />
       <GenerateBatchCard onRunStarted={(run) => setRunId(run.id)} />
       {runId !== null && <RunStatusCard runId={runId} />}
