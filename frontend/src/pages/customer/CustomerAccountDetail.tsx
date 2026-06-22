@@ -1,13 +1,75 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import type { Invoice, Payment } from '../../types'
+import type { ColumnDef } from '../../components/ui-kit/DataTable'
 import { useAuth } from '../../auth/AuthProvider'
 import { useAccount } from '../../hooks/useAccount'
 import { useCustomerAccounts } from '../../hooks/useCustomerAccounts'
 import { useInvoices } from '../../hooks/useInvoices'
 import { usePayments } from '../../hooks/usePayments'
-import { Loading, ErrorState, Empty } from '../../components/states'
-import { ApiError } from '../../lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '../../components/states'
+import { CardSkeleton } from '../../components/ui-kit/Skeletons'
+import { DataTable } from '../../components/ui-kit/DataTable'
+import { PageHeader } from '../../components/ui-kit/PageHeader'
+import { ApiError, downloadInvoicePdf } from '../../lib/api'
 import { formatLKR } from '../../lib/money'
+import { formatDate } from '../../lib/format'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+
+const INV_COLS: ColumnDef<Invoice>[] = [
+  { header: 'Period',   cell: (inv) => <span className="font-medium">{inv.period}</span> },
+  { header: 'Due Date', cell: (inv) => formatDate(inv.due_date) },
+  { header: 'Amount',   numeric: true, cell: (inv) => formatLKR(inv.total_payable) },
+]
+
+const PAY_COLS: ColumnDef<Payment>[] = [
+  { header: 'Date',   cell: (p) => formatDate(p.paid_at) },
+  { header: 'Method', cell: (p) => p.method },
+  { header: 'Amount', numeric: true, cell: (p) => formatLKR(p.amount) },
+]
+
+function LatestBillCard({ invoice }: { invoice: Invoice }) {
+  const navigate = useNavigate()
+
+  const download = useMutation({
+    mutationFn: () => downloadInvoicePdf(invoice.id),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.detail : 'PDF download failed.')
+    },
+  })
+
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardContent className="pt-5 pb-5 flex flex-col gap-4">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount Due</p>
+          <p className="text-4xl font-bold text-primary mt-1 tabular-nums">
+            {formatLKR(invoice.total_payable)}
+          </p>
+        </div>
+        <div className="flex gap-6 text-sm text-muted-foreground">
+          <span>Period: <span className="text-foreground font-medium">{invoice.period}</span></span>
+          <span>Due: <span className="text-foreground font-medium">{formatDate(invoice.due_date)}</span></span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" onClick={() => navigate(`/app/invoices/${invoice.id}`)}>
+            View bill
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={download.isPending}
+            onClick={() => download.mutate()}
+          >
+            {download.isPending ? 'Downloading…' : 'Download PDF'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function CustomerAccountDetail() {
   const { id } = useParams<{ id: string }>()
@@ -23,7 +85,13 @@ export default function CustomerAccountDetail() {
   const payments = usePayments(accountId)
 
   if (ownedAccounts.isPending || account.isPending || invoices.isPending || payments.isPending)
-    return <Loading />
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Account" breadcrumbs={[{ label: 'My Accounts', to: '/app' }]} />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
 
   if (ownedAccounts.error) return <ErrorState detail={ownedAccounts.error instanceof ApiError ? ownedAccounts.error.detail : ownedAccounts.error.message} />
   if (account.error) return <ErrorState detail={account.error instanceof ApiError ? account.error.detail : account.error.message} />
@@ -34,80 +102,43 @@ export default function CustomerAccountDetail() {
   if (!owned) return <ErrorState detail="This account isn't available on your login." />
 
   const a = account.data
+  const sortedInvoices = [...invoices.data.items].sort((x, y) => y.period.localeCompare(x.period))
+  const latestInvoice = sortedInvoices[0] ?? null
+  const navigate = useNavigate()
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Account {a.account_no}</h1>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title={a.account_no}
+        breadcrumbs={[{ label: 'My Accounts', to: '/app' }, { label: a.account_no }]}
+      />
 
-      <Card>
-        <CardHeader><CardTitle>Account Details</CardTitle></CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Account No</dt><dd>{a.account_no}</dd>
-            <dt className="text-muted-foreground">Status</dt><dd className="capitalize">{a.status}</dd>
-            <dt className="text-muted-foreground">Billing Cycle</dt><dd>{a.billing_cycle}</dd>
-          </dl>
-        </CardContent>
-      </Card>
+      {latestInvoice && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold">Latest Bill</h2>
+          <LatestBillCard invoice={latestInvoice} />
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Invoices</h2>
-        {invoices.data.items.length === 0
-          ? <Empty label="No invoices." />
-          : (
-            <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">Period</th>
-                    <th className="px-4 py-2 text-right font-medium">Total Payable</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.data.items.map((inv) => (
-                    <tr key={inv.id} className="border-t border-foreground/5 hover:bg-muted/30">
-                      <td className="px-4 py-2">
-                        <Link to={`/app/invoices/${inv.id}`} className="underline">
-                          {inv.period}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 text-right">{formatLKR(inv.total_payable)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <h2 className="text-base font-semibold">Bill History</h2>
+        <DataTable
+          columns={INV_COLS}
+          data={sortedInvoices}
+          keyExtractor={(inv) => inv.id}
+          emptyLabel="No bills yet."
+          onRowClick={(inv) => navigate(`/app/invoices/${inv.id}`)}
+        />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Payments</h2>
-        {payments.data.length === 0
-          ? <Empty label="No payments." />
-          : (
-            <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">Date</th>
-                    <th className="px-4 py-2 text-left font-medium">Method</th>
-                    <th className="px-4 py-2 text-left font-medium">Reference</th>
-                    <th className="px-4 py-2 text-right font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.data.map((p) => (
-                    <tr key={p.id} className="border-t border-foreground/5 hover:bg-muted/30">
-                      <td className="px-4 py-2">{p.paid_at}</td>
-                      <td className="px-4 py-2">{p.method}</td>
-                      <td className="px-4 py-2">{p.reference}</td>
-                      <td className="px-4 py-2 text-right">{formatLKR(p.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <h2 className="text-base font-semibold">Payments</h2>
+        <DataTable
+          columns={PAY_COLS}
+          data={payments.data}
+          keyExtractor={(p) => p.id}
+          emptyLabel="No payments recorded."
+        />
       </section>
     </div>
   )
