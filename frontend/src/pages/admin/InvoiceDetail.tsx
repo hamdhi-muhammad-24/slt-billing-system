@@ -1,13 +1,21 @@
 import { useParams } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { useInvoice } from '../../hooks/useInvoice'
 import { Loading, ErrorState, Empty } from '../../components/states'
-import { ApiError } from '../../lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ApiError, downloadInvoicePdf } from '../../lib/api'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatLKR } from '../../lib/money'
 
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>()
-  const { data: inv, isPending, error } = useInvoice(Number(id))
+  const invoiceId = Number(id)
+
+  const { data: inv, isPending, error } = useInvoice(invoiceId)
+
+  const download = useMutation({
+    mutationFn: () => downloadInvoicePdf(invoiceId),
+  })
 
   if (isPending) return <Loading />
   if (error) return <ErrorState detail={error instanceof ApiError ? error.detail : error.message} />
@@ -17,8 +25,24 @@ export default function InvoiceDetail() {
       <h1 className="text-2xl font-bold">Invoice — {inv.period}</h1>
 
       <Card>
-        <CardHeader><CardTitle>Snapshot</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Snapshot</CardTitle>
+          <CardAction>
+            <Button
+              size="sm"
+              disabled={download.isPending}
+              onClick={() => download.mutate()}
+            >
+              {download.isPending ? 'Downloading…' : 'Download PDF'}
+            </Button>
+          </CardAction>
+        </CardHeader>
         <CardContent>
+          {download.error && (
+            <p className="text-destructive text-sm mb-4">
+              {download.error instanceof ApiError ? download.error.detail : download.error.message}
+            </p>
+          )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Period</dt><dd>{inv.period}</dd>
             <dt className="text-muted-foreground">Issue Date</dt><dd>{inv.issue_date}</dd>
