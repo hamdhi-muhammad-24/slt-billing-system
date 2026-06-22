@@ -266,6 +266,24 @@ def get_invoice_info_for_billing_period(
     return row.id, row.account_number, row.period_start, row.period_end, row.status.value
 
 
+def get_bill_coords_for_invoice(
+    db: Session, invoice_id: int
+) -> tuple[str, date, date] | None:
+    """
+    Return (account_number, period_start, period_end) for the billing engine, or None.
+
+    These three values are everything build_bill() needs beyond the session.
+    """
+    row = db.execute(
+        select(Account.account_number, Invoice.period_start, Invoice.period_end)
+        .join(Account, Invoice.account_id == Account.id)
+        .where(Invoice.id == invoice_id)
+    ).one_or_none()
+    if row is None:
+        return None
+    return row.account_number, row.period_start, row.period_end
+
+
 def get_billing_run_out(db: Session, run_id: int) -> BillingRunOut | None:
     """Return BillingRunOut (with failures list) for the given run_id, or None."""
     run = db.get(BillingRun, run_id)
