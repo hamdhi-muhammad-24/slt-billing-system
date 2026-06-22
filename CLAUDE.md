@@ -11,15 +11,17 @@ A production-style telecom billing system that generates SLT-style PDF e-bills f
 database, one per account, in batch. Full system eventually = DB + billing engine + PDF +
 FastAPI + React portals + auth + scheduler + notifications + AWS. **Build in phases.**
 
-**Current phase: Phase 1 — FastAPI backend** (REST API over the existing engine).
-Phase 0 (engine + PDF + CLI) is COMPLETE. Do not build frontend/auth/AWS yet.
-The engine, repository, and PDF code are FROZEN — the API only calls them, never edits them.
+**Current phase: Phase 2 — React portals** (admin + customer frontend over the FastAPI backend).
+Phase 0 (engine + PDF + CLI) and Phase 1 (FastAPI backend) are COMPLETE. Do not build
+auth/scheduler/AWS yet.
+The engine, repository, PDF, and API code are FROZEN — new layers call them, never edit them.
 
 ---
 
 ## Non-negotiable rules
 
 1. **Money = `Decimal`**, quantized 2 dp, `ROUND_HALF_UP`. Never `float`. DB uses `NUMERIC(12,2)`.
+   In API responses money serializes as a string (e.g. `"4628.52"`).
 2. **Billing logic is framework-independent.** No FastAPI/HTTP imports in the engine. Runs via
    CLI or plain import. Unit-testable without a server.
 3. **Batch runs are idempotent.** One bill per account per period (DB unique constraint).
@@ -29,6 +31,8 @@ The engine, repository, and PDF code are FROZEN — the API only calls them, nev
 6. **Engine + renderer depend on the validated `Bill` object, never on raw DB rows.**
    All SQL lives in `app/billing/repository.py` — the only file that changes when we later
    swap to SLT's real database.
+7. **API is a thin layer.** Routers validate + call the engine/repository; no billing math or
+   SQL in routers.
 
 ---
 
@@ -43,29 +47,6 @@ The supervisor doc's `base + 15% tax` formula is WRONG — ignore it. Use the ab
 
 ---
 
-## Tech stack (Phase 0)
-
-- Language: Python 3.11+ · DB: PostgreSQL 15+
-- ORM/migrations: SQLAlchemy 2.x + Alembic · Validation: Pydantic v2 + pydantic-settings
-- PDF: ReportLab + qrcode + python-barcode + Pillow
-- Fonts: Noto Sans + Noto Sans Sinhala/Tamil (embedded) · CLI: typer · Tests: pytest
-
-Later phases add: FastAPI, React+Vite+TS, JWT auth, Celery+Redis, AWS (ECS/RDS/S3/SES), Docker.
-
----
-
-## Docs map (where the detail is)
-
-| Topic | File |
-|---|---|
-| Phase plan + step order ("what's next") | `docs/ROADMAP.md` |
-| Database schema + seed | `docs/DATABASE.md` |
-| Billing engine logic + math | `docs/BILLING.md` |
-| PDF layout, fonts, assets | `docs/PDF.md` |
-| Phase 1 API spec (endpoints, schemas) | `docs/API.md` |
-| (later) system + AWS, frontend, deploy | `docs/ARCHITECTURE.md`, `FRONTEND.md`, `DEPLOYMENT.md` |
-
----
 
 ## Project layout (target — Claude Code generates code dirs)
 
@@ -101,3 +82,4 @@ DATABASE.md seed) before any PDF work.
 | Barcode/QR | Placeholder for v1; real spec later |
 | Taxes | Stored figure for v1; real rate later |
 | PDF tech | ReportLab |
+| API money format | Decimal → 2-dp string in JSON |
