@@ -4,6 +4,7 @@ import RequireRole from './auth/RequireRole'
 import AdminLayout from './components/AdminLayout'
 import CustomerLayout from './components/CustomerLayout'
 import Login from './pages/Login'
+import NotFound from './pages/NotFound'
 import Dashboard from './pages/admin/Dashboard'
 import Customers from './pages/admin/Customers'
 import CustomerDetail from './pages/admin/CustomerDetail'
@@ -40,7 +41,7 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="*" element={<h1 className="p-6 text-2xl font-bold">Not found</h1>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       <Toaster />

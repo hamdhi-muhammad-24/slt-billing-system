@@ -50,7 +50,7 @@ function GenerateOneCard() {
     <Card>
       <CardHeader><CardTitle>Generate One Invoice</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4 max-w-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-sm">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="gen1-account">Account ID</Label>
             <Input

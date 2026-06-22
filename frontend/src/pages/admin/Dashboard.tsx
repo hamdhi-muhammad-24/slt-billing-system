@@ -12,10 +12,10 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   if (isPending) return (
-    <>
+    <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" />
-      <TableSkeleton rows={1} cols={2} />
-    </>
+      <TableSkeleton rows={1} cols={3} />
+    </div>
   )
   if (error) return <ErrorState detail={error instanceof ApiError ? error.detail : error.message} />
 
@@ -25,38 +25,39 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          label="Customers"
+          label="Total Customers"
           value={data.total}
           icon={Users}
-          sublabel="Registered accounts"
+          sublabel="Registered in the system"
         />
-        <StatCard
-          label="Customers"
-          value="View →"
-          icon={Users}
-          sublabel="Browse all customers"
-        />
-        <StatCard
-          label="Billing"
-          value="Generate →"
-          icon={Receipt}
-          sublabel="Create or batch invoices"
-        />
-      </div>
-
-      <div className="flex gap-3">
-        <button
+        <div
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 hover:opacity-90 transition-opacity"
           onClick={() => navigate('/admin/customers')}
-          className="text-sm text-primary underline underline-offset-2"
+          onKeyDown={(e) => e.key === 'Enter' && navigate('/admin/customers')}
         >
-          Go to Customers
-        </button>
-        <button
+          <StatCard
+            label="Customers"
+            value="Browse →"
+            icon={Users}
+            sublabel="View all customer accounts"
+          />
+        </div>
+        <div
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 hover:opacity-90 transition-opacity"
           onClick={() => navigate('/admin/billing')}
-          className="text-sm text-primary underline underline-offset-2"
+          onKeyDown={(e) => e.key === 'Enter' && navigate('/admin/billing')}
         >
-          Go to Billing
-        </button>
+          <StatCard
+            label="Billing"
+            value="Generate →"
+            icon={Receipt}
+            sublabel="Create or batch invoices"
+          />
+        </div>
       </div>
     </div>
   )

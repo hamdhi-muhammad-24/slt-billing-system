@@ -74,6 +74,7 @@ function LatestBillCard({ invoice }: { invoice: Invoice }) {
 export default function CustomerAccountDetail() {
   const { id } = useParams<{ id: string }>()
   const accountId = Number(id)
+  const navigate = useNavigate()
 
   const { session } = useAuth()
   const customerId = session?.customerId ?? 0
@@ -104,7 +105,6 @@ export default function CustomerAccountDetail() {
   const a = account.data
   const sortedInvoices = [...invoices.data.items].sort((x, y) => y.period.localeCompare(x.period))
   const latestInvoice = sortedInvoices[0] ?? null
-  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col gap-8">
