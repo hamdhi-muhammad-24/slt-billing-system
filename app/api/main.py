@@ -1,7 +1,13 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_exception_handlers
 from app.api.routers import accounts, billing, customers, health, invoices
+
+_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
 def create_app() -> FastAPI:
@@ -9,6 +15,13 @@ def create_app() -> FastAPI:
         title="SLT E-Bill API",
         version="1.0.0",
         description="REST API for the SLT e-billing system.",
+    )
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=_CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     register_exception_handlers(application)
     application.include_router(health.router)
