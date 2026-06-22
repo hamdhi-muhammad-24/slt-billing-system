@@ -1,5 +1,8 @@
+import { CardSkeleton } from './ui-kit/Skeletons'
+import { EmptyState } from './ui-kit/EmptyState'
+
 export function Loading() {
-  return <p className="text-muted-foreground py-8 text-center">Loading…</p>
+  return <CardSkeleton />
 }
 
 export function ErrorState({ detail }: { detail: string }) {
@@ -11,5 +14,5 @@ export function ErrorState({ detail }: { detail: string }) {
 }
 
 export function Empty({ label }: { label: string }) {
-  return <p className="text-muted-foreground py-8 text-center">{label}</p>
+  return <EmptyState title={label} />
 }

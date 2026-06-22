@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Toaster } from '@/components/ui/sonner'
 import RequireRole from './auth/RequireRole'
 import AdminLayout from './components/AdminLayout'
 import CustomerLayout from './components/CustomerLayout'
@@ -15,30 +16,34 @@ import CustomerInvoiceDetail from './pages/customer/CustomerInvoiceDetail'
 
 export default function App() {
   return (
-    <Routes>
-      <Route index element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
+    <>
+      <Routes>
+        <Route index element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
 
-      <Route element={<RequireRole role="admin" />}>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="customers/:id" element={<CustomerDetail />} />
-          <Route path="accounts/:id" element={<AccountDetail />} />
-          <Route path="invoices/:id" element={<InvoiceDetail />} />
-          <Route path="billing" element={<Billing />} />
+        <Route element={<RequireRole role="admin" />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="customers/:id" element={<CustomerDetail />} />
+            <Route path="accounts/:id" element={<AccountDetail />} />
+            <Route path="invoices/:id" element={<InvoiceDetail />} />
+            <Route path="billing" element={<Billing />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route element={<RequireRole role="customer" />}>
-        <Route path="/app" element={<CustomerLayout />}>
-          <Route index element={<MyAccounts />} />
-          <Route path="accounts/:id" element={<CustomerAccountDetail />} />
-          <Route path="invoices/:id" element={<CustomerInvoiceDetail />} />
+        <Route element={<RequireRole role="customer" />}>
+          <Route path="/app" element={<CustomerLayout />}>
+            <Route index element={<MyAccounts />} />
+            <Route path="accounts/:id" element={<CustomerAccountDetail />} />
+            <Route path="invoices/:id" element={<CustomerInvoiceDetail />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<h1 className="p-6 text-2xl font-bold">Not found</h1>} />
-    </Routes>
+        <Route path="*" element={<h1 className="p-6 text-2xl font-bold">Not found</h1>} />
+      </Routes>
+
+      <Toaster />
+    </>
   )
 }
