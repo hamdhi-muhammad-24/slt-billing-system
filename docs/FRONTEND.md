@@ -207,5 +207,30 @@ Every data view handles three states: **loading**, **error** (show the `detail` 
 6. Invoice **PDF download** (admin) — commit.
 7. Admin billing: generate-one, generate-batch, run status — commit.
 8. Customer portal: scoped accounts / invoices / invoice + PDF — commit.
-9. Polish: loading/error/empty states, layout + nav — commit.
+9. Polish:
+   - **9a Design foundation** — install design tokens (SLT deep-blue primary, Vega neutral base), add `PageHeader`, `StatCard`, `StatusBadge`, `DataTable`, skeleton loaders, `EmptyState`; wire sonner toasts — commit.
+   - **9b Admin polish** — migrate admin to sidebar layout; replace placeholder `<h1>` headings with `PageHeader`; add `StatCard` counts to Dashboard; `StatusBadge` on account/run status; `DataTable` in all list views; skeleton loaders in place of `<Loading />` — commit.
+   - **9c Customer polish** — customer portal uses topbar self-care layout; apply same component upgrades (`PageHeader`, `DataTable`, skeletons, `StatusBadge`) to customer pages — commit.
+   - **9d Global polish** — responsive breakpoints, styled 404 page, `<title>` + favicon per route, light mode as professional default — commit.
 10. Tag `phase-2-complete`.
+
+---
+
+## 16. Design system
+
+| Concern | Choice |
+|---|---|
+| Color | SLT deep-blue primary (`#003087` / CSS var) on the Vega neutral base |
+| Layout — admin | Sidebar (collapsible on mobile) |
+| Layout — customer | Topbar self-care layout |
+| Default theme | Light mode (professional default; dark toggle deferred) |
+| Reusable components | `PageHeader`, `StatCard`, `StatusBadge`, `DataTable`, skeleton loaders, `EmptyState` |
+| Toast notifications | [sonner](https://sonner.emilkowal.ski/) wired at the app root |
+
+**Component roles:**
+- `PageHeader` — consistent `<h1>` + optional breadcrumb/action slot used on every page.
+- `StatCard` — metric tile (label + value); used on the admin Dashboard for counts.
+- `StatusBadge` — colour-coded pill for account status (`active` / `suspended` / `closed`) and billing-run status (`pending` / `running` / `done` / `failed`).
+- `DataTable` — thin wrapper around an `<table>` with consistent padding, hover, and empty-state slot; replaces the inline table markup in list views.
+- Skeleton loaders — replace the plain `<Loading />` spinner in every data view once design tokens are in place.
+- `EmptyState` — illustrated empty-state card replacing the plain `<Empty />` text.
