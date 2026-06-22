@@ -1,11 +1,12 @@
 import io
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api import crud
 from app.api.deps import get_db
+from app.api.errors import NotFound
 from app.api.schemas import InvoiceOut
 from app.billing import engine as billing_engine
 from app.pdf.renderer import render_bill
@@ -13,14 +14,23 @@ from app.pdf.renderer import render_bill
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 
-@router.get("/{invoice_id}/pdf", response_class=Response)
+@router.get(
+    "/{invoice_id}/pdf",
+    response_class=Response,
+    summary="Download invoice PDF",
+    description=(
+        "Renders and returns the invoice as a PDF file attachment. "
+        "Uses the Phase 0 ReportLab generator; bytes are produced in memory — "
+        "nothing is written to disk per request."
+    ),
+)
 def get_invoice_pdf(
     invoice_id: int,
     db: Session = Depends(get_db),
 ) -> Response:
     coords = crud.get_bill_coords_for_invoice(db, invoice_id)
     if coords is None:
-        raise HTTPException(status_code=404, detail=f"Invoice {invoice_id} not found")
+        raise NotFound(f"Invoice {invoice_id} not found")
 
     account_number, period_start, period_end = coords
     bill = billing_engine.build_bill(db, account_number, period_start, period_end)
@@ -37,12 +47,20 @@ def get_invoice_pdf(
     )
 
 
-@router.get("/{invoice_id}", response_model=InvoiceOut)
+@router.get(
+    "/{invoice_id}",
+    response_model=InvoiceOut,
+    summary="Get invoice",
+    description=(
+        "Returns a frozen invoice snapshot including all line items "
+        "and the service accounts linked to those items."
+    ),
+)
 def get_invoice(
     invoice_id: int,
     db: Session = Depends(get_db),
 ) -> InvoiceOut:
     out = crud.get_invoice(db, invoice_id)
     if out is None:
-        raise HTTPException(status_code=404, detail=f"Invoice {invoice_id} not found")
+        raise NotFound(f"Invoice {invoice_id} not found")
     return out

@@ -3,11 +3,12 @@ from __future__ import annotations
 from calendar import monthrange
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api import crud
 from app.api.deps import get_db
+from app.api.errors import DuplicateInvoice, NotFound
 from app.api.schemas import BillingRunOut, GenerateBatchRequest, GenerateOneRequest, InvoiceOut
 from app.billing import engine as billing_engine
 from app.billing import repository
@@ -15,7 +16,17 @@ from app.billing import repository
 router = APIRouter(prefix="/billing", tags=["billing"])
 
 
-@router.post("/generate-one", response_model=InvoiceOut, status_code=201)
+@router.post(
+    "/generate-one",
+    response_model=InvoiceOut,
+    status_code=201,
+    summary="Generate one invoice",
+    description=(
+        "Runs the billing engine for a single account + billing month and "
+        "transitions the invoice from DRAFT to GENERATED. "
+        "Returns `409` if the invoice is already a frozen (GENERATED) snapshot."
+    ),
+)
 def generate_one(
     body: GenerateOneRequest,
     db: Session = Depends(get_db),
@@ -25,20 +36,16 @@ def generate_one(
 
     info = crud.get_invoice_info_for_billing_period(db, body.account_id, year, month)
     if info is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No invoice found for account {body.account_id} in period {body.period}",
+        raise NotFound(
+            f"No invoice found for account {body.account_id} in period {body.period}"
         )
 
     invoice_id, account_number, period_start, period_end, status = info
 
     if status == "GENERATED":
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Invoice for account {body.account_id} period {body.period} "
-                "already exists as a frozen snapshot"
-            ),
+        raise DuplicateInvoice(
+            f"Invoice for account {body.account_id} period {body.period} "
+            "already exists as a frozen snapshot"
         )
 
     # Run the billing engine — validates all line-item data is present and
@@ -53,7 +60,18 @@ def generate_one(
     return out
 
 
-@router.post("/generate-batch", response_model=BillingRunOut, status_code=202)
+@router.post(
+    "/generate-batch",
+    response_model=BillingRunOut,
+    status_code=202,
+    summary="Generate batch",
+    description=(
+        "Synchronously generates invoices for all active accounts billed in a given month, "
+        "or for the specified `account_ids` subset. Per-account failures are recorded in "
+        "`billing_run_failures` and do not abort the run. "
+        "Returns `202` with the billing run summary including any recorded failures."
+    ),
+)
 def generate_batch(
     body: GenerateBatchRequest,
     db: Session = Depends(get_db),
@@ -113,12 +131,20 @@ def generate_batch(
     return out
 
 
-@router.get("/runs/{run_id}", response_model=BillingRunOut)
+@router.get(
+    "/runs/{run_id}",
+    response_model=BillingRunOut,
+    summary="Get billing run",
+    description=(
+        "Returns the status, account counts, and per-account failure details "
+        "for a batch billing run."
+    ),
+)
 def get_billing_run(
     run_id: int,
     db: Session = Depends(get_db),
 ) -> BillingRunOut:
     out = crud.get_billing_run_out(db, run_id)
     if out is None:
-        raise HTTPException(status_code=404, detail=f"Billing run {run_id} not found")
+        raise NotFound(f"Billing run {run_id} not found")
     return out

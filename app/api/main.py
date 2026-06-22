@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.errors import register_exception_handlers
 from app.api.routers import accounts, billing, customers, health, invoices
 
 
@@ -9,6 +10,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         description="REST API for the SLT e-billing system.",
     )
+    register_exception_handlers(application)
     application.include_router(health.router)
     application.include_router(customers.router)
     application.include_router(accounts.router)
