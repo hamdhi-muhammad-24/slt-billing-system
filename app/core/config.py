@@ -15,5 +15,10 @@ class Settings(BaseSettings):
     output_dir: Path = Path("./output")
     log_level: str = "INFO"
 
+    # JWT / Auth
+    jwt_secret: str = "change-me-to-a-long-random-secret"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
+
 
 settings = Settings()
