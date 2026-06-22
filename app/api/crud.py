@@ -7,11 +7,15 @@ kept separate so it can be swapped to SLT's real DB independently.
 """
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from datetime import date
+
+from sqlalchemy import extract, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Account,
+    BillingRun,
+    BillingRunFailure,
     Customer,
     Invoice,
     InvoiceLineItem,
@@ -20,6 +24,8 @@ from app.db.models import (
 )
 from app.api.schemas import (
     AccountOut,
+    BillingRunFailureOut,
+    BillingRunOut,
     CustomerOut,
     InvoiceLineItemOut,
     InvoiceOut,
@@ -222,3 +228,74 @@ def get_invoice(db: Session, invoice_id: int) -> InvoiceOut | None:
         ]
 
     return _build_invoice_out(inv, service_accounts, line_items)
+
+
+# ---------------------------------------------------------------------------
+# Billing runs (used by the billing router)
+# ---------------------------------------------------------------------------
+
+def get_invoice_info_for_billing_period(
+    db: Session,
+    account_id: int,
+    year: int,
+    month: int,
+) -> tuple[int, str, date, date, str] | None:
+    """
+    Return (invoice_id, account_number, period_start, period_end, status_value)
+    for the invoice of account_id issued in billing year/month, or None.
+
+    Matches the same billing_date filter that repository.find_invoice_period uses.
+    """
+    row = db.execute(
+        select(
+            Invoice.id,
+            Account.account_number,
+            Invoice.period_start,
+            Invoice.period_end,
+            Invoice.status,
+        )
+        .join(Account, Invoice.account_id == Account.id)
+        .where(
+            Invoice.account_id == account_id,
+            extract("year",  Invoice.billing_date) == year,
+            extract("month", Invoice.billing_date) == month,
+        )
+    ).one_or_none()
+    if row is None:
+        return None
+    return row.id, row.account_number, row.period_start, row.period_end, row.status.value
+
+
+def get_billing_run_out(db: Session, run_id: int) -> BillingRunOut | None:
+    """Return BillingRunOut (with failures list) for the given run_id, or None."""
+    run = db.get(BillingRun, run_id)
+    if run is None:
+        return None
+
+    failure_rows = db.scalars(
+        select(BillingRunFailure)
+        .where(BillingRunFailure.billing_run_id == run_id)
+        .order_by(BillingRunFailure.id)
+    ).all()
+
+    failures = [
+        BillingRunFailureOut(
+            id=f.id,
+            run_id=f.billing_run_id,
+            account_id=f.account_id,
+            error=f.error_message,
+        )
+        for f in failure_rows
+    ]
+
+    return BillingRunOut(
+        id=run.id,
+        period=run.period_start.strftime("%Y-%m"),
+        status=run.status.value.lower(),
+        total=run.total_accounts,
+        succeeded=run.succeeded,
+        failed=run.failed,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        failures=failures,
+    )

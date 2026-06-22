@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routers import accounts, customers, health, invoices
+from app.api.routers import accounts, billing, customers, health, invoices
 
 
 def create_app() -> FastAPI:
@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
     application.include_router(customers.router)
     application.include_router(accounts.router)
     application.include_router(invoices.router)
+    application.include_router(billing.router)
     return application
 
 

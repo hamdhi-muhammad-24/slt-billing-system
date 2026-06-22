@@ -129,19 +129,6 @@ class PaymentOut(BaseModel):
     reference: Optional[str] = None
 
 
-class BillingRunOut(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: int
-    period: str            # "YYYY-MM", derived from period_start by the repo
-    status: str            # pending | running | done | failed
-    total: int             # total_accounts in the DB
-    succeeded: int
-    failed: int
-    started_at: datetime
-    finished_at: Optional[datetime] = None
-
-
 class BillingRunFailureOut(BaseModel):
     model_config = {"from_attributes": True}
 
@@ -149,6 +136,20 @@ class BillingRunFailureOut(BaseModel):
     run_id: int            # billing_run_id in the DB
     account_id: Optional[int] = None
     error: str             # error_message in the DB
+
+
+class BillingRunOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    period: str            # "YYYY-MM", derived from period_start by the repo
+    status: str            # pending | running | done | failed | partial
+    total: int             # total_accounts in the DB
+    succeeded: int
+    failed: int
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    failures: list[BillingRunFailureOut] = []
 
 
 # ---------------------------------------------------------------------------
