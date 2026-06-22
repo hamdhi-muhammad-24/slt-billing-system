@@ -257,8 +257,8 @@ def get_invoice_info_for_billing_period(
         .join(Account, Invoice.account_id == Account.id)
         .where(
             Invoice.account_id == account_id,
-            extract("year",  Invoice.billing_date) == year,
-            extract("month", Invoice.billing_date) == month,
+            extract("year",  Invoice.period_start) == year,
+            extract("month", Invoice.period_start) == month,
         )
     ).one_or_none()
     if row is None:
