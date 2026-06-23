@@ -11,10 +11,11 @@ A production-style telecom billing system that generates SLT-style PDF e-bills f
 database, one per account, in batch. Full system eventually = DB + billing engine + PDF +
 FastAPI + React portals + auth + scheduler + notifications + AWS. **Build in phases.**
 
-**Current phase: Phase 3 — Auth + roles** (JWT, bcrypt, ADMIN vs CUSTOMER, scoped PDF access).
-Phase 0 (engine + PDF + CLI), Phase 1 (FastAPI backend), and Phase 2 (React portals) are COMPLETE.
-Do not build scheduler/AWS yet. See `docs/AUTH.md` for the spec.
-The engine, repository, PDF, API, and frontend code are FROZEN — new layers call them, never edit them.
+**Current phase: Phase 4 — Scheduler** (Celery + Redis, monthly billing job).
+Phases 0 (engine + PDF + CLI), 1 (FastAPI backend), 2 (React portals), and 3 (Auth + roles) are COMPLETE.
+Do not build AWS/notifications yet. See `docs/SCHEDULER.md` for the spec.
+The engine, repository, PDF, API, frontend, and auth code are FROZEN — new layers call them, never edit them.
+Auth schema note: `customers.user_id → users.id` (one-to-one).
 
 ---
 
