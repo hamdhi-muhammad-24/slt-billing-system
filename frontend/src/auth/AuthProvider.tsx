@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
+import { clearToken } from '../lib/api'
 
 export interface Session {
   role: 'admin' | 'customer'
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     setSession(null)
     localStorage.removeItem(STORAGE_KEY)
+    clearToken()
   }
 
   return (
