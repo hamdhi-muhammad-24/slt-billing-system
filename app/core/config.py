@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     pdf_token_expire_seconds: int = 300
 
     # Scheduler / Celery
-    redis_url: str = "redis://localhost:6379/0"
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/1"
 
 
 settings = Settings()

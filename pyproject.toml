@@ -32,6 +32,8 @@ dependencies = [
     "itsdangerous>=2.1",
     # Scheduler
     "celery[redis]>=5.3",
+    "redis>=5.0",
+    "flower>=2.0",
 ]
 
 [project.optional-dependencies]
