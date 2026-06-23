@@ -11,10 +11,9 @@ A production-style telecom billing system that generates SLT-style PDF e-bills f
 database, one per account, in batch. Full system eventually = DB + billing engine + PDF +
 FastAPI + React portals + auth + scheduler + notifications + AWS. **Build in phases.**
 
-**Current phase: Phase 4 — Scheduler** (Celery + Redis, monthly billing job).
-Phases 0 (engine + PDF + CLI), 1 (FastAPI backend), 2 (React portals), and 3 (Auth + roles) are COMPLETE.
-Do not build AWS/notifications yet. See `docs/SCHEDULER.md` for the spec.
-The engine, repository, PDF, API, frontend, and auth code are FROZEN — new layers call them, never edit them.
+**Current phase: Phase 5 — Notifications** (email the generated bill via SES/SMTP, SMS/WhatsApp optional, triggered after a bill is generated). See `docs/NOTIFICATIONS.md` for the spec.
+Phases 0 (engine + PDF + CLI), 1 (FastAPI backend), 2 (React portals), 3 (Auth + roles), and 4 (Scheduler — Celery + Redis in Docker, `run_monthly_billing` task, Celery Beat monthly schedule, Flower monitoring) are COMPLETE.
+The engine, repository, PDF, API, frontend, auth, batch service (`app/billing/batch.py`), and scheduler (`app/scheduler/`) are FROZEN — new layers call them, never edit them.
 Auth schema note: `customers.user_id → users.id` (one-to-one).
 
 ---
@@ -53,12 +52,14 @@ The supervisor doc's `base + 15% tax` formula is WRONG — ignore it. Use the ab
 
 ```
 app/
-  core/     config.py, money.py, logging.py
-  db/       base.py, models.py, seed.py
-  billing/  engine.py, schemas.py, repository.py
-  pdf/      renderer.py, layout.py, barcodes.py, assets/
+  core/      config.py, money.py, logging.py
+  db/        base.py, models.py, seed.py
+  billing/   engine.py, schemas.py, repository.py, batch.py
+  pdf/       renderer.py, layout.py, barcodes.py, assets/
+  scheduler/ celery_app.py, tasks.py
   cli.py
 migrations/   tests/   output/   pyproject.toml   .env.example
+docker-compose.yml
 ```
 
 ---
