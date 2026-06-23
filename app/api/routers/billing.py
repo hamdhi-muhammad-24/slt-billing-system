@@ -10,6 +10,8 @@ from app.api import crud
 from app.api.deps import get_db
 from app.api.errors import DuplicateInvoice, NotFound
 from app.api.schemas import BillingRunOut, GenerateBatchRequest, GenerateOneRequest, InvoiceOut
+from app.auth.dependencies import require_admin
+from app.auth.schemas import UserOut
 from app.billing import engine as billing_engine
 from app.billing import repository
 
@@ -30,6 +32,7 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 def generate_one(
     body: GenerateOneRequest,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin),
 ) -> InvoiceOut:
     year  = int(body.period[:4])
     month = int(body.period[5:])
@@ -75,6 +78,7 @@ def generate_one(
 def generate_batch(
     body: GenerateBatchRequest,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin),
 ) -> BillingRunOut:
     year  = int(body.period[:4])
     month = int(body.period[5:])
@@ -143,6 +147,7 @@ def generate_batch(
 def get_billing_run(
     run_id: int,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin),
 ) -> BillingRunOut:
     out = crud.get_billing_run_out(db, run_id)
     if out is None:

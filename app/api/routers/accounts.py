@@ -5,6 +5,8 @@ from app.api import crud
 from app.api.deps import get_db
 from app.api.errors import NotFound
 from app.api.schemas import AccountOut, InvoiceOut, Page, PaymentOut, ServiceAccountOut
+from app.auth.dependencies import require_account_owner
+from app.auth.schemas import UserOut
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 def get_account(
     account_id: int,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
 ) -> AccountOut:
     out = crud.get_account(db, account_id)
     if out is None:
@@ -37,6 +40,7 @@ def get_account(
 def list_service_accounts(
     account_id: int,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
 ) -> list[ServiceAccountOut]:
     if crud.get_account(db, account_id) is None:
         raise NotFound(f"Account {account_id} not found")
@@ -57,6 +61,7 @@ def list_invoices_for_account(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
 ) -> Page[InvoiceOut]:
     if crud.get_account(db, account_id) is None:
         raise NotFound(f"Account {account_id} not found")
@@ -73,6 +78,7 @@ def list_invoices_for_account(
 def list_payments_for_account(
     account_id: int,
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
 ) -> list[PaymentOut]:
     if crud.get_account(db, account_id) is None:
         raise NotFound(f"Account {account_id} not found")

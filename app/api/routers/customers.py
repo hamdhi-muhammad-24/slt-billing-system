@@ -5,6 +5,8 @@ from app.api import crud
 from app.api.deps import get_db
 from app.api.errors import NotFound
 from app.api.schemas import AccountOut, CustomerOut, Page
+from app.auth.dependencies import require_admin
+from app.auth.schemas import UserOut
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -19,6 +21,7 @@ def list_customers(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin),
 ) -> Page[CustomerOut]:
     items, total = crud.list_customers(db, limit=limit, offset=offset)
     return Page(items=items, total=total, limit=limit, offset=offset)

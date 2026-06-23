@@ -11,3 +11,8 @@ class UserOut(BaseModel):
     email: str
     role: str
     customer_id: int | None = None
+
+
+class PdfTokenOut(BaseModel):
+    token: str
+    expires_in: int
