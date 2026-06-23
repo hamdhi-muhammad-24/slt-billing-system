@@ -11,6 +11,7 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.db.base import Base
 import app.db.models  # noqa: F401 — side-effect: registers all ORM models on Base.metadata
+import app.notifications.models  # noqa: F401 — registers notification_outbox on Base.metadata
 
 # Alembic Config object — provides access to values in alembic.ini.
 config = context.config

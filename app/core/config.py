@@ -28,5 +28,21 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
 
+    # Notifications — Email
+    email_backend: str = "smtp"
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    email_from: str = "SLT Billing <billing@slt.lk>"
+    email_use_signed_link: bool = False
+
+    # Notifications — SMS
+    sms_backend: str = "console"
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from: str = ""
+
+    # Notifications — general
+    notify_max_attempts: int = 3
+
 
 settings = Settings()
