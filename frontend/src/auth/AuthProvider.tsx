@@ -1,6 +1,6 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { clearToken } from '../lib/api'
+import { clearToken, getToken, authMe } from '../lib/api'
 
 export interface Session {
   role: 'admin' | 'customer'
@@ -9,26 +9,45 @@ export interface Session {
 
 interface AuthContextValue {
   session: Session | null
+  isChecking: boolean
   login: (session: Session) => void
   logout: () => void
 }
 
 const STORAGE_KEY = 'slt-auth'
 
-function readStorage(): Session | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) as Session
-  } catch {
-    return null
-  }
-}
-
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(readStorage)
+  const [session, setSession] = useState<Session | null>(null)
+  const [isChecking, setIsChecking] = useState(true)
+
+  useEffect(() => {
+    const token = getToken()
+    if (!token) {
+      localStorage.removeItem(STORAGE_KEY)
+      setIsChecking(false)
+      return
+    }
+    authMe()
+      .then((me) => {
+        const role = me.role === 'ADMIN' ? 'admin' : 'customer'
+        const verified: Session =
+          role === 'customer' && me.customer_id != null
+            ? { role: 'customer', customerId: me.customer_id }
+            : { role: 'admin' }
+        setSession(verified)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(verified))
+      })
+      .catch(() => {
+        clearToken()
+        localStorage.removeItem(STORAGE_KEY)
+        setSession(null)
+      })
+      .finally(() => {
+        setIsChecking(false)
+      })
+  }, [])
 
   function login(s: Session) {
     setSession(s)
@@ -42,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, login, logout }}>
+    <AuthContext.Provider value={{ session, isChecking, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

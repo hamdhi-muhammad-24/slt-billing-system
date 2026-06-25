@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Download, FileText, CreditCard, ChevronRight } from 'lucide-react'
 import type { Invoice, Payment } from '../../types'
-import type { ColumnDef } from '../../components/ui-kit/DataTable'
 import { useAuth } from '../../auth/AuthProvider'
 import { useAccount } from '../../hooks/useAccount'
 import { useCustomerAccounts } from '../../hooks/useCustomerAccounts'
@@ -10,25 +10,13 @@ import { useInvoices } from '../../hooks/useInvoices'
 import { usePayments } from '../../hooks/usePayments'
 import { ErrorState } from '../../components/states'
 import { CardSkeleton } from '../../components/ui-kit/Skeletons'
-import { DataTable } from '../../components/ui-kit/DataTable'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
+import { StatusBadge } from '../../components/ui-kit/StatusBadge'
 import { ApiError, downloadInvoicePdf } from '../../lib/api'
 import { formatLKR } from '../../lib/money'
 import { formatDate } from '../../lib/format'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-
-const INV_COLS: ColumnDef<Invoice>[] = [
-  { header: 'Period',   cell: (inv) => <span className="font-medium">{inv.period}</span> },
-  { header: 'Due Date', cell: (inv) => formatDate(inv.due_date) },
-  { header: 'Amount',   numeric: true, cell: (inv) => formatLKR(inv.total_payable) },
-]
-
-const PAY_COLS: ColumnDef<Payment>[] = [
-  { header: 'Date',   cell: (p) => formatDate(p.paid_at) },
-  { header: 'Method', cell: (p) => p.method },
-  { header: 'Amount', numeric: true, cell: (p) => formatLKR(p.amount) },
-]
+import { cn } from '@/lib/utils'
 
 function LatestBillCard({ invoice }: { invoice: Invoice }) {
   const navigate = useNavigate()
@@ -41,33 +29,87 @@ function LatestBillCard({ invoice }: { invoice: Invoice }) {
   })
 
   return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardContent className="pt-5 pb-5 flex flex-col gap-4">
+    <div className="rounded-xl gradient-primary p-5 shadow-lg text-white flex flex-col gap-5">
+      <div>
+        <p className="text-white/70 text-xs font-medium uppercase tracking-wide">Amount Due</p>
+        <p className="text-5xl font-bold tabular-nums mt-1">{formatLKR(invoice.total_payable)}</p>
+      </div>
+      <div className="flex gap-6 text-sm">
         <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount Due</p>
-          <p className="text-4xl font-bold text-primary mt-1 tabular-nums">
-            {formatLKR(invoice.total_payable)}
-          </p>
+          <p className="text-white/60 text-xs">Period</p>
+          <p className="font-semibold mt-0.5">{invoice.period}</p>
         </div>
-        <div className="flex gap-6 text-sm text-muted-foreground">
-          <span>Period: <span className="text-foreground font-medium">{invoice.period}</span></span>
-          <span>Due: <span className="text-foreground font-medium">{formatDate(invoice.due_date)}</span></span>
+        <div>
+          <p className="text-white/60 text-xs">Due Date</p>
+          <p className="font-semibold mt-0.5">{formatDate(invoice.due_date)}</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button size="sm" onClick={() => navigate(`/app/invoices/${invoice.id}`)}>
-            View bill
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={download.isPending}
-            onClick={() => download.mutate()}
-          >
-            {download.isPending ? 'Downloading…' : 'Download PDF'}
-          </Button>
+        <div>
+          <p className="text-white/60 text-xs">Issued</p>
+          <p className="font-semibold mt-0.5">{formatDate(invoice.issue_date)}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          size="sm"
+          className="bg-white text-primary hover:bg-white/90 font-semibold gap-1.5"
+          onClick={() => navigate(`/app/invoices/${invoice.id}`)}
+        >
+          <FileText size={13} />
+          View Bill
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-white/80 hover:text-white hover:bg-white/15 gap-1.5"
+          disabled={download.isPending}
+          onClick={() => download.mutate()}
+        >
+          <Download size={13} />
+          {download.isPending ? 'Downloading…' : 'Download PDF'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function InvoiceRow({ invoice, onClick }: { invoice: Invoice; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full flex items-center justify-between px-4 py-3 hover:bg-accent/40 transition-colors rounded-lg text-left"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <FileText size={14} />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{invoice.period}</p>
+          <p className="text-xs text-muted-foreground">Due {formatDate(invoice.due_date)}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <p className="text-sm font-semibold tabular-nums">{formatLKR(invoice.total_payable)}</p>
+        <ChevronRight size={14} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+      </div>
+    </button>
+  )
+}
+
+function PaymentTimelineItem({ payment, isLast }: { payment: Payment; isLast: boolean }) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+          <CreditCard size={13} />
+        </div>
+        {!isLast && <div className="w-px flex-1 bg-border mt-1" />}
+      </div>
+      <div className={cn('flex flex-col gap-0.5', isLast ? 'pb-0' : 'pb-4')}>
+        <p className="text-sm font-medium">{formatLKR(payment.amount)}</p>
+        <p className="text-xs text-muted-foreground">{payment.method} · {formatDate(payment.paid_at)}</p>
+      </div>
+    </div>
   )
 }
 
@@ -79,7 +121,6 @@ export default function CustomerAccountDetail() {
   const { session } = useAuth()
   const customerId = session?.customerId ?? 0
 
-  // Client-side ownership guard — real enforcement is server-side in the auth phase
   const ownedAccounts = useCustomerAccounts(customerId)
   const account = useAccount(accountId)
   const invoices = useInvoices(accountId)
@@ -111,34 +152,48 @@ export default function CustomerAccountDetail() {
       <PageHeader
         title={a.account_no}
         breadcrumbs={[{ label: 'My Accounts', to: '/app' }, { label: a.account_no }]}
+        actions={<StatusBadge status={a.status} />}
       />
 
       {latestInvoice && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold">Latest Bill</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Latest Bill</h2>
           <LatestBillCard invoice={latestInvoice} />
         </section>
       )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">Bill History</h2>
-        <DataTable
-          columns={INV_COLS}
-          data={sortedInvoices}
-          keyExtractor={(inv) => inv.id}
-          emptyLabel="No bills yet."
-          onRowClick={(inv) => navigate(`/app/invoices/${inv.id}`)}
-        />
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Bill History</h2>
+        <div className="rounded-xl border border-border overflow-hidden">
+          {sortedInvoices.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No bills yet.</p>
+          ) : (
+            <div className="divide-y divide-border p-1">
+              {sortedInvoices.map((inv) => (
+                <InvoiceRow
+                  key={inv.id}
+                  invoice={inv}
+                  onClick={() => navigate(`/app/invoices/${inv.id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">Payments</h2>
-        <DataTable
-          columns={PAY_COLS}
-          data={payments.data}
-          keyExtractor={(p) => p.id}
-          emptyLabel="No payments recorded."
-        />
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Payment History</h2>
+        {payments.data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No payments recorded.</p>
+        ) : (
+          <div className="pt-1">
+            {[...payments.data]
+              .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
+              .map((p, i, arr) => (
+                <PaymentTimelineItem key={p.id} payment={p} isLast={i === arr.length - 1} />
+              ))}
+          </div>
+        )}
       </section>
     </div>
   )

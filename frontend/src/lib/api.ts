@@ -54,6 +54,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 401) {
     clearToken()
+    localStorage.removeItem('slt-auth')
     window.location.href = '/login'
     throw new ApiError(401, 'Session expired — please log in again.')
   }
