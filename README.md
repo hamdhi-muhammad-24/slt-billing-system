@@ -9,6 +9,11 @@ an automated monthly scheduler, email/SMS notifications, and AWS deployment.
 
 > Contributor/AI guide: see `CLAUDE.md`. Detailed specs: see `docs/`.
 
+> Current status: Phases 0-4 are implemented (engine/PDF/CLI, API, frontend,
+> auth/roles, and scheduler). Phase 5 notifications are partially implemented:
+> manual outbox/CLI sending exists, and scheduled Celery delivery is being finished.
+> Phase 6 deployment/AWS is intentionally not started yet.
+
 ---
 
 ## Prerequisites (install before you start)
@@ -112,10 +117,10 @@ See `CLAUDE.md` and `docs/` for the full rationale and the phase roadmap.
 ## Status
 
 - [x] Database schema designed (`docs/DATABASE.md`)
-- [ ] Phase 0: core engine (DB code, billing engine, PDF, batch CLI)
-- [ ] Phase 1: FastAPI backend
-- [ ] Phase 2: React portals
-- [ ] Phase 3: auth + roles
-- [ ] Phase 4: scheduler (auto billing)
-- [ ] Phase 5: notifications
+- [x] Phase 0: core engine (DB code, billing engine, PDF, batch CLI)
+- [x] Phase 1: FastAPI backend
+- [x] Phase 2: React portals
+- [x] Phase 3: auth + roles
+- [x] Phase 4: scheduler (auto billing)
+- [ ] Phase 5: notifications (manual outbox/CLI complete; scheduled Celery delivery in progress)
 - [ ] Phase 6: Docker + AWS deployment

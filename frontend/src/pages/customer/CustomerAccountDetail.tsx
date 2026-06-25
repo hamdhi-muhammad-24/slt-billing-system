@@ -29,29 +29,29 @@ function LatestBillCard({ invoice }: { invoice: Invoice }) {
   })
 
   return (
-    <div className="rounded-xl gradient-primary p-5 shadow-lg text-white flex flex-col gap-5">
+    <div className="surface-section flex flex-col gap-5 p-5">
       <div>
-        <p className="text-white/70 text-xs font-medium uppercase tracking-wide">Amount Due</p>
-        <p className="text-5xl font-bold tabular-nums mt-1">{formatLKR(invoice.total_payable)}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount Due</p>
+        <p className="mt-1 text-5xl font-semibold tabular-nums text-primary">{formatLKR(invoice.total_payable)}</p>
       </div>
       <div className="flex gap-6 text-sm">
         <div>
-          <p className="text-white/60 text-xs">Period</p>
+          <p className="text-xs text-muted-foreground">Period</p>
           <p className="font-semibold mt-0.5">{invoice.period}</p>
         </div>
         <div>
-          <p className="text-white/60 text-xs">Due Date</p>
+          <p className="text-xs text-muted-foreground">Due Date</p>
           <p className="font-semibold mt-0.5">{formatDate(invoice.due_date)}</p>
         </div>
         <div>
-          <p className="text-white/60 text-xs">Issued</p>
+          <p className="text-xs text-muted-foreground">Issued</p>
           <p className="font-semibold mt-0.5">{formatDate(invoice.issue_date)}</p>
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         <Button
           size="sm"
-          className="bg-white text-primary hover:bg-white/90 font-semibold gap-1.5"
+          className="gap-1.5 font-semibold"
           onClick={() => navigate(`/app/invoices/${invoice.id}`)}
         >
           <FileText size={13} />
@@ -59,8 +59,8 @@ function LatestBillCard({ invoice }: { invoice: Invoice }) {
         </Button>
         <Button
           size="sm"
-          variant="ghost"
-          className="text-white/80 hover:text-white hover:bg-white/15 gap-1.5"
+          variant="outline"
+          className="gap-1.5"
           disabled={download.isPending}
           onClick={() => download.mutate()}
         >
@@ -77,10 +77,10 @@ function InvoiceRow({ invoice, onClick }: { invoice: Invoice; onClick: () => voi
     <button
       type="button"
       onClick={onClick}
-      className="group w-full flex items-center justify-between px-4 py-3 hover:bg-accent/40 transition-colors rounded-lg text-left"
+      className="group flex w-full items-center justify-between rounded-md px-4 py-3 text-left transition-colors hover:bg-accent/35"
     >
       <div className="flex items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <FileText size={14} />
         </div>
         <div>
@@ -100,7 +100,7 @@ function PaymentTimelineItem({ payment, isLast }: { payment: Payment; isLast: bo
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-success/15 text-success">
           <CreditCard size={13} />
         </div>
         {!isLast && <div className="w-px flex-1 bg-border mt-1" />}
@@ -164,7 +164,7 @@ export default function CustomerAccountDetail() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Bill History</h2>
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           {sortedInvoices.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">No bills yet.</p>
           ) : (

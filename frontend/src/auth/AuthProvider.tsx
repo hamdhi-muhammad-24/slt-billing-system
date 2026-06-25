@@ -20,13 +20,12 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [isChecking, setIsChecking] = useState(true)
+  const [isChecking, setIsChecking] = useState(() => getToken() !== null)
 
   useEffect(() => {
     const token = getToken()
     if (!token) {
       localStorage.removeItem(STORAGE_KEY)
-      setIsChecking(false)
       return
     }
     authMe()

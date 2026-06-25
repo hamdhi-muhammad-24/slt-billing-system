@@ -14,8 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 const ACCOUNT_COLS: ColumnDef<Account>[] = [
   { header: 'Account No',    cell: (a) => <span className="font-medium">{a.account_no}</span> },
   { header: 'Status',        cell: (a) => <StatusBadge status={a.status} /> },
-  { header: 'Billing Cycle', cell: (a) => a.billing_cycle },
+  { header: 'Billing Cycle', cell: (a) => a.billing_cycle ?? 'Standard monthly' },
 ]
+
+const empty = (value: string | null) => value || 'Not recorded'
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -43,15 +45,15 @@ export default function CustomerDetail() {
         breadcrumbs={[{ label: 'Customers', to: '/admin/customers' }, { label: c.name }]}
       />
 
-      <Card>
-        <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+      <Card className="rounded-lg shadow-sm">
+        <CardHeader><CardTitle className="text-base">Customer Profile</CardTitle></CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">ID</dt><dd>{c.id}</dd>
-            <dt className="text-muted-foreground">NIC</dt><dd>{c.nic}</dd>
-            <dt className="text-muted-foreground">Email</dt><dd>{c.email}</dd>
-            <dt className="text-muted-foreground">Phone</dt><dd>{c.phone}</dd>
-            <dt className="text-muted-foreground">Address</dt><dd>{c.address}</dd>
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-[150px_1fr]">
+            <dt className="text-muted-foreground">Customer ID</dt><dd className="font-medium">#{c.id}</dd>
+            <dt className="text-muted-foreground">NIC</dt><dd>{empty(c.nic)}</dd>
+            <dt className="text-muted-foreground">Email</dt><dd>{empty(c.email)}</dd>
+            <dt className="text-muted-foreground">Phone</dt><dd>{empty(c.phone)}</dd>
+            <dt className="text-muted-foreground">Billing Address</dt><dd>{empty(c.address)}</dd>
           </dl>
         </CardContent>
       </Card>

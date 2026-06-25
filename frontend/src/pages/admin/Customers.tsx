@@ -1,14 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Search } from 'lucide-react'
 import type { Customer } from '../../types'
 import { useCustomers } from '../../hooks/useCustomers'
 import { ErrorState } from '../../components/states'
-import { TableSkeleton } from '../../components/ui-kit/Skeletons'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
+import { TableSkeleton } from '../../components/ui-kit/Skeletons'
 import { ApiError } from '../../lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 50
@@ -23,12 +23,12 @@ function getInitials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  'bg-blue-500/20 text-blue-300',
-  'bg-violet-500/20 text-violet-300',
-  'bg-emerald-500/20 text-emerald-300',
-  'bg-amber-500/20 text-amber-300',
-  'bg-rose-500/20 text-rose-300',
-  'bg-teal-500/20 text-teal-300',
+  'bg-blue-500/12 text-blue-700',
+  'bg-cyan-500/12 text-cyan-700',
+  'bg-emerald-500/12 text-emerald-700',
+  'bg-amber-500/12 text-amber-700',
+  'bg-violet-500/12 text-violet-700',
+  'bg-teal-500/12 text-teal-700',
 ]
 
 function avatarColor(id: number): string {
@@ -36,30 +36,25 @@ function avatarColor(id: number): string {
 }
 
 function CustomerRow({ customer, onClick }: { customer: Customer; onClick: () => void }) {
+  const email = customer.email ?? 'Email not recorded'
+  const address = customer.address ?? 'Address not recorded'
+
   return (
-    <tr
-      onClick={onClick}
-      className="group cursor-pointer hover:bg-accent/40 transition-colors"
-    >
+    <tr onClick={onClick} className="group cursor-pointer transition-colors hover:bg-accent/35">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-              avatarColor(customer.id),
-            )}
-          >
+          <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-semibold', avatarColor(customer.id))}>
             {getInitials(customer.name)}
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-medium text-sm truncate">{customer.name}</span>
-            <span className="text-xs text-muted-foreground truncate">{customer.email}</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium">{customer.name}</span>
+            <span className="truncate text-xs text-muted-foreground">{email}</span>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{customer.nic}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{address}</td>
       <td className="px-4 py-3">
-        <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">
+        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
           #{customer.id}
         </span>
       </td>
@@ -80,8 +75,9 @@ export default function Customers() {
     return data.items.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
-        c.nic.toLowerCase().includes(q),
+        (c.email ?? '').toLowerCase().includes(q) ||
+        (c.nic ?? '').toLowerCase().includes(q) ||
+        (c.address ?? '').toLowerCase().includes(q),
     )
   }, [data, search])
 
@@ -100,28 +96,26 @@ export default function Customers() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Customers"
-        description={`${data.total} registered customer${data.total !== 1 ? 's' : ''}`}
+        description={`${data.total} registered customer${data.total !== 1 ? 's' : ''} available to billing administrators.`}
       />
 
-      {/* Search bar */}
-      <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      <div className="relative max-w-md">
+        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name, email, or NIC…"
+          placeholder="Search by name, email, NIC, or address..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-9 text-sm"
+          className="h-9 bg-white pl-9 text-sm"
         />
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/40">
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer</th>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">NIC</th>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">ID</th>
+            <tr className="border-b border-border bg-muted/55">
+              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Address</th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">ID</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -132,11 +126,11 @@ export default function Customers() {
                 </td>
               </tr>
             ) : (
-              filtered.map((c) => (
+              filtered.map((customer) => (
                 <CustomerRow
-                  key={c.id}
-                  customer={c}
-                  onClick={() => navigate(`/admin/customers/${c.id}`)}
+                  key={customer.id}
+                  customer={customer}
+                  onClick={() => navigate(`/admin/customers/${customer.id}`)}
                 />
               ))
             )}

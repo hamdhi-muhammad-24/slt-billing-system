@@ -12,39 +12,39 @@ const VARIANTS: Record<Variant, { card: string; iconWrap: string; label: string;
     sub: 'text-muted-foreground',
   },
   blue: {
-    card: 'gradient-primary shadow-lg border-0',
-    iconWrap: 'bg-white/20 text-white',
-    label: 'text-white/75',
-    value: 'text-white',
-    sub: 'text-white/60',
+    card: 'bg-card border border-blue-100 shadow-sm',
+    iconWrap: 'bg-primary/10 text-primary',
+    label: 'text-muted-foreground',
+    value: 'text-primary',
+    sub: 'text-muted-foreground',
   },
   green: {
-    card: 'gradient-success shadow-lg border-0',
-    iconWrap: 'bg-white/20 text-white',
-    label: 'text-white/75',
-    value: 'text-white',
-    sub: 'text-white/60',
+    card: 'bg-card border border-emerald-100 shadow-sm',
+    iconWrap: 'bg-success/10 text-success',
+    label: 'text-muted-foreground',
+    value: 'text-success',
+    sub: 'text-muted-foreground',
   },
   teal: {
-    card: 'gradient-teal shadow-lg border-0',
-    iconWrap: 'bg-white/20 text-white',
-    label: 'text-white/75',
-    value: 'text-white',
-    sub: 'text-white/60',
+    card: 'bg-card border border-cyan-100 shadow-sm',
+    iconWrap: 'bg-cyan-500/10 text-cyan-700',
+    label: 'text-muted-foreground',
+    value: 'text-cyan-700',
+    sub: 'text-muted-foreground',
   },
   purple: {
-    card: 'gradient-purple shadow-lg border-0',
-    iconWrap: 'bg-white/20 text-white',
-    label: 'text-white/75',
-    value: 'text-white',
-    sub: 'text-white/60',
+    card: 'bg-card border border-violet-100 shadow-sm',
+    iconWrap: 'bg-violet-500/10 text-violet-700',
+    label: 'text-muted-foreground',
+    value: 'text-violet-700',
+    sub: 'text-muted-foreground',
   },
   amber: {
-    card: 'gradient-amber shadow-lg border-0',
-    iconWrap: 'bg-white/20 text-white',
-    label: 'text-white/75',
-    value: 'text-white',
-    sub: 'text-white/60',
+    card: 'bg-card border border-amber-100 shadow-sm',
+    iconWrap: 'bg-amber-500/10 text-amber-700',
+    label: 'text-muted-foreground',
+    value: 'text-amber-700',
+    sub: 'text-muted-foreground',
   },
 }
 
@@ -60,18 +60,18 @@ export function StatCard({ label, value, icon: Icon, sublabel, variant = 'defaul
   const v = VARIANTS[variant]
 
   return (
-    <div className={cn('rounded-xl p-5 flex flex-col gap-4', v.card)}>
+    <div className={cn('flex min-h-[124px] flex-col justify-between rounded-lg p-5', v.card)}>
       <div className="flex items-center justify-between">
-        <p className={cn('text-sm font-medium', v.label)}>{label}</p>
+        <p className={cn('text-xs font-semibold uppercase tracking-wide', v.label)}>{label}</p>
         {Icon && (
-          <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', v.iconWrap)}>
-            <Icon size={17} />
+          <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', v.iconWrap)}>
+            <Icon size={18} />
           </div>
         )}
       </div>
       <div>
-        <p className={cn('text-3xl font-bold tabular-nums leading-none', v.value)}>{value}</p>
-        {sublabel && <p className={cn('text-xs mt-1.5', v.sub)}>{sublabel}</p>}
+        <p className={cn('text-3xl font-semibold tabular-nums leading-none', v.value)}>{value}</p>
+        {sublabel && <p className={cn('mt-2 text-xs leading-5', v.sub)}>{sublabel}</p>}
       </div>
     </div>
   )

@@ -1,25 +1,64 @@
 import { useState } from 'react'
-import { Wifi } from 'lucide-react'
+import { Network } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-export default function Brand() {
+type BrandTone = 'light' | 'dark'
+type BrandSize = 'sm' | 'md' | 'lg'
+
+interface BrandProps {
+  tone?: BrandTone
+  size?: BrandSize
+  showSystemName?: boolean
+  className?: string
+}
+
+const logoSrc: Record<BrandTone, string> = {
+  light: '/sltmobitel-logo-light.png',
+  dark: '/sltmobitel-logo-dark.png',
+}
+
+const logoClass: Record<BrandSize, string> = {
+  sm: 'h-6 max-w-[132px]',
+  md: 'h-8 max-w-[172px]',
+  lg: 'h-10 max-w-[220px]',
+}
+
+export default function Brand({
+  tone = 'light',
+  size = 'md',
+  showSystemName = true,
+  className,
+}: BrandProps) {
   const [hasImg, setHasImg] = useState(true)
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className={cn('flex min-w-0 items-center gap-3', className)}>
       {hasImg ? (
         <img
-          src="/slt-logo.png"
-          alt="SLT"
-          className="h-7 w-auto"
+          src={logoSrc[tone]}
+          alt="SLT-MOBITEL"
+          className={cn('w-auto shrink-0 object-contain', logoClass[size])}
           onError={() => setHasImg(false)}
         />
       ) : (
         <>
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg gradient-primary shadow-sm">
-            <Wifi size={13} className="text-white" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+            <Network size={15} />
           </div>
-          <span className="font-bold text-sm tracking-tight">SLT e-Bill</span>
+          <span className="font-semibold text-sm tracking-tight">SLT-MOBITEL</span>
         </>
+      )}
+      {showSystemName && (
+        <span
+          className={cn(
+            'hidden border-l pl-3 text-xs font-medium leading-tight sm:block',
+            tone === 'dark'
+              ? 'border-white/20 text-white/75'
+              : 'border-border text-muted-foreground',
+          )}
+        >
+          Billing Management
+        </span>
       )}
     </div>
   )

@@ -34,12 +34,18 @@ export function DataTable<T extends object>({
   if (data.length === 0) return <EmptyState title={emptyLabel} />
 
   return (
-    <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+    <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-border bg-muted/55 hover:bg-muted/55">
             {columns.map((col, i) => (
-              <TableHead key={i} className={col.numeric ? 'text-right' : ''}>
+              <TableHead
+                key={i}
+                className={cn(
+                  'h-10 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+                  col.numeric && 'text-right',
+                )}
+              >
                 {col.header}
               </TableHead>
             ))}
@@ -49,11 +55,20 @@ export function DataTable<T extends object>({
           {data.map((row) => (
             <TableRow
               key={keyExtractor(row)}
-              className={cn(onRowClick && 'cursor-pointer')}
+              className={cn(
+                'border-border/70 transition-colors hover:bg-accent/35',
+                onRowClick && 'cursor-pointer',
+              )}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
             >
               {columns.map((col, i) => (
-                <TableCell key={i} className={col.numeric ? 'text-right' : ''}>
+                <TableCell
+                  key={i}
+                  className={cn(
+                    'px-4 py-3 text-sm align-middle',
+                    col.numeric && 'text-right font-medium tabular-nums',
+                  )}
+                >
                   {col.cell(row)}
                 </TableCell>
               ))}

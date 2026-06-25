@@ -35,16 +35,16 @@ interface Props {
 export default function InvoiceSnapshotCard({ invoice: inv }: Props) {
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-4">
+      <Card className="rounded-lg shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Payable</CardTitle>
-              <p className="text-4xl font-bold text-primary mt-1">{formatLKR(inv.total_payable)}</p>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Payable</CardTitle>
+              <p className="mt-2 text-4xl font-semibold tabular-nums text-primary">{formatLKR(inv.total_payable)}</p>
             </div>
-            <div className="text-right text-sm text-muted-foreground">
-              <p>Period: <span className="text-foreground font-medium">{inv.period}</span></p>
-              <p>Due: <span className="text-foreground font-medium">{formatDate(inv.due_date)}</span></p>
+            <div className="grid gap-1 text-sm text-muted-foreground sm:text-right">
+              <p>Billing period: <span className="font-medium text-foreground">{inv.period}</span></p>
+              <p>Payment due: <span className="font-medium text-foreground">{formatDate(inv.due_date)}</span></p>
               <p>Issued: <span className="text-foreground">{formatDate(inv.issue_date)}</span></p>
             </div>
           </div>
@@ -53,8 +53,8 @@ export default function InvoiceSnapshotCard({ invoice: inv }: Props) {
         <Separator />
 
         <CardContent className="pt-4">
-          <CardDescription className="mb-3 text-xs uppercase tracking-wide">Breakdown</CardDescription>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-2 text-sm">
+          <CardDescription className="mb-4 text-xs font-semibold uppercase tracking-wide">Invoice Breakdown</CardDescription>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-3 text-sm">
             <dt className="text-muted-foreground">Balance B/F</dt>
             <dd className="text-right tabular-nums">{formatLKR(inv.balance_bf)}</dd>
 
@@ -70,7 +70,7 @@ export default function InvoiceSnapshotCard({ invoice: inv }: Props) {
             <Separator className="col-span-2 my-1" />
 
             <dt className="font-semibold">Total Payable</dt>
-            <dd className="text-right tabular-nums font-semibold">{formatLKR(inv.total_payable)}</dd>
+            <dd className="text-right font-semibold tabular-nums text-primary">{formatLKR(inv.total_payable)}</dd>
           </dl>
         </CardContent>
       </Card>

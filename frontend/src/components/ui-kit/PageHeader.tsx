@@ -16,25 +16,25 @@ interface Props {
 
 export function PageHeader({ title, description, breadcrumbs, actions }: Props) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
-      <div className="flex flex-col gap-1.5">
+    <div className="mb-6 flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="flex items-center gap-1 text-xs text-muted-foreground">
+          <nav className="flex flex-wrap items-center gap-1 text-xs font-medium text-muted-foreground">
             {breadcrumbs.map((crumb, i) => (
               <span key={i} className="flex items-center gap-1">
                 {i > 0 && <ChevronRight size={11} className="text-muted-foreground/40 shrink-0" />}
                 {crumb.to
-                  ? <Link to={crumb.to} className="hover:text-foreground transition-colors">{crumb.label}</Link>
+                  ? <Link to={crumb.to} className="transition-colors hover:text-primary">{crumb.label}</Link>
                   : <span className="text-foreground/70">{crumb.label}</span>
                 }
               </span>
             ))}
           </nav>
         )}
-        <h1 className="text-2xl font-bold tracking-tight relative inline-block after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:rounded-full after:gradient-primary after:opacity-50">{title}</h1>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">{title}</h1>
+        {description && <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="shrink-0">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
   )
 }

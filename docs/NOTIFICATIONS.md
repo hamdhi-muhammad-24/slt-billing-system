@@ -134,15 +134,13 @@ and the run continues. Same idea for missing phone.
 - **Core:** `scan-and-send` lives in `app/notifications/service.py`.
 - **Dev / manual:** `python -m app.notifications.cli send-pending`.
 - **Scheduled:** a Celery task `notify_pending` in `app/notifications/tasks.py`, registered on
-  the **existing** Celery app via `@celery_app.task`. We rely on Celery **autodiscovery** so
-  `app/scheduler/celery_app.py` stays untouched. The Beat entry (run every N minutes, or right
-  after the monthly billing job) is added from the notifications module using Celery's
-  `on_after_configure` signal — again, no edit to the frozen scheduler file.
+  the existing Celery app via `@celery_app.task`. The current app does not autodiscover all
+  `app.*` tasks, so `app/scheduler/celery_app.py` includes `app.notifications.tasks` and adds
+  a Beat entry that runs every 15 minutes.
 - Visible in **Flower** like your other tasks.
 
-> If your frozen `celery_app.py` does **not** autodiscover `app.*` tasks, the single minimal
-> wiring touch is adding `app.notifications.tasks` to its include list. We'll confirm which
-> case you're in during the build and pick the no-edit path if available.
+> The scheduler include/Beat entry is the one intentional minimal touch to the Phase 4
+> scheduler layer for Phase 5 notification automation.
 
 ---
 

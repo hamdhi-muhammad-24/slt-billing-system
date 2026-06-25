@@ -3,6 +3,10 @@
 The phase-by-phase plan. **Do one step at a time.** After each step: run the check, confirm
 it passes, `git commit`, then move on. Never let Claude Code build multiple steps at once.
 
+Current implementation status: Phases 0-4 are complete. Phase 5 notifications are partially
+complete: outbox, senders, templates, service, and CLI exist; scheduled Celery notification
+delivery is the remaining Phase 5 work. Phase 6 deployment/AWS work has not started.
+
 Legend: 🎯 goal · 📂 files · ✅ acceptance check · 💬 prompt to give Claude Code
 
 ---

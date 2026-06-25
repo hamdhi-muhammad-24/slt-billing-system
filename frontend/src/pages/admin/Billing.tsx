@@ -42,7 +42,7 @@ function GenerateOneSection() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [accountId, setAccountId] = useState(1)
-  const [period, setPeriod] = useState('2024-01')
+  const [period, setPeriod] = useState('2024-02')
 
   const mutation = useMutation({
     mutationFn: () => generateOne({ account_id: accountId, period }),
@@ -106,7 +106,7 @@ interface BatchSectionProps {
 }
 
 function GenerateBatchSection({ onRunStarted }: BatchSectionProps) {
-  const [period, setPeriod] = useState('2024-01')
+  const [period, setPeriod] = useState('2024-02')
 
   const mutation = useMutation({
     mutationFn: () => generateBatch({ period }),
@@ -151,14 +151,14 @@ const FAILURE_COLS: ColumnDef<BillingRunFailure>[] = [
 ]
 
 function runGradient(status: string) {
-  if (status === 'completed') return 'gradient-success'
+  if (status === 'done') return 'gradient-success'
   if (status === 'failed') return 'from-red-600 to-red-500 bg-gradient-to-br'
   if (status === 'running' || status === 'pending') return 'gradient-primary'
   return 'from-amber-500 to-amber-400 bg-gradient-to-br'
 }
 
 function RunStatusIcon({ status }: { status: string }) {
-  if (status === 'completed') return <CheckCircle2 size={20} className="text-white" />
+  if (status === 'done') return <CheckCircle2 size={20} className="text-white" />
   if (status === 'failed') return <XCircle size={20} className="text-white" />
   if (status === 'running') return <Loader2 size={20} className="text-white animate-spin" />
   if (status === 'pending') return <Circle size={20} className="text-white/80" />

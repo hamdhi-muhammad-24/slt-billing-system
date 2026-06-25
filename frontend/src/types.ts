@@ -1,30 +1,30 @@
 export interface Customer {
   id: number
   name: string
-  nic: string
-  email: string
-  phone: string
-  address: string
+  nic: string | null
+  email: string | null
+  phone: string | null
+  address: string | null
 }
 
-export type AccountStatus = 'active' | 'suspended' | 'closed'
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'CLOSED'
 
 export interface Account {
   id: number
   customer_id: number
   account_no: string
   status: AccountStatus
-  billing_cycle: string
+  billing_cycle: string | null
 }
 
-export type ServiceType = 'voice' | 'broadband' | 'peotv'
+export type ServiceType = 'VOICE' | 'BROADBAND' | 'PEOTV' | 'BUNDLE' | 'OTHER'
 
 export interface ServiceAccount {
   id: number
   account_id: number
   service_type: ServiceType
   identifier: string
-  package_id: number
+  package_id: number | null
 }
 
 export interface Package {
@@ -36,7 +36,7 @@ export interface Package {
 
 export interface InvoiceLineItem {
   id: number
-  service_account_id: number
+  service_account_id: number | null
   description: string
   amount: string
   is_tax: boolean
@@ -45,10 +45,8 @@ export interface InvoiceLineItem {
 
 export interface ServiceAccountSummary {
   id: number
-  account_id: number
   service_type: ServiceType
   identifier: string
-  package_id: number
 }
 
 export interface Invoice {
@@ -72,10 +70,10 @@ export interface Payment {
   amount: string
   paid_at: string
   method: string
-  reference: string
+  reference: string | null
 }
 
-export type BillingRunStatus = 'pending' | 'running' | 'done' | 'failed'
+export type BillingRunStatus = 'pending' | 'running' | 'done' | 'partial' | 'failed'
 
 export interface BillingRun {
   id: number
@@ -91,7 +89,7 @@ export interface BillingRun {
 export interface BillingRunFailure {
   id: number
   run_id: number
-  account_id: number
+  account_id: number | null
   error: string
 }
 

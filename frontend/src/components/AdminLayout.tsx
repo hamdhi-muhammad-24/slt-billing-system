@@ -19,9 +19,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/admin',           label: 'Dashboard', icon: LayoutDashboard, end: true,  pill: 'bg-blue-500/20 text-blue-300'   },
-  { to: '/admin/customers', label: 'Customers', icon: Users,           end: false, pill: 'bg-violet-500/20 text-violet-300' },
-  { to: '/admin/billing',   label: 'Billing',   icon: Receipt,         end: false, pill: 'bg-emerald-500/20 text-emerald-300' },
+  { to: '/admin',           label: 'Dashboard', icon: LayoutDashboard, end: true,  pill: 'bg-cyan-400/15 text-cyan-200' },
+  { to: '/admin/customers', label: 'Customers', icon: Users,           end: false, pill: 'bg-blue-400/15 text-blue-200' },
+  { to: '/admin/billing',   label: 'Billing',   icon: Receipt,         end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
 ]
 
 function SidebarNav({ onNav }: { onNav?: () => void }) {
@@ -35,16 +35,16 @@ function SidebarNav({ onNav }: { onNav?: () => void }) {
           onClick={onNav}
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+              'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
               isActive
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40',
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm'
+                : 'text-sidebar-foreground/68 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground',
             )
           }
         >
           {({ isActive }) => (
             <>
-              <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-md', isActive ? pill : 'bg-white/5 text-sidebar-foreground/50')}>
+              <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-md', isActive ? pill : 'bg-white/5 text-sidebar-foreground/50')}>
                 <Icon size={13} />
               </span>
               {label}
@@ -61,23 +61,23 @@ function SidebarFrame({ email, onNav }: { email?: string; onNav?: () => void }) 
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
-      <div className="h-14 flex items-center px-4 border-b border-sidebar-border shrink-0">
-        <Brand />
+      <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
+        <Brand tone="dark" size="md" />
       </div>
 
       <SidebarNav onNav={onNav} />
 
       {/* Avatar badge at bottom */}
-      <div className="shrink-0 p-3 border-t border-sidebar-border">
+      <div className="shrink-0 border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2.5 px-1 py-1">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full gradient-primary text-white text-xs font-bold">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-xs font-semibold text-white ring-1 ring-white/10">
             {initials}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-medium text-sidebar-foreground truncate">
               {email ?? 'Administrator'}
             </span>
-            <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-px text-[10px] font-medium mt-0.5">
+            <span className="mt-1 inline-flex w-fit items-center rounded-full bg-emerald-400/15 px-2 py-px text-[10px] font-medium text-emerald-200">
               Admin
             </span>
           </div>
@@ -104,15 +104,15 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="flex h-svh">
+    <div className="flex h-svh bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-sidebar-border">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border md:flex">
         <SidebarFrame email={me?.email} />
       </aside>
 
       {/* Mobile sidebar sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="p-0 w-56">
+        <SheetContent side="left" className="w-64 p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SidebarFrame email={me?.email} onNav={() => setSheetOpen(false)} />
         </SheetContent>
@@ -121,9 +121,7 @@ export default function AdminLayout() {
       {/* Main column */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Top bar */}
-        <header className="h-14 shrink-0 flex items-center gap-3 px-4 bg-background border-b border-border/60"
-          style={{ boxShadow: 'inset 0 -1px 0 oklch(0.40 0.145 258 / 12%)' }}
-        >
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card px-5 shadow-sm">
           <Button
             variant="ghost"
             size="icon"
@@ -134,10 +132,15 @@ export default function AdminLayout() {
             <Menu size={20} />
           </Button>
 
+          <div className="hidden flex-col leading-tight sm:flex">
+            <span className="text-sm font-semibold">SLT-MOBITEL Billing Console</span>
+            <span className="text-xs text-muted-foreground">Operational billing and invoice management</span>
+          </div>
+
           <span className="flex-1" />
 
           {me?.email && (
-            <span className="hidden sm:block text-xs text-muted-foreground">{me.email}</span>
+            <span className="hidden rounded-full border border-border bg-muted/45 px-3 py-1 text-xs font-medium text-muted-foreground sm:block">{me.email}</span>
           )}
 
           <Button
@@ -152,7 +155,7 @@ export default function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto px-5 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

@@ -12,6 +12,7 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
   paid:      { label: 'Paid',       className: 'bg-success/10 text-success border border-success/25',          dot: 'bg-success' },
   completed: { label: 'Completed',  className: 'bg-success/10 text-success border border-success/25',          dot: 'bg-success' },
   pending:   { label: 'Pending',    className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800', dot: 'bg-amber-500' },
+  partial:   { label: 'Partial',    className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800', dot: 'bg-amber-500' },
   running:   { label: 'Running',    className: 'bg-primary/10 text-primary border border-primary/25',          dot: 'bg-primary animate-pulse' },
   suspended: { label: 'Suspended',  className: 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800', dot: 'bg-orange-500' },
   failed:    { label: 'Failed',     className: 'bg-destructive/10 text-destructive border border-destructive/25', dot: 'bg-destructive' },

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 
 export default function NotFound() {
   const { session } = useAuth()
-  const home = !session ? '/login' : session.role === 'admin' ? '/admin' : '/app'
+  const home = !session ? '/' : session.role === 'admin' ? '/admin' : '/app'
 
   return (
     <div className="min-h-svh flex flex-col items-center justify-center gap-6 text-center p-6">

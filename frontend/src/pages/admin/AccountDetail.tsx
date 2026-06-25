@@ -17,7 +17,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
-  voice: 'Voice', broadband: 'Broadband', peotv: 'PEO TV',
+  VOICE: 'Voice',
+  BROADBAND: 'Broadband',
+  PEOTV: 'PEO TV',
+  BUNDLE: 'Bundle',
+  OTHER: 'Other',
 }
 
 const SA_COLS: ColumnDef<ServiceAccount>[] = [
@@ -35,7 +39,7 @@ const INV_COLS: ColumnDef<Invoice>[] = [
 const PAY_COLS: ColumnDef<Payment>[] = [
   { header: 'Date',      cell: (p) => formatDate(p.paid_at) },
   { header: 'Method',    cell: (p) => p.method },
-  { header: 'Reference', cell: (p) => p.reference },
+  { header: 'Reference', cell: (p) => p.reference ?? 'Not recorded' },
   { header: 'Amount',    numeric: true, cell: (p) => formatLKR(p.amount) },
 ]
 
@@ -71,13 +75,13 @@ export default function AccountDetail() {
         breadcrumbs={[{ label: 'Customers', to: '/admin/customers' }, { label: a.account_no }]}
       />
 
-      <Card>
-        <CardHeader><CardTitle>Summary</CardTitle></CardHeader>
+      <Card className="rounded-lg shadow-sm">
+        <CardHeader><CardTitle className="text-base">Account Summary</CardTitle></CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-[150px_1fr]">
             <dt className="text-muted-foreground">Account No</dt><dd className="font-medium">{a.account_no}</dd>
             <dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={a.status} /></dd>
-            <dt className="text-muted-foreground">Billing Cycle</dt><dd>{a.billing_cycle}</dd>
+            <dt className="text-muted-foreground">Billing Cycle</dt><dd>{a.billing_cycle ?? 'Standard monthly'}</dd>
           </dl>
         </CardContent>
       </Card>

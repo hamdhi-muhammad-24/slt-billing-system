@@ -2,13 +2,13 @@ from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
-# POST /billing/generate-one — duplicate guard (account 1, 2024-01 is GENERATED)
+# POST /billing/generate-one: duplicate guard (account 1, billing month 2024-02 is GENERATED)
 # ---------------------------------------------------------------------------
 
 def test_generate_one_409_for_already_generated(client: TestClient) -> None:
     r = client.post(
         "/billing/generate-one",
-        json={"account_id": 1, "period": "2024-01"},
+        json={"account_id": 1, "period": "2024-02"},
     )
     assert r.status_code == 409
 
@@ -16,7 +16,7 @@ def test_generate_one_409_for_already_generated(client: TestClient) -> None:
 def test_generate_one_409_body_has_detail(client: TestClient) -> None:
     r = client.post(
         "/billing/generate-one",
-        json={"account_id": 1, "period": "2024-01"},
+        json={"account_id": 1, "period": "2024-02"},
     )
     assert "detail" in r.json()
 

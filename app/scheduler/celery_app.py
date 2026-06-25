@@ -7,7 +7,7 @@ celery_app = Celery(
     "slt_billing",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.scheduler.tasks"],
+    include=["app.scheduler.tasks", "app.notifications.tasks"],
 )
 
 celery_app.conf.beat_schedule = {
@@ -15,5 +15,9 @@ celery_app.conf.beat_schedule = {
         "task": "app.scheduler.tasks.run_monthly_billing",
         "schedule": crontab(day_of_month=1, hour=2, minute=0),
         "kwargs": {"period": None},
+    },
+    "notify_pending": {
+        "task": "app.notifications.tasks.notify_pending",
+        "schedule": crontab(minute="*/15"),
     },
 }

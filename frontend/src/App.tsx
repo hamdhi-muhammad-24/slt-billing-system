@@ -1,10 +1,11 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import RequireRole from './auth/RequireRole'
 import AdminLayout from './components/AdminLayout'
 import CustomerLayout from './components/CustomerLayout'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
+import PublicPortal from './pages/PublicPortal'
 import Dashboard from './pages/admin/Dashboard'
 import Customers from './pages/admin/Customers'
 import CustomerDetail from './pages/admin/CustomerDetail'
@@ -19,7 +20,7 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route index element={<Navigate to="/login" replace />} />
+        <Route index element={<PublicPortal />} />
         <Route path="/login" element={<Login />} />
 
         <Route element={<RequireRole role="admin" />}>
