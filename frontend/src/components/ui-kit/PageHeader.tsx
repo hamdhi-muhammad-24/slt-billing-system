@@ -16,7 +16,7 @@ interface Props {
 
 export function PageHeader({ title, description, breadcrumbs, actions }: Props) {
   return (
-    <div className="mb-6 flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-6 flex flex-col gap-4 border-b border-border/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex flex-wrap items-center gap-1 text-xs font-medium text-muted-foreground">
@@ -31,7 +31,7 @@ export function PageHeader({ title, description, breadcrumbs, actions }: Props) 
             ))}
           </nav>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.8rem]">{title}</h1>
         {description && <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

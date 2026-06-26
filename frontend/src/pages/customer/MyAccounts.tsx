@@ -1,14 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import type { LucideIcon } from 'lucide-react'
 import {
+  AlertCircle,
   ArrowRight,
-  Building2,
   CalendarDays,
   CreditCard,
   Download,
   FileText,
   Inbox,
+  Mail,
   ReceiptText,
   ShieldCheck,
   Wifi,
@@ -49,88 +51,71 @@ function formatLkrNumber(value: number): string {
   return formatLKR(value.toFixed(2))
 }
 
-function MetricTile({
-  icon: Icon,
-  label,
-  value,
-  tone = 'primary',
-}: {
-  icon: typeof FileText
-  label: string
-  value: string
-  tone?: 'primary' | 'success' | 'warning'
-}) {
-  const toneClass =
-    tone === 'success'
-      ? 'bg-success/10 text-success'
-      : tone === 'warning'
-        ? 'bg-warning/10 text-warning-foreground'
-        : 'bg-primary/10 text-primary'
-
+function AccountCard({ account }: { account: Account }) {
   return (
-    <div className="surface-card flex items-center gap-3 p-4">
-      <div className={`flex size-10 shrink-0 items-center justify-center rounded-md ${toneClass}`}>
-        <Icon size={18} />
+    <div className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-0 overflow-hidden">
+      <div className="gradient-primary px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <Wifi size={13} className="text-white" />
+          </div>
+          <span className="text-white font-semibold text-sm">{account.account_no}</span>
+        </div>
+        <StatusBadge status={account.status} />
       </div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="mt-0.5 truncate text-lg font-semibold tabular-nums">{value}</p>
+
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground capitalize">
+          {account.billing_cycle ?? 'Standard monthly'} billing
+        </p>
+        <Link to={`/app/accounts/${account.id}`} className="block">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-between group hover:border-primary/40 hover:text-primary transition-colors"
+          >
+            View invoices
+            <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+          </Button>
+        </Link>
       </div>
     </div>
   )
 }
 
-function AccountCard({
-  account,
-  latestInvoice,
+function BillingCard({
+  icon: Icon,
+  label,
+  value,
+  helper,
+  tone = 'primary',
 }: {
-  account: Account
-  latestInvoice?: Invoice
+  icon: LucideIcon
+  label: string
+  value: string
+  helper?: string
+  tone?: 'primary' | 'success' | 'warning'
 }) {
+  const iconClass =
+    tone === 'success'
+      ? 'bg-success/10 text-success'
+      : tone === 'warning'
+        ? 'bg-warning/15 text-warning-foreground'
+        : 'bg-primary/10 text-primary'
+
   return (
-    <article className="surface-card overflow-hidden">
-      <div className="flex items-start justify-between gap-3 border-b border-border bg-muted/35 px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Wifi size={16} />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{account.account_no}</p>
-            <p className="text-xs text-muted-foreground">{account.billing_cycle ?? 'Monthly billing'}</p>
-          </div>
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-2 text-xl font-bold tracking-tight tabular-nums">{value}</p>
+          {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
         </div>
-        <StatusBadge status={account.status} />
-      </div>
-
-      <div className="grid gap-4 p-4">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs text-muted-foreground">Latest bill</p>
-            <p className="mt-1 font-semibold tabular-nums">
-              {latestInvoice ? formatLKR(latestInvoice.total_payable) : 'No bill'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Due date</p>
-            <p className="mt-1 font-semibold">
-              {latestInvoice ? formatDate(latestInvoice.due_date) : 'Pending'}
-            </p>
-          </div>
+        <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
+          <Icon size={16} />
         </div>
-
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="w-full justify-between hover:border-primary/40 hover:text-primary"
-        >
-          <Link to={`/app/accounts/${account.id}`}>
-            View account
-            <ArrowRight size={14} />
-          </Link>
-        </Button>
       </div>
-    </article>
+    </div>
   )
 }
 
@@ -164,35 +149,23 @@ export default function MyAccounts() {
     },
   })
 
-  if (customer.isPending || accounts.isPending) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="h-28 rounded-lg bg-muted animate-pulse" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-        </div>
+  if (customer.isPending || accounts.isPending) return (
+    <div className="flex flex-col gap-6">
+      <div className="h-8 w-56 bg-muted animate-pulse rounded-md" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (customer.error) {
-    return <ErrorState detail={customer.error instanceof ApiError ? customer.error.detail : customer.error.message} />
-  }
-  if (accounts.error) {
-    return <ErrorState detail={accounts.error instanceof ApiError ? accounts.error.detail : accounts.error.message} />
-  }
+  if (customer.error) return <ErrorState detail={customer.error instanceof ApiError ? customer.error.detail : customer.error.message} />
+  if (accounts.error) return <ErrorState detail={accounts.error instanceof ApiError ? accounts.error.detail : accounts.error.message} />
 
   const invoiceError = invoiceQueries.find((query) => query.error)?.error
   const paymentError = paymentQueries.find((query) => query.error)?.error
-  if (invoiceError) {
-    return <ErrorState detail={invoiceError instanceof ApiError ? invoiceError.detail : invoiceError.message} />
-  }
-  if (paymentError) {
-    return <ErrorState detail={paymentError instanceof ApiError ? paymentError.detail : paymentError.message} />
-  }
+  if (invoiceError) return <ErrorState detail={invoiceError instanceof ApiError ? invoiceError.detail : invoiceError.message} />
+  if (paymentError) return <ErrorState detail={paymentError instanceof ApiError ? paymentError.detail : paymentError.message} />
 
   const invoices = invoiceQueries.flatMap((query) => query.data?.items ?? [])
   const payments = paymentQueries.flatMap((query) => query.data ?? [])
@@ -216,7 +189,7 @@ export default function MyAccounts() {
   )
   const activeAccounts = accountList.filter((account) => account.status === 'ACTIVE').length
   const dueIn = latestInvoice ? daysUntil(latestInvoice.due_date) : null
-  const dueLabel = dueIn == null
+  const dueStatus = dueIn == null
     ? 'No bill yet'
     : dueIn < 0
       ? `${Math.abs(dueIn)} days overdue`
@@ -226,160 +199,182 @@ export default function MyAccounts() {
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-        <div className="gradient-primary relative p-5 text-white sm:p-6">
-          <div className="network-grid absolute inset-0 opacity-35" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-medium text-white/72">Customer self-care dashboard</p>
-              <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
-                Hello, {customer.data.name}
-              </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">
-                Review linked SLT-MOBITEL accounts, check your latest bill, and download statements
-                from a single secure workspace.
-              </p>
-            </div>
-            <div className="grid min-w-[260px] gap-2 rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur">
-              <p className="text-xs font-medium text-white/70">Total payable across latest bills</p>
-              <p className="text-3xl font-semibold tabular-nums">
-                {invoiceLoading ? 'Checking...' : formatLkrNumber(totalPayable)}
-              </p>
-              <p className="text-xs text-white/60">
-                {accountList.length} account{accountList.length === 1 ? '' : 's'} linked to this login
-              </p>
-            </div>
-          </div>
+      <div>
+        <p className="text-sm text-muted-foreground">Welcome back</p>
+        <h1 className="text-2xl font-bold tracking-tight">Hello, {customer.data.name}</h1>
+      </div>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          Billing Summary
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <BillingCard
+            icon={CreditCard}
+            label="Current amount due"
+            value={invoiceLoading ? 'Checking...' : formatLkrNumber(totalPayable)}
+            helper="Across latest bills"
+          />
+          <BillingCard
+            icon={CalendarDays}
+            label="Due date"
+            value={invoiceLoading ? 'Checking...' : latestInvoice ? formatDate(latestInvoice.due_date) : 'No bill'}
+            helper={invoiceLoading ? undefined : dueStatus}
+            tone={dueIn != null && dueIn <= 3 ? 'warning' : 'primary'}
+          />
+          <BillingCard
+            icon={CreditCard}
+            label="Last payment"
+            value={paymentLoading ? 'Checking...' : latestPayment ? formatLKR(latestPayment.amount) : 'No payment'}
+            helper={latestPayment ? formatDate(latestPayment.paid_at) : 'Payment history'}
+            tone="success"
+          />
+          <BillingCard
+            icon={ShieldCheck}
+            label="Active connections"
+            value={String(activeAccounts)}
+            helper={`${accountList.length} linked account${accountList.length === 1 ? '' : 's'}`}
+            tone="success"
+          />
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricTile icon={Building2} label="Linked accounts" value={String(accountList.length)} />
-        <MetricTile icon={ShieldCheck} label="Active services" value={String(activeAccounts)} tone="success" />
-        <MetricTile
-          icon={CalendarDays}
-          label="Next due status"
-          value={invoiceLoading ? 'Checking...' : dueLabel}
-          tone={dueIn != null && dueIn <= 3 ? 'warning' : 'primary'}
-        />
-        <MetricTile
-          icon={CreditCard}
-          label="Last payment"
-          value={paymentLoading ? 'Checking...' : latestPayment ? formatLKR(latestPayment.amount) : 'No payment'}
-          tone="success"
-        />
-      </div>
-
-      <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-        <article className="surface-section p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Latest bill</p>
-              <h2 className="mt-1 text-3xl font-semibold tabular-nums">
-                {invoiceLoading ? 'Checking...' : latestInvoice ? formatLKR(latestInvoice.total_payable) : 'No bill available'}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {latestInvoice && latestAccount
-                  ? `${latestAccount.account_no} for ${latestInvoice.period}, due ${formatDate(latestInvoice.due_date)}`
-                  : 'Bills generated by SLT-MOBITEL will appear here.'}
-              </p>
-            </div>
-            {latestInvoice && (
-              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                <p className="text-xs text-muted-foreground">Due status</p>
-                <p className="font-semibold">{dueLabel}</p>
+      <section className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4">
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="gradient-primary px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+                <FileText size={13} className="text-white" />
               </div>
-            )}
+              <span className="text-white font-semibold text-sm">Latest bill preview</span>
+            </div>
+            {latestInvoice && <span className="text-xs font-medium text-white/80">{latestInvoice.period}</span>}
           </div>
 
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-            <Button
-              disabled={!latestInvoice}
-              onClick={() => latestInvoice && navigate(`/app/invoices/${latestInvoice.id}`)}
-            >
-              <FileText size={15} />
-              View latest bill
-            </Button>
+          <div className="px-4 py-4">
+            <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
+              {invoiceLoading ? 'Checking...' : latestInvoice ? formatLKR(latestInvoice.total_payable) : 'No bill available'}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {latestInvoice && latestAccount
+                ? `${latestAccount.account_no} bill due ${formatDate(latestInvoice.due_date)}`
+                : 'Your latest generated bill will appear here.'}
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Button
+                size="sm"
+                disabled={!latestInvoice}
+                onClick={() => latestInvoice && navigate(`/app/invoices/${latestInvoice.id}`)}
+              >
+                <FileText size={13} />
+                View Bill
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!latestInvoice || downloadLatest.isPending}
+                onClick={() => latestInvoice && downloadLatest.mutate(latestInvoice.id)}
+              >
+                <Download size={13} />
+                {downloadLatest.isPending ? 'Downloading...' : 'Download PDF'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="gradient-primary px-4 py-3 flex items-center gap-2">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <ReceiptText size={13} className="text-white" />
+            </div>
+            <span className="text-white font-semibold text-sm">Quick actions</span>
+          </div>
+
+          <div className="grid gap-2 px-4 py-3">
             <Button
               variant="outline"
+              size="sm"
+              className="justify-between"
               disabled={!latestInvoice || downloadLatest.isPending}
               onClick={() => latestInvoice && downloadLatest.mutate(latestInvoice.id)}
             >
-              <Download size={15} />
-              {downloadLatest.isPending ? 'Downloading...' : 'Download PDF'}
+              <span className="inline-flex items-center gap-2">
+                <Download size={13} />
+                Download bill
+              </span>
+              <ArrowRight size={13} />
             </Button>
-          </div>
-        </article>
-
-        <article className="surface-section p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Quick actions</p>
-              <h2 className="mt-1 text-xl font-semibold">Billing shortcuts</h2>
-            </div>
-            <div className="flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <ReceiptText size={20} />
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-2">
             <Button
               variant="outline"
+              size="sm"
               className="justify-between"
               disabled={!latestAccount}
               onClick={() => latestAccount && navigate(`/app/accounts/${latestAccount.id}`)}
             >
-              Open account history
-              <ArrowRight size={14} />
+              <span className="inline-flex items-center gap-2">
+                <ReceiptText size={13} />
+                View bill history
+              </span>
+              <ArrowRight size={13} />
             </Button>
             <Button
               variant="outline"
+              size="sm"
               className="justify-between"
               disabled={!latestInvoice}
-              onClick={() => latestInvoice && navigate(`/app/invoices/${latestInvoice.id}`)}
+              onClick={() => toast.info('Online bill payment will be connected in the payment phase.')}
             >
-              Review bill breakdown
-              <ArrowRight size={14} />
+              <span className="inline-flex items-center gap-2">
+                <CreditCard size={13} />
+                Pay bill
+              </span>
+              <ArrowRight size={13} />
             </Button>
             <Button
               variant="outline"
+              size="sm"
               className="justify-between"
-              disabled={!latestInvoice || downloadLatest.isPending}
-              onClick={() => latestInvoice && downloadLatest.mutate(latestInvoice.id)}
+              onClick={() => toast.info('eBill request workflow will be added in a later phase.')}
             >
-              Download statement
-              <ArrowRight size={14} />
+              <span className="inline-flex items-center gap-2">
+                <Mail size={13} />
+                Request eBill
+              </span>
+              <ArrowRight size={13} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="justify-between"
+              onClick={() => toast.info('Billing issue reporting will be added in a support workflow phase.')}
+            >
+              <span className="inline-flex items-center gap-2">
+                <AlertCircle size={13} />
+                Report billing issue
+              </span>
+              <ArrowRight size={13} />
             </Button>
           </div>
-        </article>
+        </div>
       </section>
 
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Your accounts</p>
-            <h2 className="text-xl font-semibold">{accountList.length} linked account{accountList.length === 1 ? '' : 's'}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">Broadband, voice, PeoTV, and bundled service accounts</p>
-        </div>
-
-        {accountList.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title="No accounts linked to your login yet"
-            hint="Contact SLT support if you believe this is an error."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {accountList.map((account) => (
-              <AccountCard
-                key={account.id}
-                account={account}
-                latestInvoice={latestByAccount.get(account.id)}
-              />
-            ))}
-          </div>
-        )}
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          Your Accounts ({accountList.length})
+        </h2>
+        {accountList.length === 0
+          ? (
+            <EmptyState
+              icon={Inbox}
+              title="No accounts linked to your login yet"
+              hint="Contact SLT support if you believe this is an error."
+            />
+          )
+          : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {accountList.map((a) => <AccountCard key={a.id} account={a} />)}
+            </div>
+          )}
       </section>
     </div>
   )
