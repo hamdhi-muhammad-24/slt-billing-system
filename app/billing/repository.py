@@ -6,8 +6,8 @@ All functions return plain dataclasses — no SQLAlchemy types leak out.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import extract, func, select
@@ -25,6 +25,7 @@ from app.db.models import (
     Payment,
     RunStatus,
     ServiceAccount,
+    UsageRecord,
 )
 
 
@@ -62,6 +63,15 @@ class PaymentRow:
 
 
 @dataclass
+class UsageRecordRow:
+    service_number: str
+    service_type:   str
+    event_time:     datetime | None
+    description:    str | None
+    charge:         Decimal
+
+
+@dataclass
 class BillInputs:
     # From accounts + customers
     account_number:   str
@@ -83,6 +93,7 @@ class BillInputs:
     service_accounts: list[ServiceAccountRow]
     line_items:       list[LineItemRow]
     payments:         list[PaymentRow]
+    usage_records:    list[UsageRecordRow] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +241,38 @@ def get_bill_inputs(
         for r in pmt_rows
     ]
 
+    # ── 6. Optional usage detail for the lower-right invoice table ─────────
+    svc_ids = [svc.id for svc in service_accounts]
+    usage_records: list[UsageRecordRow] = []
+    if svc_ids:
+        usage_rows = session.execute(
+            select(
+                ServiceAccount.service_number,
+                ServiceAccount.service_type,
+                UsageRecord.event_time,
+                UsageRecord.description,
+                UsageRecord.charge,
+            )
+            .join(ServiceAccount, UsageRecord.service_account_id == ServiceAccount.id)
+            .where(
+                UsageRecord.service_account_id.in_(svc_ids),
+                UsageRecord.period_start == period_start,
+                UsageRecord.period_end == period_end,
+            )
+            .order_by(UsageRecord.event_time, UsageRecord.id)
+        ).all()
+
+        usage_records = [
+            UsageRecordRow(
+                service_number=r.service_number,
+                service_type=r.service_type.value,
+                event_time=r.event_time,
+                description=r.description,
+                charge=r.charge or Decimal("0.00"),
+            )
+            for r in usage_rows
+        ]
+
     return BillInputs(
         account_number=acct_row.account_number,
         telephone_number=acct_row.telephone_number,
@@ -248,6 +291,7 @@ def get_bill_inputs(
         service_accounts=service_accounts,
         line_items=line_items,
         payments=payments,
+        usage_records=usage_records,
     )
 
 

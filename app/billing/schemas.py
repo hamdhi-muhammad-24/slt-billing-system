@@ -4,10 +4,10 @@ No SQLAlchemy, no FastAPI, no HTTP imports.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class PaymentInfo(BaseModel):
@@ -15,6 +15,14 @@ class PaymentInfo(BaseModel):
     method: str
     amount: Decimal
     reference: str | None = None
+
+
+class UsageInfo(BaseModel):
+    event_time: datetime | None = None
+    service_number: str
+    service_type: str
+    description: str
+    charge: Decimal
 
 
 class BillLine(BaseModel):
@@ -71,3 +79,4 @@ class Bill(BaseModel):
     taxes_total:      Decimal
     summary:          Summary
     payments:         list[PaymentInfo]
+    usage_records:    list[UsageInfo] = Field(default_factory=list)

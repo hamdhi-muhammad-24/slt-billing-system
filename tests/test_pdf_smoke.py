@@ -6,14 +6,20 @@ All fixtures use assemble_bill() directly with in-memory BillInputs.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from app.billing.engine import assemble_bill
-from app.billing.repository import BillInputs, LineItemRow, PaymentRow, ServiceAccountRow
+from app.billing.repository import (
+    BillInputs,
+    LineItemRow,
+    PaymentRow,
+    ServiceAccountRow,
+    UsageRecordRow,
+)
 from app.billing.schemas import Bill
 from app.pdf.renderer import render_bill
 
@@ -219,4 +225,23 @@ class TestPdfSmoke:
         )
         out = str(tmp_path / "long_addr.pdf")
         render_bill(assemble_bill(inputs), out)
+        _assert_valid_pdf(out)
+
+    def test_usage_records_render_usage_table(self, tmp_path):
+        """Optional usage rows render in the lower-right usage detail table."""
+        inputs = _base(
+            usage_records=[
+                UsageRecordRow(
+                    service_number="0990000000",
+                    service_type="PEOTV",
+                    event_time=datetime(2024, 2, 3, 19, 30),
+                    description="Additional Channels",
+                    charge=Decimal("125.00"),
+                )
+            ],
+        )
+        bill = assemble_bill(inputs)
+        assert len(bill.usage_records) == 1
+        out = str(tmp_path / "usage.pdf")
+        render_bill(bill, out)
         _assert_valid_pdf(out)

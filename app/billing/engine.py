@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.billing import repository
 from app.billing.repository import BillInputs
-from app.billing.schemas import Bill, BillLine, PaymentInfo, ServiceGroup, Summary
+from app.billing.schemas import Bill, BillLine, PaymentInfo, ServiceGroup, Summary, UsageInfo
 from app.core.money import money_sum, quantize
 
 
@@ -120,6 +120,16 @@ def assemble_bill(inputs: BillInputs) -> Bill:
                 reference=p.reference,
             )
             for p in inputs.payments
+        ],
+        usage_records=[
+            UsageInfo(
+                event_time=u.event_time,
+                service_number=u.service_number,
+                service_type=u.service_type,
+                description=u.description or "",
+                charge=u.charge,
+            )
+            for u in inputs.usage_records
         ],
     )
 

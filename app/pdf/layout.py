@@ -17,7 +17,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 # Page geometry
 # ---------------------------------------------------------------------------
 PAGE_W, PAGE_H = A4          # 595.28 × 841.89 pt
-MARGIN     = 36.0
+MARGIN     = 43.0
 LEFT       = MARGIN
 RIGHT      = PAGE_W - MARGIN
 CONTENT_W  = RIGHT - LEFT    # ≈ 523 pt
@@ -25,11 +25,11 @@ CONTENT_W  = RIGHT - LEFT    # ≈ 523 pt
 # ---------------------------------------------------------------------------
 # Colours (from PDF.md §1)
 # ---------------------------------------------------------------------------
-HEADER_BLUE  = HexColor("#14529E")
-LABEL_BLUE   = HexColor("#2E6DB4")
-TEAL_FILL    = HexColor("#16A7C2")
-TEAL_BORDER  = HexColor("#16A7C2")
-GREEN_BORDER = HexColor("#4CAF50")
+HEADER_BLUE  = HexColor("#0158A5")
+LABEL_BLUE   = HexColor("#07649E")
+TEAL_FILL    = HexColor("#09B8D9")
+TEAL_BORDER  = HexColor("#0B94BE")
+GREEN_BORDER = HexColor("#4CA957")
 BOX_BORDER   = HexColor("#BFC9D4")
 TEXT_COLOR   = HexColor("#1A1A1A")
 MUTED_COLOR  = HexColor("#6B7280")

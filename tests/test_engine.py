@@ -6,14 +6,20 @@ The golden test verifies Sample-1 from docs/DATABASE.md §7.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
 from app.billing.engine import assemble_bill
-from app.billing.repository import BillInputs, LineItemRow, PaymentRow, ServiceAccountRow
+from app.billing.repository import (
+    BillInputs,
+    LineItemRow,
+    PaymentRow,
+    ServiceAccountRow,
+    UsageRecordRow,
+)
 
 # ---------------------------------------------------------------------------
 # Sample-1 fixture — exact data from docs/DATABASE.md §7
@@ -186,6 +192,22 @@ class TestSample1Golden:
         assert len(bill.payments) == 1
         assert bill.payments[0].method == "PHYSICAL"
         assert bill.payments[0].amount == Decimal("5000.00")
+
+    def test_usage_records_preserved(self):
+        inputs = _sample1()
+        inputs.usage_records = [
+            UsageRecordRow(
+                service_number="0359236535",
+                service_type="PEOTV",
+                event_time=datetime(2024, 2, 3, 19, 30),
+                description="Additional Channels",
+                charge=Decimal("125.00"),
+            )
+        ]
+        bill = assemble_bill(inputs)
+        assert len(bill.usage_records) == 1
+        assert bill.usage_records[0].description == "Additional Channels"
+        assert bill.usage_records[0].charge == Decimal("125.00")
 
 
 # ---------------------------------------------------------------------------
