@@ -15,9 +15,9 @@ def test_list_customers_pagination_envelope(client: TestClient) -> None:
     assert set(body.keys()) >= {"items", "total", "limit", "offset"}
 
 
-def test_list_customers_total_is_8(client: TestClient) -> None:
+def test_list_customers_total_has_realistic_seed_set(client: TestClient) -> None:
     body = client.get("/customers").json()
-    assert body["total"] == 8
+    assert body["total"] >= 28
 
 
 def test_list_customers_default_pagination(client: TestClient) -> None:
@@ -61,3 +61,34 @@ def test_money_fields_are_strings(client: TestClient) -> None:
 def test_2024_01_total_payable_exact(client: TestClient) -> None:
     inv = _account1_invoice_2024_01(client)
     assert inv["total_payable"] == "4628.52"
+
+
+def test_customer_profile_includes_kyc_contact_fields(client: TestClient) -> None:
+    customer = client.get("/customers/1").json()
+    assert customer["nic"]
+    assert customer["email"]
+    assert customer["phone"]
+
+
+def test_account_usage_history_returns_six_months(client: TestClient) -> None:
+    body = client.get("/accounts/1/usage/history?months=6").json()
+    periods = {row["period"] for row in body}
+    assert {"2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"} <= periods
+
+
+def test_daily_usage_endpoint_returns_rows(client: TestClient) -> None:
+    services = client.get("/accounts/1/service-accounts").json()
+    broadband = next(s for s in services if s["service_type"] == "BROADBAND")
+    rows = client.get(f"/service-accounts/{broadband['id']}/daily-usage?period=2026-06").json()
+    assert len(rows) >= 28
+    assert {"usage_date", "download_gb", "upload_gb", "total_gb"} <= set(rows[0])
+
+
+def test_admin_dashboard_summary_returns_operational_counts(client: TestClient) -> None:
+    body = client.get("/billing/admin-summary").json()
+    assert body["total_customers"] >= 28
+    assert body["active_accounts"] >= 1
+    assert body["generated_invoices"] >= 1
+    assert "recent_billing_runs" in body
+    assert "recent_invoices" in body
+    assert "alerts" in body

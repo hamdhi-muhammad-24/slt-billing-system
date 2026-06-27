@@ -6,6 +6,7 @@ import { formatDate } from '../lib/format'
 import { DataTable } from './ui-kit/DataTable'
 import { StatusBadge } from './ui-kit/StatusBadge'
 import { Separator } from '@/components/ui/separator'
+import Brand from './Brand'
 
 const LINE_ITEM_COLS: ColumnDef<InvoiceLineItem>[] = [
   {
@@ -32,6 +33,25 @@ interface Props {
   invoice: Invoice
 }
 
+type InvoiceStatus = 'Paid' | 'Due' | 'Overdue' | 'Generated'
+
+function asNumber(value: string): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+function invoiceStatus(invoice: Invoice): InvoiceStatus {
+  if (asNumber(invoice.total_payable) <= 0) return 'Paid'
+  if (!invoice.due_date) return 'Generated'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(invoice.due_date)
+  due.setHours(0, 0, 0, 0)
+
+  return due < today ? 'Overdue' : 'Due'
+}
+
 function DetailTile({
   label,
   value,
@@ -53,21 +73,35 @@ function DetailTile({
 }
 
 export default function InvoiceSnapshotCard({ invoice: inv }: Props) {
+  const status = invoiceStatus(inv)
+
   return (
     <>
       <section className="surface-section overflow-hidden">
         <div className="gradient-primary relative p-5 text-white sm:p-6">
           <div className="network-grid absolute inset-0 opacity-30" />
-          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-white/72">Total payable</p>
-              <p className="mt-2 text-4xl font-semibold tabular-nums sm:text-5xl">
-                {formatLKR(inv.total_payable)}
-              </p>
+          <div className="relative flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <Brand tone="dark" size="lg" />
+              <StatusBadge status={status} />
             </div>
-            <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm backdrop-blur">
-              <p className="text-white/65">Billing period</p>
-              <p className="mt-1 font-semibold text-white">{inv.period}</p>
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/72">Total payable</p>
+                <p className="mt-2 text-4xl font-semibold tabular-nums sm:text-5xl">
+                  {formatLKR(inv.total_payable)}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm backdrop-blur">
+                  <p className="text-white/65">Billing period</p>
+                  <p className="mt-1 font-semibold text-white">{inv.period}</p>
+                </div>
+                <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm backdrop-blur">
+                  <p className="text-white/65">Payment due</p>
+                  <p className="mt-1 font-semibold text-white">{formatDate(inv.due_date)}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

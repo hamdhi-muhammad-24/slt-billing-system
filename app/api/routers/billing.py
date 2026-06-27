@@ -9,13 +9,26 @@ from sqlalchemy.orm import Session
 from app.api import crud
 from app.api.deps import get_db
 from app.api.errors import DuplicateInvoice, NotFound
-from app.api.schemas import BillingRunOut, GenerateBatchRequest, GenerateOneRequest, InvoiceOut
+from app.api.schemas import AdminDashboardSummaryOut, BillingRunOut, GenerateBatchRequest, GenerateOneRequest, InvoiceOut
 from app.auth.dependencies import require_admin
 from app.auth.schemas import UserOut
 from app.billing import engine as billing_engine
 from app.billing import repository
 
 router = APIRouter(prefix="/billing", tags=["billing"])
+
+
+@router.get(
+    "/admin-summary",
+    response_model=AdminDashboardSummaryOut,
+    summary="Admin billing dashboard summary",
+    description="Returns operational billing counts, recent runs, recent invoices, notifications, and alerts.",
+)
+def admin_dashboard_summary(
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin),
+) -> AdminDashboardSummaryOut:
+    return crud.get_admin_dashboard_summary(db)
 
 
 @router.post(

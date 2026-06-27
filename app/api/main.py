@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_exception_handlers
-from app.api.routers import accounts, billing, customers, health, invoices
+from app.api.routers import accounts, billing, customers, health, invoices, service_accounts
 from app.auth import router as auth_router
 
 _CORS_ORIGINS = [
@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
     application.include_router(health.router)
     application.include_router(customers.router)
     application.include_router(accounts.router)
+    application.include_router(service_accounts.router)
     application.include_router(invoices.router)
     application.include_router(billing.router)
     return application

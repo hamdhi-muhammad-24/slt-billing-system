@@ -1,12 +1,15 @@
 import type {
   Account,
+  AdminDashboardSummary,
   BillingRun,
   BillingRunFailure,
   Customer,
+  DailyUsageRecord,
   Invoice,
   Paginated,
   Payment,
   ServiceAccount,
+  UsageSummary,
 } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -56,7 +59,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     clearToken()
     localStorage.removeItem('slt-auth')
     window.location.href = '/login'
-    throw new ApiError(401, 'Session expired — please log in again.')
+    throw new ApiError(401, 'Session expired - please log in again.')
   }
 
   if (!res.ok) {
@@ -127,6 +130,10 @@ export function getHealth(): Promise<HealthResponse> {
   return request('/health')
 }
 
+export function getAdminDashboardSummary(): Promise<AdminDashboardSummary> {
+  return request('/billing/admin-summary')
+}
+
 export function listCustomers(
   params?: { limit?: number; offset?: number },
 ): Promise<Paginated<Customer>> {
@@ -158,6 +165,19 @@ export function listInvoices(
 
 export function listPayments(accountId: number): Promise<Payment[]> {
   return request(`/accounts/${accountId}/payments`)
+}
+
+export function listUsage(accountId: number, period?: string): Promise<UsageSummary[]> {
+  const q = period ? `?period=${encodeURIComponent(period)}` : ''
+  return request(`/accounts/${accountId}/usage${q}`)
+}
+
+export function listUsageHistory(accountId: number, months = 6): Promise<UsageSummary[]> {
+  return request(`/accounts/${accountId}/usage/history?months=${months}`)
+}
+
+export function listDailyUsage(serviceAccountId: number, period: string): Promise<DailyUsageRecord[]> {
+  return request(`/service-accounts/${serviceAccountId}/daily-usage?period=${encodeURIComponent(period)}`)
 }
 
 export function getInvoice(invoiceId: number): Promise<Invoice> {

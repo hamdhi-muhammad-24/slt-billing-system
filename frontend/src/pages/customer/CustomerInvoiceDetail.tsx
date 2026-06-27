@@ -64,7 +64,7 @@ function DetailCard({
   value: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <Icon size={16} />
       </div>
@@ -101,7 +101,7 @@ export default function CustomerInvoiceDetail() {
   })
 
   if (isPending) return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-16 md:pb-0">
       <CardSkeleton />
       <CardSkeleton />
     </div>
@@ -127,7 +127,7 @@ export default function CustomerInvoiceDetail() {
         Back to account
       </Button>
 
-      <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="gradient-primary px-5 py-5 text-white sm:px-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-col gap-5">
@@ -142,7 +142,7 @@ export default function CustomerInvoiceDetail() {
             </div>
 
             <div className="flex flex-col gap-3 sm:min-w-[300px]">
-              <div className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur">
+              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-white/65">
@@ -188,7 +188,7 @@ export default function CustomerInvoiceDetail() {
           <DetailCard icon={FileText} label="Issued" value={formatDate(inv.issue_date)} />
           <DetailCard icon={CalendarDays} label="Due date" value={formatDate(inv.due_date)} />
           <DetailCard icon={ReceiptText} label="Billing period" value={inv.period} />
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <label htmlFor="billing-period" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Select period
             </label>
@@ -209,9 +209,9 @@ export default function CustomerInvoiceDetail() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-xl border border-border bg-card shadow-sm">
+        <div className="rounded-lg border border-border bg-card shadow-sm">
           <div className="flex items-center gap-3 border-b border-border bg-muted/35 px-4 py-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <WalletCards size={14} />
             </div>
             <div>
@@ -264,9 +264,9 @@ export default function CustomerInvoiceDetail() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card shadow-sm">
+        <div className="rounded-lg border border-border bg-card shadow-sm">
           <div className="flex items-center gap-3 border-b border-border bg-muted/35 px-4 py-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-success/10 text-success">
               <CreditCard size={14} />
             </div>
             <div>
@@ -303,6 +303,27 @@ export default function CustomerInvoiceDetail() {
           </div>
         </div>
       </section>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 p-3 shadow-lg backdrop-blur md:hidden">
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={download.isPending}
+            onClick={() => download.mutate()}
+          >
+            <Download size={13} />
+            Download
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => toast.info('Online bill payment will be connected in the payment phase.')}
+          >
+            <CreditCard size={13} />
+            Pay Bill
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

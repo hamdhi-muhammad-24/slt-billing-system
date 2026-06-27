@@ -65,7 +65,7 @@ function LatestBillCard({ invoice }: { invoice: Invoice }) {
           onClick={() => download.mutate()}
         >
           <Download size={13} />
-          {download.isPending ? 'Downloading…' : 'Download PDF'}
+          {download.isPending ? 'Downloading...' : 'Download PDF'}
         </Button>
       </div>
     </div>
@@ -107,7 +107,7 @@ function PaymentTimelineItem({ payment, isLast }: { payment: Payment; isLast: bo
       </div>
       <div className={cn('flex flex-col gap-0.5', isLast ? 'pb-0' : 'pb-4')}>
         <p className="text-sm font-medium">{formatLKR(payment.amount)}</p>
-        <p className="text-xs text-muted-foreground">{payment.method} · {formatDate(payment.paid_at)}</p>
+        <p className="text-xs text-muted-foreground">{payment.method} - {formatDate(payment.paid_at)}</p>
       </div>
     </div>
   )
@@ -125,6 +125,12 @@ export default function CustomerAccountDetail() {
   const account = useAccount(accountId)
   const invoices = useInvoices(accountId)
   const payments = usePayments(accountId)
+  const stickyDownload = useMutation({
+    mutationFn: (invoiceId: number) => downloadInvoicePdf(invoiceId),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.detail : 'PDF download failed.')
+    },
+  })
 
   if (ownedAccounts.isPending || account.isPending || invoices.isPending || payments.isPending)
     return (
@@ -195,6 +201,31 @@ export default function CustomerAccountDetail() {
           </div>
         )}
       </section>
+
+      {latestInvoice && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 p-3 shadow-lg backdrop-blur md:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={stickyDownload.isPending}
+              onClick={() => stickyDownload.mutate(latestInvoice.id)}
+            >
+              <Download size={13} />
+              Download
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => toast.info('Online bill payment will be connected in the payment phase.')}
+            >
+              <CreditCard size={13} />
+              Pay Bill
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 import { Hash, IdCard, Mail, MapPin, Phone, UserRound, Wifi } from 'lucide-react'
 import type { Account } from '../../types'
 import type { ColumnDef } from '../../components/ui-kit/DataTable'
@@ -10,6 +11,8 @@ import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { DataTable } from '../../components/ui-kit/DataTable'
 import { StatusBadge } from '../../components/ui-kit/StatusBadge'
 import { ApiError } from '../../lib/api'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const ACCOUNT_COLS: ColumnDef<Account>[] = [
   { header: 'Account No',    cell: (a) => <span className="font-medium">{a.account_no}</span> },
@@ -54,9 +57,20 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
   const navigate = useNavigate()
+  const [accountSearch, setAccountSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | Account['status']>('ALL')
 
   const customer = useCustomer(customerId)
   const accounts = useCustomerAccounts(customerId)
+
+  const filteredAccounts = useMemo(() => {
+    const q = accountSearch.trim().toLowerCase()
+    return (accounts.data ?? []).filter((account) => {
+      const matchesSearch = !q || account.account_no.toLowerCase().includes(q) || (account.service_label ?? '').toLowerCase().includes(q)
+      const matchesStatus = statusFilter === 'ALL' || account.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [accountSearch, accounts.data, statusFilter])
 
   if (customer.isPending || accounts.isPending) return (
     <>
@@ -80,7 +94,7 @@ export default function CustomerDetail() {
       <section className="surface-section overflow-hidden">
         <div className="flex flex-col gap-5 border-b border-border bg-muted/25 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-semibold text-primary-foreground">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-md bg-primary text-lg font-semibold text-primary-foreground">
               {initials(c.name)}
             </div>
             <div className="min-w-0">
@@ -111,9 +125,30 @@ export default function CustomerDetail() {
             <h2 className="text-base font-semibold">Linked services</h2>
           </div>
         </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+            value={accountSearch}
+            onChange={(event) => setAccountSearch(event.target.value)}
+            placeholder="Search account number or service label"
+            className="h-9 bg-white text-sm sm:max-w-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            {(['ALL', 'ACTIVE', 'SUSPENDED', 'CLOSED'] as const).map((status) => (
+              <Button
+                key={status}
+                type="button"
+                variant={statusFilter === status ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+              >
+                {status === 'ALL' ? 'All' : status}
+              </Button>
+            ))}
+          </div>
+        </div>
         <DataTable
           columns={ACCOUNT_COLS}
-          data={accounts.data}
+          data={filteredAccounts}
           keyExtractor={(a) => a.id}
           emptyLabel="No accounts."
           onRowClick={(a) => navigate(`/admin/accounts/${a.id}`)}

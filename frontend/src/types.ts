@@ -4,6 +4,12 @@ export interface Customer {
   nic: string | null
   email: string | null
   phone: string | null
+  alternate_phone: string | null
+  title: string | null
+  first_name: string | null
+  last_name: string | null
+  preferred_language: string | null
+  customer_type: string | null
   address: string | null
 }
 
@@ -15,6 +21,13 @@ export interface Account {
   account_no: string
   status: AccountStatus
   billing_cycle: string | null
+  service_label: string | null
+  telephone_number: string | null
+  bill_delivery_method: string | null
+  credit_limit: string | null
+  deposit_amount: string | null
+  notify_email: boolean
+  notify_sms: boolean
 }
 
 export type ServiceType = 'VOICE' | 'BROADBAND' | 'PEOTV' | 'BUNDLE' | 'OTHER'
@@ -25,6 +38,10 @@ export interface ServiceAccount {
   service_type: ServiceType
   identifier: string
   package_id: number | null
+  package_name: string | null
+  connection_type: string | null
+  label: string | null
+  status: AccountStatus | null
 }
 
 export interface Package {
@@ -71,6 +88,34 @@ export interface Payment {
   paid_at: string
   method: string
   reference: string | null
+  status: string | null
+  receipt_number: string | null
+  provider: string | null
+}
+
+export interface UsageSummary {
+  id: number
+  service_account_id: number
+  period: string
+  metric: string
+  included_quantity: string
+  used_quantity: string
+  remaining_quantity: string
+  overage_quantity: string
+  charge: string
+}
+
+export interface DailyUsageRecord {
+  id: number
+  service_account_id: number
+  usage_date: string
+  bucket: string
+  protocol: string | null
+  app_category: string | null
+  download_gb: string
+  upload_gb: string
+  total_gb: string
+  charge: string
 }
 
 export type BillingRunStatus = 'pending' | 'running' | 'done' | 'partial' | 'failed'
@@ -91,6 +136,35 @@ export interface BillingRunFailure {
   run_id: number
   account_id: number | null
   error: string
+}
+
+export interface DashboardRecentInvoice {
+  id: number
+  account_id: number
+  account_no: string
+  customer_name: string
+  period: string
+  issue_date: string
+  total_payable: string
+  status: string
+}
+
+export interface DashboardAlert {
+  level: 'success' | 'warning' | 'critical'
+  title: string
+  detail: string
+}
+
+export interface AdminDashboardSummary {
+  total_customers: number
+  active_accounts: number
+  generated_invoices: number
+  failed_billing_runs: number
+  notifications_sent: number
+  notifications_failed: number
+  recent_billing_runs: (BillingRun & { failures: BillingRunFailure[] })[]
+  recent_invoices: DashboardRecentInvoice[]
+  alerts: DashboardAlert[]
 }
 
 export interface Paginated<T> {

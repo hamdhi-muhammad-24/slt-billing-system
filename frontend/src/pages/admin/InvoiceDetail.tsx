@@ -8,6 +8,7 @@ import { ApiError, downloadInvoicePdf } from '../../lib/api'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import InvoiceSnapshotCard from '../../components/InvoiceSnapshotCard'
+import { CreditCard, Download } from 'lucide-react'
 
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -33,21 +34,32 @@ export default function InvoiceDetail() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={`Invoice — ${inv.period}`}
+        title={`Invoice - ${inv.period}`}
         breadcrumbs={[
           { label: 'Customers', to: '/admin/customers' },
           { label: `Account ${inv.account_id}`, to: `/admin/accounts/${inv.account_id}` },
           { label: inv.period },
         ]}
-        actions={
-          <Button
-            size="sm"
-            disabled={download.isPending}
-            onClick={() => download.mutate()}
-          >
-            {download.isPending ? 'Downloading…' : 'Download PDF'}
-          </Button>
-        }
+        actions={(
+          <>
+            <Button
+              size="sm"
+              disabled={download.isPending}
+              onClick={() => download.mutate()}
+            >
+              <Download size={14} />
+              {download.isPending ? 'Downloading...' : 'Download PDF'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.info('Online bill payment will be connected in the payment phase.')}
+            >
+              <CreditCard size={14} />
+              Pay Now
+            </Button>
+          </>
+        )}
       />
       <InvoiceSnapshotCard invoice={inv} />
     </div>

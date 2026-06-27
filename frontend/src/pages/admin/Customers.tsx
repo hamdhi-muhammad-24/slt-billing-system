@@ -65,21 +65,28 @@ function CustomerRow({ customer, onClick }: { customer: Customer; onClick: () =>
 export default function Customers() {
   const [offset, setOffset] = useState(0)
   const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('ALL')
   const { data, isPending, error } = useCustomers(PAGE_SIZE, offset)
   const navigate = useNavigate()
+
+  const customerTypes = useMemo(() => {
+    const types = new Set((data?.items ?? []).map((customer) => customer.customer_type).filter(Boolean))
+    return ['ALL', ...Array.from(types)] as string[]
+  }, [data])
 
   const filtered = useMemo(() => {
     if (!data) return []
     const q = search.trim().toLowerCase()
-    if (!q) return data.items
-    return data.items.filter(
-      (c) =>
+    return data.items.filter((c) => {
+      const matchesSearch = !q ||
         c.name.toLowerCase().includes(q) ||
         (c.email ?? '').toLowerCase().includes(q) ||
         (c.nic ?? '').toLowerCase().includes(q) ||
-        (c.address ?? '').toLowerCase().includes(q),
-    )
-  }, [data, search])
+        (c.address ?? '').toLowerCase().includes(q)
+      const matchesType = typeFilter === 'ALL' || c.customer_type === typeFilter
+      return matchesSearch && matchesType
+    })
+  }, [data, search, typeFilter])
 
   if (isPending) return (
     <>
@@ -99,14 +106,31 @@ export default function Customers() {
         description={`${data.total} registered customer${data.total !== 1 ? 's' : ''} available to billing administrators.`}
       />
 
-      <div className="relative max-w-md">
-        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, email, NIC, or address..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-9 bg-white pl-9 text-sm"
-        />
+      <div className="surface-section p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-md">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, NIC, or address..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 bg-white pl-9 text-sm"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {customerTypes.map((type) => (
+              <Button
+                key={type}
+                type="button"
+                variant={typeFilter === type ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTypeFilter(type)}
+              >
+                {type === 'ALL' ? 'All types' : type}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
@@ -122,7 +146,7 @@ export default function Customers() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  {search ? `No customers matching "${search}".` : 'No customers found.'}
+                  {search || typeFilter !== 'ALL' ? 'No customers match the current filters.' : 'No customers found.'}
                 </td>
               </tr>
             ) : (

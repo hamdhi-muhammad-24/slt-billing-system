@@ -53,10 +53,10 @@ function formatLkrNumber(value: number): string {
 
 function AccountCard({ account }: { account: Account }) {
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-0 overflow-hidden">
+    <div className="flex flex-col gap-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <div className="gradient-primary px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/20">
             <Wifi size={13} className="text-white" />
           </div>
           <span className="text-white font-semibold text-sm">{account.account_no}</span>
@@ -104,14 +104,14 @@ function BillingCard({
         : 'bg-primary/10 text-primary'
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
           <p className="mt-2 text-xl font-bold tracking-tight tabular-nums">{value}</p>
           {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
         </div>
-        <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
+        <div className={`flex size-9 shrink-0 items-center justify-center rounded-md ${iconClass}`}>
           <Icon size={16} />
         </div>
       </div>
@@ -198,7 +198,7 @@ export default function MyAccounts() {
         : `${dueIn} days left`
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 pb-16 md:pb-0">
       <div>
         <p className="text-sm text-muted-foreground">Welcome back</p>
         <h1 className="text-2xl font-bold tracking-tight">Hello, {customer.data.name}</h1>
@@ -240,10 +240,10 @@ export default function MyAccounts() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4">
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div className="gradient-primary px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/20">
                 <FileText size={13} className="text-white" />
               </div>
               <span className="text-white font-semibold text-sm">Latest bill preview</span>
@@ -282,15 +282,15 @@ export default function MyAccounts() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div className="gradient-primary px-4 py-3 flex items-center gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/20">
               <ReceiptText size={13} className="text-white" />
             </div>
             <span className="text-white font-semibold text-sm">Quick actions</span>
           </div>
 
-          <div className="grid gap-2 px-4 py-3">
+          <div className="grid gap-2 px-4 py-3 sm:grid-cols-2 lg:grid-cols-1">
             <Button
               variant="outline"
               size="sm"
@@ -376,6 +376,29 @@ export default function MyAccounts() {
             </div>
           )}
       </section>
+
+      {latestInvoice && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 p-3 shadow-lg backdrop-blur md:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={downloadLatest.isPending}
+              onClick={() => downloadLatest.mutate(latestInvoice.id)}
+            >
+              <Download size={13} />
+              Download
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => toast.info('Online bill payment will be connected in the payment phase.')}
+            >
+              <CreditCard size={13} />
+              Pay Bill
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

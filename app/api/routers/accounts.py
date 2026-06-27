@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api import crud
 from app.api.deps import get_db
 from app.api.errors import NotFound
-from app.api.schemas import AccountOut, InvoiceOut, Page, PaymentOut, ServiceAccountOut
+from app.api.schemas import AccountOut, InvoiceOut, Page, PaymentOut, ServiceAccountOut, UsageSummaryOut
 from app.auth.dependencies import require_account_owner
 from app.auth.schemas import UserOut
 
@@ -83,3 +83,37 @@ def list_payments_for_account(
     if crud.get_account(db, account_id) is None:
         raise NotFound(f"Account {account_id} not found")
     return crud.list_payments_for_account(db, account_id)
+
+
+@router.get(
+    "/{account_id}/usage",
+    response_model=list[UsageSummaryOut],
+    summary="Usage summary for account",
+    description="Returns monthly usage summaries for every service on the account.",
+)
+def list_usage_for_account(
+    account_id: int,
+    period: str | None = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
+) -> list[UsageSummaryOut]:
+    if crud.get_account(db, account_id) is None:
+        raise NotFound(f"Account {account_id} not found")
+    return crud.list_usage_for_account(db, account_id, period=period)
+
+
+@router.get(
+    "/{account_id}/usage/history",
+    response_model=list[UsageSummaryOut],
+    summary="Usage history for account",
+    description="Returns recent monthly usage summaries, newest first.",
+)
+def list_usage_history_for_account(
+    account_id: int,
+    months: int = Query(6, ge=1, le=24),
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_account_owner),
+) -> list[UsageSummaryOut]:
+    if crud.get_account(db, account_id) is None:
+        raise NotFound(f"Account {account_id} not found")
+    return crud.list_usage_for_account(db, account_id, months=months)

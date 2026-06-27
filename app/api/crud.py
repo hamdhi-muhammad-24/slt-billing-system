@@ -14,24 +14,34 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Account,
+    BillingPeriod,
     BillingRun,
     BillingRunFailure,
     Customer,
+    DailyUsageRecord,
     Invoice,
     InvoiceLineItem,
+    Package,
     Payment,
     ServiceAccount,
+    UsageSummary,
 )
+from app.notifications.models import NotificationOutbox
 from app.api.schemas import (
+    AdminDashboardSummaryOut,
     AccountOut,
     BillingRunFailureOut,
     BillingRunOut,
     CustomerOut,
+    DashboardAlertOut,
+    DashboardRecentInvoiceOut,
+    DailyUsageRecordOut,
     InvoiceLineItemOut,
     InvoiceOut,
     PaymentOut,
     ServiceAccountOut,
     ServiceAccountSummary,
+    UsageSummaryOut,
 )
 
 
@@ -49,6 +59,15 @@ def _customer_out(c: Customer) -> CustomerOut:
     return CustomerOut(
         id=c.id,
         name=c.full_name,
+        nic=c.nic,
+        email=c.email,
+        phone=c.mobile_number,
+        alternate_phone=c.alternate_phone,
+        title=c.title,
+        first_name=c.first_name,
+        last_name=c.last_name,
+        preferred_language=c.preferred_language,
+        customer_type=c.customer_type.value if c.customer_type else None,
         address=_address(c),
     )
 
@@ -59,6 +78,14 @@ def _account_out(a: Account) -> AccountOut:
         customer_id=a.customer_id,
         account_no=a.account_number,
         status=a.status.value,
+        billing_cycle=a.billing_cycle,
+        service_label=a.service_label,
+        telephone_number=a.telephone_number,
+        bill_delivery_method=a.bill_delivery_method.value if a.bill_delivery_method else None,
+        credit_limit=a.credit_limit,
+        deposit_amount=a.deposit_amount,
+        notify_email=a.notify_email,
+        notify_sms=a.notify_sms,
     )
 
 
@@ -125,19 +152,25 @@ def get_account(db: Session, account_id: int) -> AccountOut | None:
 def list_service_accounts(
     db: Session, account_id: int
 ) -> list[ServiceAccountOut]:
-    rows = db.scalars(
-        select(ServiceAccount)
+    rows = db.execute(
+        select(ServiceAccount, Package.name)
+        .outerjoin(Package, ServiceAccount.package_id == Package.id)
         .where(ServiceAccount.account_id == account_id)
         .order_by(ServiceAccount.id)
     ).all()
     return [
         ServiceAccountOut(
-            id=r.id,
-            account_id=r.account_id,
-            service_type=r.service_type.value,
-            identifier=r.service_number,
+            id=svc.id,
+            account_id=svc.account_id,
+            service_type=svc.service_type.value,
+            identifier=svc.service_number,
+            package_id=svc.package_id,
+            package_name=package_name,
+            connection_type=svc.connection_type.value if svc.connection_type else None,
+            label=svc.label,
+            status=svc.status.value if svc.status else None,
         )
-        for r in rows
+        for svc, package_name in rows
     ]
 
 
@@ -174,6 +207,9 @@ def list_payments_for_account(
             paid_at=r.payment_date,
             method=r.method.value,
             reference=r.reference,
+            status=r.status.value if r.status else None,
+            receipt_number=r.receipt_number,
+            provider=r.provider,
         )
         for r in rows
     ]
@@ -228,6 +264,78 @@ def get_invoice(db: Session, invoice_id: int) -> InvoiceOut | None:
         ]
 
     return _build_invoice_out(inv, service_accounts, line_items)
+
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+
+def list_usage_for_account(
+    db: Session,
+    account_id: int,
+    *,
+    period: str | None = None,
+    months: int | None = None,
+) -> list[UsageSummaryOut]:
+    query = (
+        select(UsageSummary, BillingPeriod.code)
+        .join(ServiceAccount, UsageSummary.service_account_id == ServiceAccount.id)
+        .join(BillingPeriod, UsageSummary.billing_period_id == BillingPeriod.id)
+        .where(ServiceAccount.account_id == account_id)
+        .order_by(BillingPeriod.period_start.desc(), ServiceAccount.id)
+    )
+    if period is not None:
+        query = query.where(BillingPeriod.code == period)
+    if months is not None:
+        query = query.limit(months * 10)
+
+    rows = db.execute(query).all()
+    return [
+        UsageSummaryOut(
+            id=summary.id,
+            service_account_id=summary.service_account_id,
+            period=period_code,
+            metric=summary.metric,
+            included_quantity=summary.included_quantity,
+            used_quantity=summary.used_quantity,
+            remaining_quantity=summary.remaining_quantity,
+            overage_quantity=summary.overage_quantity,
+            charge=summary.charge,
+        )
+        for summary, period_code in rows
+    ]
+
+
+def list_daily_usage_for_service(
+    db: Session,
+    service_account_id: int,
+    *,
+    period: str,
+) -> list[DailyUsageRecordOut]:
+    rows = db.scalars(
+        select(DailyUsageRecord)
+        .join(BillingPeriod, DailyUsageRecord.billing_period_id == BillingPeriod.id)
+        .where(
+            DailyUsageRecord.service_account_id == service_account_id,
+            BillingPeriod.code == period,
+        )
+        .order_by(DailyUsageRecord.usage_date, DailyUsageRecord.id)
+    ).all()
+    return [
+        DailyUsageRecordOut(
+            id=row.id,
+            service_account_id=row.service_account_id,
+            usage_date=row.usage_date,
+            bucket=row.bucket,
+            protocol=row.protocol,
+            app_category=row.app_category,
+            download_gb=row.download_gb,
+            upload_gb=row.upload_gb,
+            total_gb=row.total_gb,
+            charge=row.charge,
+        )
+        for row in rows
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -316,4 +424,117 @@ def get_billing_run_out(db: Session, run_id: int) -> BillingRunOut | None:
         started_at=run.started_at,
         finished_at=run.finished_at,
         failures=failures,
+    )
+
+
+def get_admin_dashboard_summary(db: Session) -> AdminDashboardSummaryOut:
+    total_customers = db.scalar(select(func.count(Customer.id))) or 0
+    active_accounts = db.scalar(
+        select(func.count(Account.id)).where(Account.status == "ACTIVE")
+    ) or 0
+    generated_invoices = db.scalar(
+        select(func.count(Invoice.id)).where(Invoice.status == "GENERATED")
+    ) or 0
+    failed_billing_runs = db.scalar(
+        select(func.count(BillingRun.id)).where(BillingRun.status.in_(["FAILED", "PARTIAL"]))
+    ) or 0
+    notifications_sent = db.scalar(
+        select(func.count(NotificationOutbox.id)).where(NotificationOutbox.status == "SENT")
+    ) or 0
+    notifications_failed = db.scalar(
+        select(func.count(NotificationOutbox.id)).where(NotificationOutbox.status == "FAILED")
+    ) or 0
+
+    run_rows = db.scalars(
+        select(BillingRun)
+        .order_by(BillingRun.started_at.desc(), BillingRun.id.desc())
+        .limit(6)
+    ).all()
+    recent_runs = []
+    for run in run_rows:
+        failures = db.scalars(
+            select(BillingRunFailure)
+            .where(BillingRunFailure.billing_run_id == run.id)
+            .order_by(BillingRunFailure.id)
+        ).all()
+        recent_runs.append(BillingRunOut(
+            id=run.id,
+            period=run.period_start.strftime("%Y-%m"),
+            status=run.status.value.lower(),
+            total=run.total_accounts,
+            succeeded=run.succeeded,
+            failed=run.failed,
+            started_at=run.started_at,
+            finished_at=run.finished_at,
+            failures=[
+                BillingRunFailureOut(
+                    id=f.id,
+                    run_id=f.billing_run_id,
+                    account_id=f.account_id,
+                    error=f.error_message,
+                )
+                for f in failures
+            ],
+        ))
+
+    invoice_rows = db.execute(
+        select(Invoice, Account.account_number, Customer.full_name)
+        .join(Account, Invoice.account_id == Account.id)
+        .join(Customer, Account.customer_id == Customer.id)
+        .order_by(Invoice.billing_date.desc(), Invoice.id.desc())
+        .limit(8)
+    ).all()
+    recent_invoices = [
+        DashboardRecentInvoiceOut(
+            id=invoice.id,
+            account_id=invoice.account_id,
+            account_no=account_number,
+            customer_name=customer_name,
+            period=invoice.period_start.strftime("%Y-%m"),
+            issue_date=invoice.billing_date,
+            total_payable=invoice.total_payable,
+            status=invoice.status.value,
+        )
+        for invoice, account_number, customer_name in invoice_rows
+    ]
+
+    alerts: list[DashboardAlertOut] = []
+    if failed_billing_runs:
+        alerts.append(DashboardAlertOut(
+            level="critical",
+            title="Billing runs need review",
+            detail=f"{failed_billing_runs} failed or partial billing run(s) are recorded.",
+        ))
+    if notifications_failed:
+        alerts.append(DashboardAlertOut(
+            level="warning",
+            title="Notification delivery failures",
+            detail=f"{notifications_failed} notification(s) failed and may need retry.",
+        ))
+    overdue_invoices = db.scalar(
+        select(func.count(Invoice.id)).where(Invoice.status == "OVERDUE")
+    ) or 0
+    if overdue_invoices:
+        alerts.append(DashboardAlertOut(
+            level="warning",
+            title="Overdue invoices present",
+            detail=f"{overdue_invoices} invoice(s) are marked overdue.",
+        ))
+    if not alerts:
+        alerts.append(DashboardAlertOut(
+            level="success",
+            title="Billing operations normal",
+            detail="No failed runs or notification failures require immediate action.",
+        ))
+
+    return AdminDashboardSummaryOut(
+        total_customers=total_customers,
+        active_accounts=active_accounts,
+        generated_invoices=generated_invoices,
+        failed_billing_runs=failed_billing_runs,
+        notifications_sent=notifications_sent,
+        notifications_failed=notifications_failed,
+        recent_billing_runs=recent_runs,
+        recent_invoices=recent_invoices,
+        alerts=alerts,
     )

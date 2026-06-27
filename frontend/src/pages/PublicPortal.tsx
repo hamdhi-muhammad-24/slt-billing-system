@@ -123,7 +123,7 @@ export default function PublicPortal() {
                 broadband, voice, PeoTV, and bundled service accounts.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 <Button asChild size="lg" className="bg-white text-[#07284d] hover:bg-white/90">
                   <Link to={customerPortalPath}>
                     View My Bill
@@ -141,6 +141,25 @@ export default function PublicPortal() {
                     <CreditCard size={16} />
                   </Link>
                 </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <Link to={signInPath}>
+                    Sign In
+                    <LockKeyhole size={16} />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
+                {supportLinks.map((link) => (
+                  <a key={link.label} href={link.href} className="hover:text-white">
+                    {link.label}
+                  </a>
+                ))}
               </div>
             </div>
 

@@ -46,6 +46,12 @@ class CustomerOut(BaseModel):
     nic: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    title: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    customer_type: Optional[str] = None
     address: Optional[str] = None
 
 
@@ -57,6 +63,13 @@ class AccountOut(BaseModel):
     account_no: str
     status: str
     billing_cycle: Optional[str] = None
+    service_label: Optional[str] = None
+    telephone_number: Optional[str] = None
+    bill_delivery_method: Optional[str] = None
+    credit_limit: Optional[Money] = None
+    deposit_amount: Optional[Money] = None
+    notify_email: bool = True
+    notify_sms: bool = True
 
 
 class ServiceAccountOut(BaseModel):
@@ -67,6 +80,10 @@ class ServiceAccountOut(BaseModel):
     service_type: str
     identifier: str
     package_id: Optional[int] = None
+    package_name: Optional[str] = None
+    connection_type: Optional[str] = None
+    label: Optional[str] = None
+    status: Optional[str] = None
 
 
 class ServiceAccountSummary(BaseModel):
@@ -127,6 +144,38 @@ class PaymentOut(BaseModel):
     paid_at: date          # payment_date in the DB
     method: str
     reference: Optional[str] = None
+    status: Optional[str] = None
+    receipt_number: Optional[str] = None
+    provider: Optional[str] = None
+
+
+class UsageSummaryOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    service_account_id: int
+    period: str
+    metric: str
+    included_quantity: Decimal
+    used_quantity: Decimal
+    remaining_quantity: Decimal
+    overage_quantity: Decimal
+    charge: Money
+
+
+class DailyUsageRecordOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    service_account_id: int
+    usage_date: date
+    bucket: str
+    protocol: Optional[str] = None
+    app_category: Optional[str] = None
+    download_gb: Decimal
+    upload_gb: Decimal
+    total_gb: Decimal
+    charge: Money
 
 
 class BillingRunFailureOut(BaseModel):
@@ -150,6 +199,35 @@ class BillingRunOut(BaseModel):
     started_at: datetime
     finished_at: Optional[datetime] = None
     failures: list[BillingRunFailureOut] = []
+
+
+class DashboardRecentInvoiceOut(BaseModel):
+    id: int
+    account_id: int
+    account_no: str
+    customer_name: str
+    period: str
+    issue_date: date
+    total_payable: Money
+    status: str
+
+
+class DashboardAlertOut(BaseModel):
+    level: str
+    title: str
+    detail: str
+
+
+class AdminDashboardSummaryOut(BaseModel):
+    total_customers: int
+    active_accounts: int
+    generated_invoices: int
+    failed_billing_runs: int
+    notifications_sent: int
+    notifications_failed: int
+    recent_billing_runs: list[BillingRunOut]
+    recent_invoices: list[DashboardRecentInvoiceOut]
+    alerts: list[DashboardAlertOut]
 
 
 # ---------------------------------------------------------------------------
