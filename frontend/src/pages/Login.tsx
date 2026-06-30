@@ -1,76 +1,63 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
-  BadgeHelp,
   Building2,
   CheckCircle2,
-  CreditCard,
+  Download,
+  Eye,
+  EyeOff,
   Headphones,
   LockKeyhole,
   ShieldCheck,
-  Smartphone,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { authLogin, authMe, setToken, ApiError } from '../lib/api'
 import Brand from '../components/Brand'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
 const ROLE_HOME = { admin: '/admin', customer: '/app' } as const
 
-type GatewayMode = 'customer' | 'staff' | 'otp' | 'quickPay'
+type GatewayMode = 'customer' | 'staff'
 
-const gatewayModes = [
+const roleTabs = [
   {
     id: 'customer' as const,
     icon: UserRound,
-    title: 'Customer Sign In',
-    text: 'View bills, statements, service accounts, and payment history.',
+    label: 'Customer',
   },
   {
     id: 'staff' as const,
     icon: Building2,
-    title: 'Staff/Admin Sign In',
-    text: 'Access billing operations, customers, invoices, and reports.',
-  },
-  {
-    id: 'otp' as const,
-    icon: Smartphone,
-    title: 'View Bill With OTP',
-    text: 'Frontend preview for one-time bill access verification.',
-  },
-  {
-    id: 'quickPay' as const,
-    icon: CreditCard,
-    title: 'Quick Pay',
-    text: 'Frontend preview for payment lookup before secure processing.',
+    label: 'Staff/Admin',
   },
 ]
 
 const trustItems = [
-  'Role-based portal access',
-  'Customer and admin entry points',
-  'Private billing data protected behind sign in',
+  {
+    icon: ShieldCheck,
+    label: 'Role-based access',
+  },
+  {
+    icon: LockKeyhole,
+    label: 'Protected billing data',
+  },
+  {
+    icon: Download,
+    label: 'Secure PDF bill downloads',
+  },
 ]
 
-function modeTitle(mode: GatewayMode): string {
-  if (mode === 'staff') return 'Staff/Admin Sign In'
-  if (mode === 'otp') return 'View Bill With OTP'
-  if (mode === 'quickPay') return 'Quick Pay'
-  return 'Customer Sign In'
-}
-
-function modeDescription(mode: GatewayMode): string {
+function modeSubtitle(mode: GatewayMode): string {
   if (mode === 'staff') return 'Use authorized SLT-MOBITEL staff credentials to continue.'
-  if (mode === 'otp') return 'Enter account details to request a one-time passcode. This is a UI placeholder.'
-  if (mode === 'quickPay') return 'Look up a bill for quick payment. This is a UI placeholder.'
   return 'Use registered customer credentials to open your billing workspace.'
 }
 
@@ -80,8 +67,7 @@ export default function Login() {
   const [activeMode, setActiveMode] = useState<GatewayMode>('customer')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [accountNo, setAccountNo] = useState('')
-  const [mobileNo, setMobileNo] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -110,237 +96,203 @@ export default function Login() {
     }
   }
 
-  function handlePlaceholderSubmit(e: FormEvent) {
-    e.preventDefault()
-    toast.info('This portal option is a frontend placeholder for now.')
-  }
-
-  const isCredentialMode = activeMode === 'customer' || activeMode === 'staff'
-
   return (
-    <main className="min-h-svh bg-[#f4f8fc] text-foreground">
-      <header className="border-b border-border/70 bg-white">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Brand tone="light" size="lg" />
-          <Button asChild variant="outline" size="sm" className="shrink-0">
+    <main className="min-h-svh overflow-hidden bg-[#F4F8FB] text-[#0B1F33]">
+      <header className="relative z-20 border-b border-[#DCE8F2] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <Brand tone="light" size="md" />
+          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 border-[#CADAEA] bg-white px-3 text-[#062B55] shadow-sm hover:bg-[#F4F8FB]">
             <Link to="/">
               <ArrowLeft size={14} />
-              Portal Home
+              <span className="hidden sm:inline">Back to Portal</span>
+              <span className="sm:hidden">Portal</span>
             </Link>
           </Button>
         </div>
       </header>
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[360px] bg-[#07284d]" />
-        <div className="network-grid absolute inset-x-0 top-0 h-[360px] opacity-35" />
-        <div className="absolute inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_16%_20%,rgba(73,173,235,0.26),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(78,184,72,0.20),transparent_28%)]" />
+      <section className="relative">
+        <div className="absolute inset-x-0 top-0 h-72 bg-[linear-gradient(135deg,#062B55_0%,#083F78_58%,#0057A8_100%)]" />
+        <div className="absolute inset-x-0 top-0 h-72 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:42px_42px]" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mb-8 max-w-3xl text-white">
-            <p className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium text-white/85">
-              <ShieldCheck size={15} />
-              Secure SLT-MOBITEL portal gateway
-            </p>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
-              Choose how you want to continue
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-              Customers can view bills and payment options, while authorized staff can continue to
-              billing administration from the same trusted gateway.
-            </p>
-          </div>
+        <div className="relative mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-stretch lg:px-8 lg:py-14">
+          <section className="rounded-lg border border-white/16 bg-[linear-gradient(145deg,rgba(6,43,85,0.98),rgba(0,87,168,0.92))] p-5 text-white shadow-[0_24px_70px_rgba(6,43,85,0.24)] sm:p-8 lg:min-h-[620px]">
+            <div className="flex h-full flex-col">
+              <p className="inline-flex max-w-full items-center gap-2 rounded-md border border-white/18 bg-white/10 px-3 py-1.5 text-sm font-medium text-white/90">
+                <ShieldCheck size={15} />
+                <span>Secure SLT-MOBITEL portal gateway</span>
+              </p>
 
-          <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-            <aside className="surface-section overflow-hidden">
-              <div className="border-b border-border bg-muted/35 p-5">
-                <p className="text-sm font-medium text-muted-foreground">Portal options</p>
-                <h2 className="mt-1 text-xl font-semibold">Access gateway</h2>
+              <div className="mt-8 max-w-xl sm:mt-10 lg:mt-16">
+                <h1 className="text-3xl font-semibold leading-[1.08] sm:text-5xl">
+                  Sign in to your billing workspace
+                </h1>
+                <p className="mt-5 text-base leading-7 text-white/76">
+                  Customers can view invoices and payment history, while authorized staff can manage
+                  billing operations securely.
+                </p>
               </div>
 
-              <div className="grid gap-2 p-3">
-                {gatewayModes.map((mode) => {
-                  const Icon = mode.icon
-                  const isActive = activeMode === mode.id
+              <div className="mt-8 grid gap-3 sm:max-w-lg">
+                {trustItems.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <div key={item.label} className="flex items-center gap-3 rounded-md border border-white/12 bg-white/8 px-3.5 py-3 text-sm text-white/88">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-[#0057A8]">
+                        <Icon size={17} />
+                      </span>
+                      <span className="font-medium">{item.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-auto hidden pt-10 lg:block">
+                <div className="rounded-lg border border-white/12 bg-white/8 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <CheckCircle2 size={16} className="text-[#6FE17D]" />
+                    SLT-MOBITEL Billing Management
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-white/68">
+                    A secure gateway for customer self-care and staff billing operations.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <Card className="rounded-lg border border-[#D8E6F2] bg-white py-0 shadow-[0_24px_70px_rgba(6,43,85,0.14)]">
+            <CardContent className="p-5 sm:p-7">
+              <div>
+                <p className="text-sm font-semibold uppercase text-[#0057A8]">Billing portal login</p>
+                <h2 className="mt-2 text-3xl font-semibold text-[#0B1F33]">Welcome back</h2>
+                <p className="mt-2 text-sm leading-6 text-[#536B7D]">{modeSubtitle(activeMode)}</p>
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg border border-[#DDE8F1] bg-[#F4F8FB] p-1">
+                {roleTabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = activeMode === tab.id
                   return (
                     <button
-                      key={mode.id}
+                      key={tab.id}
                       type="button"
                       onClick={() => {
-                        setActiveMode(mode.id)
+                        setActiveMode(tab.id)
                         setError(null)
                       }}
                       className={cn(
-                        'grid grid-cols-[42px_1fr] gap-3 rounded-lg border p-3 text-left transition',
+                        'inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-semibold transition sm:px-3',
                         isActive
-                          ? 'border-primary/40 bg-primary/8 shadow-sm'
-                          : 'border-transparent hover:border-border hover:bg-muted/40',
+                          ? 'bg-white text-[#062B55] shadow-sm ring-1 ring-[#CADAEA]'
+                          : 'text-[#536B7D] hover:bg-white/70 hover:text-[#062B55]',
                       )}
                     >
-                      <span
-                        className={cn(
-                          'flex size-10 items-center justify-center rounded-md',
-                          isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-primary',
-                        )}
-                      >
-                        <Icon size={18} />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold">{mode.title}</span>
-                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{mode.text}</span>
-                      </span>
+                      <Icon size={16} />
+                      {tab.label}
                     </button>
                   )
                 })}
               </div>
-            </aside>
 
-            <section className="grid gap-5 xl:grid-cols-[1fr_320px]">
-              <div className="surface-section p-5 sm:p-7">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Selected service</p>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight">{modeTitle(activeMode)}</h2>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                      {modeDescription(activeMode)}
+              <form onSubmit={handleSubmit} className="mt-7 grid gap-5">
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-[#0B1F33]">
+                    Email address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    required
+                    placeholder={activeMode === 'staff' ? 'name@slt.lk' : 'name@example.com'}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-11 border-[#CADAEA] bg-white text-[#0B1F33] placeholder:text-[#8CA1B4] focus-visible:ring-[#0057A8]/25"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password" className="text-sm font-medium text-[#0B1F33]">
+                      Password
+                    </Label>
+                    <a
+                      href="mailto:support@slt.lk?subject=Billing%20portal%20password%20help"
+                      className="text-xs font-semibold text-[#0057A8] hover:text-[#062B55]"
+                    >
+                      Forgot password?
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-11 border-[#CADAEA] bg-white pr-11 text-[#0B1F33] placeholder:text-[#8CA1B4] focus-visible:ring-[#0057A8]/25"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-[#536B7D] transition hover:bg-[#F4F8FB] hover:text-[#062B55]"
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="flex gap-3 rounded-md border border-destructive/25 bg-destructive/5 px-3.5 py-3">
+                    <AlertCircle size={17} className="mt-0.5 shrink-0 text-destructive" />
+                    <p className="text-sm leading-6 text-destructive" role="alert">
+                      {error}
                     </p>
                   </div>
-                  <div className="hidden size-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary sm:flex">
-                    {activeMode === 'quickPay' ? <CreditCard size={22} /> : activeMode === 'otp' ? <Smartphone size={22} /> : <LockKeyhole size={22} />}
-                  </div>
-                </div>
-
-                {isCredentialMode ? (
-                  <form onSubmit={handleSubmit} className="mt-7 grid gap-5">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        autoComplete="username"
-                        required
-                        placeholder={activeMode === 'staff' ? 'name@slt.lk' : 'name@example.com'}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="h-11 bg-white"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="h-11 bg-white"
-                      />
-                    </div>
-
-                    {error && (
-                      <div className="rounded-md border border-destructive/20 bg-destructive/5 px-3.5 py-2.5">
-                        <p className="text-sm text-destructive" role="alert">{error}</p>
-                      </div>
-                    )}
-
-                    <Button type="submit" className="h-11 w-full justify-between font-semibold" disabled={loading}>
-                      {loading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                          Signing in...
-                        </span>
-                      ) : (
-                        <>
-                          Continue securely
-                          <ArrowRight size={15} />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={handlePlaceholderSubmit} className="mt-7 grid gap-5">
-                    <div className="grid gap-2">
-                      <Label htmlFor="accountNo" className="text-sm font-medium">Account number</Label>
-                      <Input
-                        id="accountNo"
-                        required
-                        placeholder="Enter SLT-MOBITEL account number"
-                        value={accountNo}
-                        onChange={(e) => setAccountNo(e.target.value)}
-                        className="h-11 bg-white"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="mobileNo" className="text-sm font-medium">
-                        {activeMode === 'otp' ? 'Mobile number for OTP' : 'Contact mobile number'}
-                      </Label>
-                      <Input
-                        id="mobileNo"
-                        required
-                        placeholder="07X XXX XXXX"
-                        value={mobileNo}
-                        onChange={(e) => setMobileNo(e.target.value)}
-                        className="h-11 bg-white"
-                      />
-                    </div>
-
-                    <div className="rounded-md border border-warning/25 bg-warning/10 px-3.5 py-3">
-                      <p className="text-sm leading-6 text-warning-foreground">
-                        This option is currently a frontend placeholder. Full OTP and quick-pay
-                        processing can be connected in a later backend phase.
-                      </p>
-                    </div>
-
-                    <Button type="submit" className="h-11 w-full justify-between font-semibold">
-                      {activeMode === 'otp' ? 'Request OTP' : 'Continue to Quick Pay'}
-                      <ArrowRight size={15} />
-                    </Button>
-                  </form>
                 )}
-              </div>
 
-              <aside className="surface-section p-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-11 items-center justify-center rounded-md bg-success/10 text-success">
-                    <CheckCircle2 size={20} />
+                <Button type="submit" className="h-11 w-full justify-between bg-[#062B55] px-3 font-semibold text-white shadow-sm hover:bg-[#0057A8]" disabled={loading}>
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Signing in...
+                    </span>
+                  ) : (
+                    <>
+                      Continue securely
+                      <ArrowRight size={15} />
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              <div className="mt-6 rounded-lg border border-[#DDE8F1] bg-[#F7FAFD] p-4">
+                <div className="flex gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#EAF8EE] text-[#248D36]">
+                    <CheckCircle2 size={18} />
                   </div>
                   <div>
-                    <h2 className="font-semibold">Trusted gateway</h2>
-                    <p className="text-sm text-muted-foreground">Designed for public portal entry</p>
+                    <p className="text-sm font-semibold text-[#0B1F33]">Protected billing access</p>
+                    <p className="mt-1 text-sm leading-6 text-[#536B7D]">
+                      Your billing information is protected and only visible after sign in.
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-5 grid gap-3">
-                  {trustItems.map((item) => (
-                    <div key={item} className="flex gap-3 rounded-md border border-border bg-muted/25 p-3 text-sm">
-                      <ShieldCheck size={16} className="mt-0.5 shrink-0 text-primary" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 rounded-md bg-[#eef6ff] p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#0b3a67]">
-                    <BadgeHelp size={16} />
-                    Need help signing in?
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Use support if you cannot access your customer account or staff billing console.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="mt-4 w-full justify-between bg-white">
-                    <a href="mailto:support@slt.lk">
-                      Contact support
-                      <Headphones size={14} />
-                    </a>
-                  </Button>
-                </div>
-              </aside>
-            </section>
-          </div>
+              <div className="mt-5 flex flex-col gap-2 text-sm text-[#536B7D] sm:flex-row sm:items-center sm:justify-between">
+                <span>Need access help?</span>
+                <a href="mailto:support@slt.lk" className="inline-flex items-center gap-2 font-semibold text-[#0057A8] hover:text-[#062B55]">
+                  Contact support
+                  <Headphones size={14} />
+                </a>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
     </main>
