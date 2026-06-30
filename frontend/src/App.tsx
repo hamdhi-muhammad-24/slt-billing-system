@@ -3,8 +3,10 @@ import { Toaster } from '@/components/ui/sonner'
 import RequireRole from './auth/RequireRole'
 import AdminLayout from './components/AdminLayout'
 import CustomerLayout from './components/CustomerLayout'
+import BillAccess from './pages/BillAccess'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
+import PayBill from './pages/PayBill'
 import PublicPortal from './pages/PublicPortal'
 import Dashboard from './pages/admin/Dashboard'
 import Customers from './pages/admin/Customers'
@@ -21,7 +23,9 @@ export default function App() {
     <>
       <Routes>
         <Route index element={<PublicPortal />} />
+        <Route path="/bill-access" element={<BillAccess />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/pay-bill" element={<PayBill />} />
 
         <Route element={<RequireRole role="admin" />}>
           <Route path="/admin" element={<AdminLayout />}>
