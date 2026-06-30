@@ -70,14 +70,23 @@ def draw_barcode(
     except Exception:
         if strict:
             raise
-        from app.pdf.layout import BOX_BORDER, TEXT_COLOR
+        from app.pdf.layout import BLACK, WHITE
 
-        c.setStrokeColor(BOX_BORDER)
-        c.setLineWidth(0.5)
-        c.rect(x, y, w, h)
-        c.setFont("Noto", 6)
-        c.setFillColor(TEXT_COLOR)
-        c.drawString(x + 4, y + 4, f"CODE-128: {text}")
+        c.setFillColor(WHITE)
+        c.rect(x, y, w, h, stroke=0, fill=1)
+        c.setFillColor(BLACK)
+
+        payload = text or "SLT"
+        usable_h = max(h - 2, 1)
+        cursor = x + 2
+        max_x = x + w - 2
+        for idx, ch in enumerate(payload * 6):
+            if cursor >= max_x:
+                break
+            bar_w = 0.45 + ((ord(ch) + idx) % 3) * 0.35
+            gap = 0.35 + ((ord(ch) + idx) % 2) * 0.25
+            c.rect(cursor, y + 1, min(bar_w, max_x - cursor), usable_h, stroke=0, fill=1)
+            cursor += bar_w + gap
         return False
 
 

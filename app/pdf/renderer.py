@@ -21,7 +21,6 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Flowable,
     Frame,
-    HRFlowable,
     NextPageTemplate,
     PageTemplate,
     Paragraph,
@@ -76,6 +75,7 @@ _SLIP_LABEL    = HexColor("#C7D8EC")
 _SLIP_BORDER   = HexColor("#82A9B8")
 _NOTICE_FILL   = HexColor("#FFF5F5")
 _NOTICE_RED    = HexColor("#E1272A")
+_LEGAL_BLUE    = HexColor("#506982")
 
 
 def _px(x: float) -> float:
@@ -263,17 +263,18 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     c.setFillColor(L.WHITE)
     c.roundRect(right_x, ry, inner_w, cust_h, 10, stroke=1, fill=1)
 
-    c.setFont("Noto-Bold", 8)
+    c.setFont("Noto-Bold", 7.6)
     c.setFillColor(L.TEXT_COLOR)
-    _fit_text(c, bill.customer_name, right_x + 15, ry + cust_h - 18, inner_w - 30, "Noto-Bold", 8)
-    c.setFont("Noto-Bold", 7.5)
-    addr_y = ry + cust_h - 31
+    _fit_text(c, "Rev./Mr./Mrs.", right_x + 15, ry + cust_h - 18, inner_w - 30, "Noto-Bold", 7.6)
+    _fit_text(c, bill.customer_name, right_x + 15, ry + cust_h - 42, inner_w - 30, "Noto-Bold", 7.6)
+    c.setFont("Noto-Bold", 7.3)
+    addr_y = ry + cust_h - 55
     for line in bill.address_lines:
-        _fit_text(c, line, right_x + 15, addr_y, inner_w - 30, "Noto-Bold", 7.5)
+        _fit_text(c, line, right_x + 15, addr_y, inner_w - 30, "Noto-Bold", 7.3)
         addr_y -= 11
 
     # Barcode (invoice number) inside the lower-right of the customer box.
-    draw_barcode(c, bill.invoice_number, right_x + inner_w - 92, ry + 6, w=84, h=19)
+    draw_barcode(c, bill.invoice_number, right_x + inner_w - 96, ry + 7, w=88, h=18)
 
     # Service-label banner
     ry -= 6
@@ -286,7 +287,7 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     c.drawCentredString(right_x + inner_w / 2, ry + 6, bill.customer_segment.upper())
 
     # Reference line (invoice ref + service tag) — small muted text
-    ry -= 3
+    ry -= 8
     c.setFont("Noto", 5.2)
     c.setFillColor(L.TEXT_COLOR)
     c.drawString(right_x + 7, ry, _ref_line(bill))
@@ -354,12 +355,12 @@ def _draw_summary(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     """Draw 5-box summary row; return y below it."""
     y = top_y - 4
     # Section heading + rule
-    c.setFont("Noto-Bold", 8.5)
-    c.setFillColor(L.TEXT_COLOR)
+    c.setFont("Noto-Bold", 11.3)
+    c.setFillColor(L.LABEL_BLUE)
     c.drawString(LEFT, y, "SUMMARY OF INVOICE")
-    y -= 3
-    L.hrule(c, LEFT, y, CONTENT_W, color=L.BOX_BORDER, lw=0.6)
-    y -= 4
+    rule_x = LEFT + c.stringWidth("SUMMARY OF INVOICE", "Noto-Bold", 11.3) + 7
+    L.hrule(c, rule_x, y + 3, RIGHT - rule_x, color=L.LABEL_BLUE, lw=0.6)
+    y -= 9
 
     BOX_H = _hpx(108)
     OP_W  = _wpx(35)
@@ -487,12 +488,8 @@ class _SlipFlowable(Flowable):
 
         # ── G. Legal line ────────────────────────────────────────────────
         legal_base = sh + 4 + self._NOTICE_H + 4
-        mid  = len(self._LEGAL) // 2
-        cut  = self._LEGAL.rfind(" ", 0, mid)
-        c.setFont("Noto", 5.5)
-        c.setFillColor(L.MUTED_COLOR)
-        c.drawString(0, legal_base + 10, self._LEGAL[:cut])
-        c.drawString(0, legal_base,      self._LEGAL[cut + 1:])
+        c.setFillColor(_LEGAL_BLUE)
+        _fit_text(c, self._LEGAL, 0, legal_base + 4, CONTENT_W, "Noto", 5.7, 4.4)
 
         # ── H. Notice box ─────────────────────────────────────────────────
         nb_y = sh + 4                        # box bottom
@@ -503,31 +500,29 @@ class _SlipFlowable(Flowable):
         c.roundRect(0, nb_y, CONTENT_W, nb_h, 8, stroke=1, fill=1)
 
         # Heading  "ප්‍රකාශය / அறிவிப்பு / Notice"
-        ht_y = nb_y + nb_h - 12
-        c.setFont("NotoSinhala", 7)
+        ht_y = nb_y + nb_h - 11
+        c.setFont("NotoSinhala", 7.2)
         c.setFillColor(_NOTICE_RED)
         c.drawString(4, ht_y, "ප්‍රකාශය /")
-        c.setFont("NotoTamil", 7)
+        c.setFont("NotoTamil", 7.2)
         c.drawString(64, ht_y, "அறிவிப்பு /")
-        c.setFont("Noto-Bold", 7)
+        c.setFont("Noto-Bold", 7.2)
         c.drawString(130, ht_y, "Notice")
 
-        lines = [self._NOTICE_SI, self._NOTICE_TA]
-        body = self._NOTICE_EN
-        cut1 = body.rfind(" ", 0, len(body) // 2)
-        lines += [body[:cut1], body[cut1 + 1:]]
-        c.setFont("Noto", 5.5)
         c.setFillColor(L.TEXT_COLOR)
-        ly = ht_y - 11
-        for idx, line in enumerate(lines):
-            if idx == 0:
-                c.setFont("NotoSinhala", 5.2)
-            elif idx == 1:
-                c.setFont("NotoTamil", 5.2)
-            else:
-                c.setFont("Noto", 5.2)
-            c.drawString(4, ly, line)
-            ly -= 8
+        ly = ht_y - 9
+        _fit_text(c, self._NOTICE_SI, 4, ly, CONTENT_W - 8, "NotoSinhala", 4.6, 3.8)
+        ly -= 7.5
+        _fit_text(c, self._NOTICE_TA, 4, ly, CONTENT_W - 8, "NotoTamil", 4.6, 3.8)
+        ly -= 7.5
+        first = (
+            "Please settle the arrears indicated in this invoice within 7 days to avoid possible "
+            "disconnection of services as the due date has lapsed. If you have already settled the arrears"
+        )
+        second = "please disregard this notice."
+        _fit_text(c, first, 4, ly, CONTENT_W - 8, "Noto", 4.7, 3.8)
+        ly -= 7.0
+        _fit_text(c, second, 4, ly, CONTENT_W - 8, "Noto", 4.7, 3.8)
 
         # ── Dashed tear-off separator (full page width) ─────────────────
         c.saveState()
@@ -547,7 +542,7 @@ class _SlipFlowable(Flowable):
         # Right panel: x=rx  width=rw
         lw    = CONTENT_W * 0.50   # ≈ 261 pt
         rx    = lw + 10            # right panel start (local)
-        rw    = CONTENT_W - lw - 10
+        rw    = CONTENT_W - rx
 
         FH    = 13.0   # field height
         FG    = 2.0    # gap between fields
@@ -582,6 +577,20 @@ class _SlipFlowable(Flowable):
             c.setStrokeColor(_SLIP_BORDER)
             c.setLineWidth(0.4)
             c.roundRect(rx + RLW + 3, fy, vw - 3, FH, 7, stroke=1, fill=1)
+
+        def date_boxes(start_x: float, fy: float) -> None:
+            ex = start_x
+            for group_digits, group_label in ((2, "DD"), (2, "MM"), (4, "YYYY")):
+                c.setFont("Noto", 4.5)
+                c.setFillColor(L.MUTED_COLOR)
+                c.drawString(ex, fy + FH - 1, group_label)
+                for _ in range(group_digits):
+                    c.setStrokeColor(L.BOX_BORDER)
+                    c.setFillColor(L.WHITE)
+                    c.setLineWidth(0.4)
+                    c.rect(ex, fy + 2, bsz, bsz, stroke=1, fill=1)
+                    ex += bsz + 1
+                ex += 4
 
         # ── Left panel: 6 fields top-down ───────────────────────────────
         fy = sh - 2 - FH  # first field top-right-of = sh-2; draw from fy
@@ -640,33 +649,49 @@ class _SlipFlowable(Flowable):
         # ── Right panel: "Payment Slip" tag + barcode ───────────────────
         # Top strip: teal "Payment Slip" label
         tag_y  = sh - 2 - FH     # same top as left field row 1
-        tag_w  = rw * 0.45
+        tag_w  = 68.0
         c.setFillColor(L.HEADER_BLUE)
         c.roundRect(rx, tag_y, tag_w, FH, 7, stroke=0, fill=1)
         c.setFont("Noto-Bold", 7.5)
         c.setFillColor(L.WHITE)
         c.drawString(rx + 3, tag_y + 3, "Payment Slip")
 
-        # SLT logo in the tag header (right of "Payment Slip")
+        qr_sz = 31.0
+        qr_bx = rx + rw - qr_sz
+        qr_by = tag_y - 19
+        logo_w = 39.0
+        logo_h = 13.0
+        logo_x = qr_bx - logo_w - 4
+
+        bc_x = rx + tag_w + 5
+        bc_y = tag_y + 1
+        bc_w = max(72.0, logo_x - bc_x - 4)
+        draw_barcode(c, b.invoice_number, bc_x, bc_y, w=bc_w, h=13)
+
         try:
             c.drawImage(
                 L.LOGO_PATH,
-                rx + tag_w + 3, tag_y,
-                width=rw - tag_w - 3, height=FH,
+                logo_x, tag_y - 1,
+                width=logo_w, height=logo_h,
                 preserveAspectRatio=True, anchor="c", mask="auto",
             )
         except Exception:
             pass
 
-        # Barcode below tag, spanning full right-panel width
-        bc_y = tag_y - FG - 22
-        draw_barcode(c, b.invoice_number, rx, bc_y, w=rw, h=22)
+        c.setFont("Noto", 4.5)
+        c.setFillColor(L.MUTED_COLOR)
+        c.drawCentredString(logo_x + logo_w / 2, tag_y - 8, "LANKAQR")
 
         # ── Right-panel fields (below barcode) ──────────────────────────
-        ry = bc_y - FG   # cursor for right-panel fields
+        draw_qr(
+            c,
+            f"https://www.slt.lk/payonline?inv={b.invoice_number}",
+            qr_bx, qr_by, size=qr_sz,
+        )
+
+        ry = tag_y - 22
 
         # Checkboxes: Cash / Cheques / Credit Card
-        ry -= FH
         c.setFillColor(L.WHITE)
         c.rect(rx, ry, rw, FH, stroke=0, fill=1)
         cbx = rx + 4
@@ -685,7 +710,16 @@ class _SlipFlowable(Flowable):
         rfield("Cheque Number",         ry - FH);  ry -= FH + FG
         rfield("Amount",                ry - FH);  ry -= FH + FG
         rfield("Customer's Signature",  ry - FH);  ry -= FH + FG
-        rfield("Date",                  ry - FH);  ry -= FH + FG
+        date_y = ry - FH
+        c.setFillColor(_SLIP_LABEL)
+        c.roundRect(rx, date_y, RLW, FH, 7, stroke=0, fill=1)
+        c.setFont("Noto-Bold", 5.8)
+        c.setFillColor(L.LABEL_BLUE)
+        c.drawString(rx + 6, date_y + 3, "Date")
+        date_boxes(rx + RLW + 3, date_y)
+        c.setFont("Noto", 5.2)
+        c.setFillColor(L.TEXT_COLOR)
+        c.drawRightString(rx + rw - 2, date_y + 3, "1B56510565")
 
         # ── Bottom section: SLT logo (left) + QR + LANKAQR label ────────
         bottom_h = max(ry, 4)           # available height above y=0
@@ -694,30 +728,10 @@ class _SlipFlowable(Flowable):
         qr_by = bottom_h - qr_sz       # QR bottom y
         qr_bx = rx + rw - qr_sz        # QR x (right-aligned)
 
-        draw_qr(
-            c,
-            f"https://www.slt.lk/payonline?inv={b.invoice_number}",
-            qr_bx, qr_by, size=qr_sz,
-        )
-
         # LANKAQR label sits below the QR code
-        c.setFont("Noto", 5)
-        c.setFillColor(L.MUTED_COLOR)
-        c.drawCentredString(qr_bx + qr_sz / 2, max(1, qr_by - 7), "LANKAQR")
-
         # SLT Mobitel logo — left portion of bottom section, centred on QR height
         logo_h = min(16.0, qr_sz)
         logo_w = min(qr_bx - rx - 4, rw * 0.42)
-        try:
-            c.drawImage(
-                L.LOGO_PATH,
-                rx, qr_by + (qr_sz - logo_h) / 2,
-                width=logo_w, height=logo_h,
-                preserveAspectRatio=True, anchor="w", mask="auto",
-            )
-        except Exception:
-            pass
-
 
 # ---------------------------------------------------------------------------
 # Platypus story — D (charges) + E (payments) + I/G/H (slip)
@@ -752,28 +766,40 @@ _BASE_TS = [
 ]
 
 
+class _ChargesHeadingFlowable(Flowable):
+    """Draw the charges heading with the SLT-style rule and amount label."""
+
+    _H = 19.0
+    _TITLE = "DETAILS OF CHARGES FOR THE PERIOD"
+
+    def wrap(self, availW: float, availH: float):
+        return (availW, self._H)
+
+    def draw(self) -> None:
+        c = self.canv
+        title_size = 11.5
+        title_y = 6.5
+
+        c.setFont("Noto-Bold", title_size)
+        c.setFillColor(L.LABEL_BLUE)
+        c.drawString(0, title_y, self._TITLE)
+
+        rule_x = c.stringWidth(self._TITLE, "Noto-Bold", title_size) + 6
+        c.setStrokeColor(L.LABEL_BLUE)
+        c.setLineWidth(0.6)
+        c.line(rule_x, title_y + 3.0, CONTENT_W, title_y + 3.0)
+
+        c.setFont("Noto-Bold", 6.7)
+        c.setFillColor(L.TEXT_COLOR)
+        c.drawRightString(CONTENT_W - 4, 0, "(Rs.)")
+
+
 def _build_story(bill: Bill) -> list:
     st = _para_styles()
     story: list = []
 
     # ── D. Details of Charges ─────────────────────────────────────────────
-    story.append(HRFlowable(width="100%", color=L.BOX_BORDER, thickness=0.5,
-                             spaceAfter=3))
-
-    title_row = Table(
-        [[Paragraph("DETAILS OF CHARGES FOR THE PERIOD", st["section"]),
-          Paragraph("(Rs.)", st["muted"])]],
-        colWidths=[_DESC_W, _AMT_W],
-    )
-    title_row.setStyle(TableStyle([
-        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-        ("TOPPADDING",    (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("ALIGN",         (1, 0), (1, 0),  "RIGHT"),
-        ("VALIGN",        (0, 0), (-1, -1), "BOTTOM"),
-    ]))
-    story.append(title_row)
+    story.append(_ChargesHeadingFlowable())
 
     # Charge rows (grouped by service account)
     data: list[list] = []
@@ -817,9 +843,10 @@ def _build_story(bill: Bill) -> list:
 
     data.append([Paragraph("Total Charges for the Period", st["bold"]),
                  Paragraph(_fmt_amount(bill.summary.charges_for_period), st["rbold"])])
-    cmds += [("LINEABOVE",     (0, ri), (-1, ri), 0.5, L.BOX_BORDER),
+    cmds += [("LINEABOVE",     (0, ri), (-1, ri), 0.6, L.TEXT_COLOR),
+             ("LINEBELOW",     (0, ri), (-1, ri), 0.6, L.TEXT_COLOR),
              ("TOPPADDING",    (0, ri), (-1, ri), 4),
-             ("BOTTOMPADDING", (0, ri), (-1, ri), 2)]
+             ("BOTTOMPADDING", (0, ri), (-1, ri), 4)]
 
     if data:
         charge_table = Table(data, colWidths=[_DESC_W, _AMT_W], splitByRow=True)
@@ -850,7 +877,7 @@ def _build_story(bill: Bill) -> list:
             pdata.append([
                 Paragraph(f"  {label}", st["base"]),
                 Paragraph(_fmt_date(pmt.payment_date), st["base"]),
-                Paragraph(_fmt_amount(pmt.amount), st["right"]),
+                _fmt_amount(pmt.amount),
             ])
             pri += 1
     else:
@@ -860,17 +887,21 @@ def _build_story(bill: Bill) -> list:
 
     pdata.append([Paragraph("Total Payments Received", st["bold"]),
                   "",
-                  Paragraph(_fmt_amount(bill.summary.payments_received), st["rbold"])])
-    pcmds += [("LINEABOVE",  (0, pri), (-1, pri), 0.5, L.BOX_BORDER),
-              ("TOPPADDING", (0, pri), (-1, pri), 4)]
+                  _fmt_amount(bill.summary.payments_received)])
+    pcmds += [("FONTNAME",   (0, pri), (0, pri), "Noto-Bold"),
+              ("FONTNAME",   (2, pri), (2, pri), "Noto-Bold"),
+              ("LINEABOVE",  (0, pri), (-1, pri), 0.5, L.BOX_BORDER),
+              ("TOPPADDING", (0, pri), (-1, pri), 3)]
 
     left_block_w = CONTENT_W * 0.49
     right_block_w = CONTENT_W - left_block_w - 10
-    dw = left_block_w - 66
+    date_w = 56.0
+    amount_w = 52.0
+    dw = left_block_w - date_w - amount_w
     pmt_table = Table(
         pdata,
-        colWidths=[dw, 42, 24],
-        rowHeights=[10] + [8] * (len(pdata) - 1),
+        colWidths=[dw, date_w, amount_w],
+        rowHeights=[10] + [9] * (len(pdata) - 1),
         splitByRow=True,
     )
     pmt_table.setStyle(TableStyle(pcmds))
