@@ -216,28 +216,27 @@ export function getBillingRun(runId: number): Promise<BillingRunWithFailures> {
   return request(`/billing/runs/${runId}`)
 }
 
+interface PdfTokenResponse {
+  token: string
+  expires_in: number
+}
+
 export async function downloadInvoicePdf(invoiceId: number): Promise<void> {
-  const token = getToken()
-  const res = await fetch(`${BASE_URL}/invoices/${invoiceId}/pdf`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (!res.ok) {
-    let detail = res.statusText
-    try {
-      const body = (await res.json()) as { detail: string }
-      if (body.detail) detail = body.detail
-    } catch {
-      // ignore
-    }
-    throw new ApiError(res.status, detail)
+  const { token } = await request<PdfTokenResponse>(`/invoices/${invoiceId}/pdf-token`)
+  const url = `${BASE_URL}/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    throw new Error('PDF download failed')
   }
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
+  a.href = objectUrl
   a.download = `invoice-${invoiceId}.pdf`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  URL.revokeObjectURL(objectUrl)
 }

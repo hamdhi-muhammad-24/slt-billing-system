@@ -65,6 +65,7 @@ class Bill(BaseModel):
     account_number:   str
     telephone_number: str | None = None
     service_label:    str | None = None
+    customer_segment: str = "HOME"
     customer_name:    str
     address_lines:    list[str]
     invoice_number:   str

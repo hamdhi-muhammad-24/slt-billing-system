@@ -27,10 +27,10 @@ CONTENT_W  = RIGHT - LEFT    # ≈ 523 pt
 # ---------------------------------------------------------------------------
 HEADER_BLUE  = HexColor("#0158A5")
 LABEL_BLUE   = HexColor("#07649E")
-TEAL_FILL    = HexColor("#09B8D9")
-TEAL_BORDER  = HexColor("#0B94BE")
+TEAL_FILL    = HexColor("#00BDF1")
+TEAL_BORDER  = HexColor("#0458A0")
 GREEN_BORDER = HexColor("#4CA957")
-BOX_BORDER   = HexColor("#BFC9D4")
+BOX_BORDER   = HexColor("#AEB9C3")
 TEXT_COLOR   = HexColor("#1A1A1A")
 MUTED_COLOR  = HexColor("#6B7280")
 RED_COLOR    = HexColor("#CC0000")

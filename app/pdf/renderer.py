@@ -63,15 +63,35 @@ CONTENT_W = L.CONTENT_W      # 523.28
 
 HEADER_H = 79.0
 SLIM_H   = 30.0
+REF_W_PX = 1080.0
+REF_H_PX = 1528.0
+PX_X = PAGE_W / REF_W_PX
+PX_Y = PAGE_H / REF_H_PX
 
 # Extra colours used only in the renderer
-_MAGENTA       = HexColor("#C01B73")
-_APP_BLUE      = HexColor("#254899")
-_PAY_GREEN     = HexColor("#24A756")
-_SLIP_LABEL    = HexColor("#DCEAF4")
+_MAGENTA       = HexColor("#E21E6A")
+_APP_BLUE      = HexColor("#3B58A8")
+_PAY_GREEN     = HexColor("#22A555")
+_SLIP_LABEL    = HexColor("#C7D8EC")
 _SLIP_BORDER   = HexColor("#82A9B8")
 _NOTICE_FILL   = HexColor("#FFF5F5")
-_NOTICE_RED    = HexColor("#CC0000")
+_NOTICE_RED    = HexColor("#E1272A")
+
+
+def _px(x: float) -> float:
+    return x * PX_X
+
+
+def _py(y_from_top: float) -> float:
+    return PAGE_H - y_from_top * PX_Y
+
+
+def _hpx(h: float) -> float:
+    return h * PX_Y
+
+
+def _wpx(w: float) -> float:
+    return w * PX_X
 
 
 def _fit_text(
@@ -142,18 +162,18 @@ def _draw_header(c: rl_canvas.Canvas) -> None:
     c.setFillColor(L.WHITE)
     c.drawString(LEFT, y + 28, "INVOICE")
 
-    c.setFont("Noto-Bold", 8.5)
+    c.setFont("Noto-Bold", 11.5)
     c.drawString(LEFT + 130, y + 42, "Sri Lanka Telecom PLC")
     c.setFont("Noto", 8)
     c.drawString(LEFT + 130, y + 32, "Lotus Road, P.O Box 503, Colombo 01.")
 
     # SLT MOBITEL logo — right side, preserving aspect ratio, no background
-    logo_h = 48.0
-    logo_w = 150.0
+    logo_h = _hpx(88)
+    logo_w = _wpx(250)
     try:
         c.drawImage(
             L.LOGO_PATH,
-            RIGHT - logo_w, y + 15,
+            PAGE_W - _wpx(40) - logo_w, y + _hpx(26),
             width=logo_w, height=logo_h,
             preserveAspectRatio=True, anchor="c", mask="auto",
         )
@@ -189,16 +209,16 @@ def _draw_slim_header(c: rl_canvas.Canvas) -> None:
 def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     """Draw identity block; return y below it (= top of summary section)."""
 
-    left_w   = CONTENT_W * 0.44          # ≈ 230 pt
-    right_x  = LEFT + left_w + 10        # ≈ 276 pt (page coords)
-    right_w  = CONTENT_W - left_w - 10   # ≈ 283 pt
+    left_w   = _wpx(382)
+    right_x  = _px(482)
+    right_w  = RIGHT - right_x
 
     # Split right column into inner content column + narrow QR/app column
-    _QR_W   = 68.0
-    inner_w = right_w - _QR_W - 5        # ≈ 210 pt
-    qr_x    = right_x + inner_w + 5      # ≈ 491 pt (page coords)
+    _QR_W   = _wpx(124)
+    inner_w = _wpx(388)
+    qr_x    = _px(887)
 
-    y = top_y - 27  # left-column cursor
+    y = top_y - _hpx(61)  # left-column cursor
 
     # ── Left column ──────────────────────────────────────────────────────
     c.setFont("Noto-Bold", 10.5)
@@ -233,10 +253,10 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     bottom_left = y   # bottom of left column
 
     # ── Inner right column ────────────────────────────────────────────────
-    ry = top_y - 27   # inner-column cursor (page y, counts down)
+    ry = top_y - _hpx(53)   # inner-column cursor (page y, counts down)
 
     # Customer address box (green border)
-    cust_h = 100.0
+    cust_h = _hpx(180)
     ry -= cust_h
     c.setStrokeColor(L.GREEN_BORDER)
     c.setLineWidth(0.9)
@@ -257,13 +277,13 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
 
     # Service-label banner
     ry -= 6
-    banner_h = 23.0
+    banner_h = _hpx(42)
     ry -= banner_h
     c.setFillColor(L.TEAL_FILL)
     c.roundRect(right_x, ry, inner_w, banner_h, 3, stroke=0, fill=1)
     c.setFont("Noto", 13)
     c.setFillColor(L.BLACK)
-    c.drawCentredString(right_x + inner_w / 2, ry + 6, (bill.service_label or "HOME").upper())
+    c.drawCentredString(right_x + inner_w / 2, ry + 6, bill.customer_segment.upper())
 
     # Reference line (invoice ref + service tag) — small muted text
     ry -= 3
@@ -277,10 +297,10 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     # ── QR / MySLT column ─────────────────────────────────────────────────
     # "X of N" is painted by _NumberedCanvas at page y ≈ top_y - 10;
     # start the QR box 14 pt below that to leave it clear.
-    qry = top_y - 27
+    qry = top_y - _hpx(30)
 
     # QR code in amber rounded box
-    qr_box = _QR_W - 2
+    qr_box = _hpx(122)
     qry -= qr_box
     c.setFillColor(_MAGENTA)
     c.roundRect(qr_x, qry, _QR_W, qr_box, 11, stroke=0, fill=1)
@@ -294,7 +314,7 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
 
     # MySLT app icon in purple rounded box
     qry -= 7
-    app_h = 52.0
+    app_h = _hpx(110)
     qry -= app_h
     c.setFillColor(_APP_BLUE)
     c.roundRect(qr_x, qry, _QR_W, app_h, 11, stroke=0, fill=1)
@@ -341,8 +361,8 @@ def _draw_summary(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     L.hrule(c, LEFT, y, CONTENT_W, color=L.BOX_BORDER, lw=0.6)
     y -= 4
 
-    BOX_H = 50.0
-    OP_W  = 13.0
+    BOX_H = _hpx(108)
+    OP_W  = _wpx(35)
     box_w = (CONTENT_W - 4 * OP_W) / 5.0
 
     boxes = [
@@ -362,7 +382,7 @@ def _draw_summary(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
         c.setLineWidth(0.9)
         c.roundRect(bx, y, box_w, BOX_H, 9, stroke=1, fill=1)
 
-        caption_h = 31.0
+        caption_h = _hpx(61)
         if teal:
             c.setFillColor(L.TEAL_FILL)
             c.roundRect(bx, y + BOX_H - caption_h, box_w, caption_h, 9, stroke=0, fill=1)
@@ -370,20 +390,20 @@ def _draw_summary(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
             label_color = L.WHITE
         else:
             c.setStrokeColor(L.TEAL_BORDER)
-            c.line(bx, y + 23, bx + box_w, y + 23)
+            c.line(bx, y + _hpx(43), bx + box_w, y + _hpx(43))
             label_color = L.LABEL_BLUE
 
         c.setFillColor(label_color)
-        c.setFont("NotoSinhala", 5.1)
-        c.drawCentredString(bx + box_w / 2, y + BOX_H - 10, si)
-        c.setFont("NotoTamil", 4.8)
-        c.drawCentredString(bx + box_w / 2, y + BOX_H - 18, ta)
-        c.setFont("Noto", 5.7)
-        c.drawCentredString(bx + box_w / 2, y + BOX_H - 27, en)
+        c.setFont("NotoSinhala", 4.9)
+        c.drawCentredString(bx + box_w / 2, y + BOX_H - _hpx(20), si)
+        c.setFont("NotoTamil", 4.6)
+        c.drawCentredString(bx + box_w / 2, y + BOX_H - _hpx(35), ta)
+        c.setFont("Noto", 5.6)
+        c.drawCentredString(bx + box_w / 2, y + BOX_H - _hpx(51), en)
 
         c.setFont("Noto-Bold", 8.8)
         c.setFillColor(L.TEXT_COLOR)
-        c.drawCentredString(bx + box_w / 2, y + 7, val)
+        c.drawCentredString(bx + box_w / 2, y + _hpx(15), val)
 
         # Operator between boxes
         if i < 3:
@@ -713,7 +733,8 @@ def _para_styles() -> dict[str, ParagraphStyle]:
     return {
         "base":  base,
         "bold":  ParagraphStyle("bold",  parent=base, fontName="Noto-Bold"),
-        "hdg":   ParagraphStyle("hdg",   parent=base, fontName="Noto-Bold", fontSize=8.8),
+        "hdg":   ParagraphStyle("hdg",   parent=base, fontName="Noto-Bold", fontSize=7.4),
+        "section": ParagraphStyle("section", parent=base, fontName="Noto-Bold", fontSize=11.5, leading=13),
         "muted": ParagraphStyle("muted", parent=base, textColor=L.MUTED_COLOR),
         "right": ParagraphStyle("right", parent=base, alignment=TA_RIGHT),
         "rbold": ParagraphStyle("rbold", parent=base, fontName="Noto-Bold", alignment=TA_RIGHT),
@@ -740,7 +761,7 @@ def _build_story(bill: Bill) -> list:
                              spaceAfter=3))
 
     title_row = Table(
-        [[Paragraph("DETAILS OF CHARGES FOR THE PERIOD", st["hdg"]),
+        [[Paragraph("DETAILS OF CHARGES FOR THE PERIOD", st["section"]),
           Paragraph("(Rs.)", st["muted"])]],
         colWidths=[_DESC_W, _AMT_W],
     )
@@ -846,7 +867,12 @@ def _build_story(bill: Bill) -> list:
     left_block_w = CONTENT_W * 0.49
     right_block_w = CONTENT_W - left_block_w - 10
     dw = left_block_w - 66
-    pmt_table = Table(pdata, colWidths=[dw, 42, 24], splitByRow=True)
+    pmt_table = Table(
+        pdata,
+        colWidths=[dw, 42, 24],
+        rowHeights=[10] + [8] * (len(pdata) - 1),
+        splitByRow=True,
+    )
     pmt_table.setStyle(TableStyle(pcmds))
 
     usage_title = (
@@ -886,6 +912,7 @@ def _build_story(bill: Bill) -> list:
     usage_table = Table(
         udata,
         colWidths=[right_block_w * 0.24, right_block_w * 0.23, right_block_w * 0.34, right_block_w * 0.19],
+        rowHeights=[10, 10] + [8] * max(0, len(udata) - 2),
         splitByRow=True,
     )
     usage_table.setStyle(TableStyle(ucmds))

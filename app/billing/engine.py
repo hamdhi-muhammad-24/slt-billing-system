@@ -17,6 +17,10 @@ from app.billing.schemas import Bill, BillLine, PaymentInfo, ServiceGroup, Summa
 from app.core.money import money_sum, quantize
 
 
+def _customer_segment(customer_type: str | None) -> str:
+    return "BUSINESS" if (customer_type or "").upper() == "BUSINESS" else "HOME"
+
+
 def assemble_bill(inputs: BillInputs) -> Bill:
     """
     Pure function: BillInputs → Bill.
@@ -94,6 +98,7 @@ def assemble_bill(inputs: BillInputs) -> Bill:
         account_number=inputs.account_number,
         telephone_number=inputs.telephone_number,
         service_label=inputs.service_label,
+        customer_segment=_customer_segment(inputs.customer_type),
         customer_name=inputs.customer_name,
         address_lines=address_lines,
         invoice_number=inputs.invoice_number,

@@ -94,6 +94,7 @@ class BillInputs:
     line_items:       list[LineItemRow]
     payments:         list[PaymentRow]
     usage_records:    list[UsageRecordRow] = field(default_factory=list)
+    customer_type:    str = "RESIDENTIAL"
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +120,7 @@ def get_bill_inputs(
             Account.telephone_number,
             Account.service_label,
             Customer.full_name,
+            Customer.customer_type,
             Customer.address_line1,
             Customer.address_line2,
             Customer.city,
@@ -278,6 +280,7 @@ def get_bill_inputs(
         telephone_number=acct_row.telephone_number,
         service_label=acct_row.service_label,
         customer_name=acct_row.full_name,
+        customer_type=acct_row.customer_type.value if acct_row.customer_type else "RESIDENTIAL",
         address_line1=acct_row.address_line1,
         address_line2=acct_row.address_line2,
         city=acct_row.city,

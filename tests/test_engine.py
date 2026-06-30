@@ -209,6 +209,15 @@ class TestSample1Golden:
         assert bill.usage_records[0].description == "Additional Channels"
         assert bill.usage_records[0].charge == Decimal("125.00")
 
+    def test_customer_type_maps_to_home_or_business_segment(self):
+        residential = assemble_bill(_sample1())
+        assert residential.customer_segment == "HOME"
+
+        business_inputs = _sample1()
+        business_inputs.customer_type = "BUSINESS"
+        business = assemble_bill(business_inputs)
+        assert business.customer_segment == "BUSINESS"
+
 
 # ---------------------------------------------------------------------------
 # Summary invariant — total_payable == arrears + charges_for_period
