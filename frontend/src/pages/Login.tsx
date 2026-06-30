@@ -16,7 +16,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { authLogin, authMe, setToken, ApiError } from '../lib/api'
+import { authLogin, authMe, setToken, clearToken, ApiError } from '../lib/api'
 import Brand from '../components/Brand'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -83,6 +83,18 @@ export default function Login() {
       setToken(access_token)
       const me = await authMe()
       const role = me.role === 'ADMIN' ? 'admin' : 'customer'
+
+      if (activeMode === 'staff' && role !== 'admin') {
+        clearToken()
+        setError('These credentials are not authorised for staff access. Please use the Customer portal.')
+        return
+      }
+      if (activeMode === 'customer' && role !== 'customer') {
+        clearToken()
+        setError('Staff accounts must sign in through the Staff / Admin portal.')
+        return
+      }
+
       const nextSession =
         role === 'customer' && me.customer_id != null
           ? { role: 'customer' as const, customerId: me.customer_id }

@@ -202,7 +202,7 @@ export default function PublicPortal() {
             </div>
           </div>
 
-          <aside className="relative overflow-hidden rounded-3xl border border-white/18 bg-[linear-gradient(155deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.07)_100%)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl">
+          <aside className="relative overflow-hidden rounded-3xl border border-white/18 bg-[linear-gradient(155deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),transparent)]" />
             <div className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[radial-gradient(circle,rgba(57,181,74,0.12),transparent_70%)]" />
 
