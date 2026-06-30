@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   Building2,
-  CheckCircle2,
   CreditCard,
   FileText,
   Headphones,
@@ -82,6 +81,57 @@ const featureCards = [
   },
 ]
 
+const heroHighlights = [
+  {
+    label: 'Bill access',
+    text: 'Verified before viewing',
+  },
+  {
+    label: 'Payments',
+    text: 'Secure gateway path',
+  },
+  {
+    label: 'Self-care',
+    text: 'Customer and staff ready',
+  },
+]
+
+const gatewayStatusRows = [
+  {
+    icon: FileText,
+    label: 'Customer bill access',
+    text: 'Protected viewing',
+  },
+  {
+    icon: CreditCard,
+    label: 'Payment gateway path',
+    text: 'Secure entry',
+  },
+  {
+    icon: Building2,
+    label: 'Staff billing console',
+    text: 'Role-aware access',
+  },
+]
+
+const gatewayWorkflow = [
+  {
+    icon: FileText,
+    title: 'Select service',
+    description: 'Choose bill access, payment, or sign in.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Verify access',
+    description: 'Customer details stay protected before viewing bills.',
+  },
+  {
+    icon: LockKeyhole,
+    title: 'Continue securely',
+    description: 'Proceed to the correct billing workspace.',
+  },
+]
+
 const supportLinks = [
   { label: 'Contact support', href: 'mailto:support@slt.lk' },
   { label: 'Billing help', href: '#billing-help' },
@@ -99,21 +149,25 @@ export default function PublicPortal() {
 
   return (
     <main className="min-h-svh bg-[#F3F8FD] text-[#0B1F33]">
-      <header className="sticky top-0 z-40 border-b border-[#DCE8F2] bg-white/90 shadow-[0_4px_24px_rgba(6,43,85,0.05)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[#DCE8F2] bg-white/95 shadow-[0_4px_24px_rgba(6,43,85,0.06)] backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-18 items-center justify-between gap-3 py-3">
+          <div className="flex min-h-18 items-center justify-between gap-4 py-3">
             <Brand tone="light" size="md" />
 
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <nav className="hidden items-center gap-7 text-sm font-medium text-[#486276] md:flex">
                 {navLinks.map((link) => (
-                  <a key={link.label} href={link.href} className="transition-colors hover:text-[#0057A8]">
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-[#0066B3] after:transition-all hover:text-[#0057A8] hover:after:w-full"
+                  >
                     {link.label}
                   </a>
                 ))}
               </nav>
 
-              <Button asChild size="sm" className="h-9 bg-[linear-gradient(135deg,#05264A,#0066B3)] px-3 text-white shadow-sm hover:shadow-[0_10px_24px_rgba(0,102,179,0.22)]">
+              <Button asChild size="sm" className="h-10 shrink-0 bg-[linear-gradient(135deg,#05264A,#0066B3)] px-3.5 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(0,102,179,0.22)]">
                 <Link to={signInPath}>
                   Sign In
                   <ArrowRight size={14} />
@@ -133,12 +187,12 @@ export default function PublicPortal() {
       </header>
 
       <section className="relative overflow-hidden bg-[#05264A] text-white">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#05264A_0%,#063B73_48%,#0066B3_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(14,165,233,0.32),transparent_34%),radial-gradient(circle_at_84%_12%,rgba(57,181,74,0.20),transparent_30%),radial-gradient(circle_at_52%_100%,rgba(255,255,255,0.13),transparent_34%)]" />
-        <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:44px_44px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#031E3C_0%,#05264A_26%,#063B73_58%,#0066B3_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(14,165,233,0.34),transparent_34%),radial-gradient(circle_at_84%_12%,rgba(57,181,74,0.19),transparent_30%),radial-gradient(circle_at_50%_104%,rgba(255,255,255,0.15),transparent_34%)]" />
+        <div className="absolute inset-0 opacity-24 [background-image:linear-gradient(rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.13)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-x-0 bottom-0 h-px bg-white/15" />
 
-        <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center lg:gap-10 lg:px-8 lg:py-20">
+        <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-center lg:gap-12 lg:px-8 lg:py-20">
           <div className="max-w-3xl">
             <p className="inline-flex max-w-full items-center gap-2 rounded-md border border-white/20 bg-white/12 px-3 py-1.5 text-sm font-medium text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md">
               <ShieldCheck size={15} />
@@ -151,62 +205,99 @@ export default function PublicPortal() {
               View your latest bill, continue to payment access, or sign in to manage broadband,
               voice, PeoTV, and bundled services.
             </p>
-          </div>
 
-          <aside className="rounded-lg border border-white/18 bg-white/12 p-5 shadow-[0_28px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-            <div className="flex items-center gap-3 border-b border-white/15 pb-5">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-[0_12px_28px_rgba(255,255,255,0.16)]">
-                <ReceiptText size={22} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Billing gateway</h2>
-                <p className="mt-1 text-sm leading-5 text-white/72">
-                  Secure access preview for bill and account tasks.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-2.5">
-              {[
-                'Verified customer bill access',
-                'Authenticated payment entry',
-                'Role-based staff administration',
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-md border border-white/10 bg-white/8 px-3 py-3 text-sm text-white/86 shadow-sm">
-                  <CheckCircle2 size={16} className="shrink-0 text-[#6FE17D]" />
-                  <span>{item}</span>
+            <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+              {heroHighlights.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-white/15 bg-white/10 px-4 py-3 shadow-[0_14px_32px_rgba(0,0,0,0.16)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/15"
+                >
+                  <p className="text-sm font-semibold text-white">{item.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-white/64">{item.text}</p>
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="mt-5 rounded-lg border border-white/14 bg-white/10 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase text-white/55">Secure workflow</p>
-                  <p className="mt-1 text-xl font-semibold">Billing data protected</p>
+          <aside className="relative overflow-hidden rounded-lg border border-white/18 bg-[linear-gradient(160deg,rgba(255,255,255,0.17),rgba(255,255,255,0.08))] p-5 shadow-[0_30px_86px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#39B54A,#0EA5E9,#FFFFFF)] opacity-80" />
+            <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:28px_28px]" />
+
+            <div className="relative">
+              <div className="flex items-start justify-between gap-4 border-b border-white/15 pb-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-[0_12px_28px_rgba(255,255,255,0.16)]">
+                    <ReceiptText size={22} />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-semibold">Billing gateway</h2>
+                    <p className="mt-1 text-sm leading-5 text-white/72">
+                      Secure access for bill viewing, payment entry, and staff administration.
+                    </p>
+                  </div>
                 </div>
-                <span className="rounded-full bg-[#39B54A]/18 px-3 py-1 text-xs font-semibold text-[#8CF09B]">
-                  Protected
+                <span className="hidden rounded-full border border-[#39B54A]/30 bg-[#39B54A]/15 px-2.5 py-1 text-xs font-semibold text-[#8CF09B] sm:inline-flex">
+                  Secure
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div className="rounded-md border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs text-white/55">Verification</p>
-                  <p className="mt-1 text-sm font-semibold">Required</p>
-                </div>
-                <div className="rounded-md border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs text-white/55">PDF access</p>
-                  <p className="mt-1 text-sm font-semibold">After sign in</p>
-                </div>
-                <div className="rounded-md border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs text-white/55">Payment path</p>
-                  <p className="mt-1 text-sm font-semibold text-[#8CF09B]">Secure</p>
-                </div>
+              <div className="mt-5 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
+                {gatewayStatusRows.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <div
+                      key={item.label}
+                      className="rounded-md border border-white/15 bg-white/10 p-3 text-sm shadow-sm transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/15"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-sm">
+                          <Icon size={16} />
+                        </span>
+                        <span className="font-semibold leading-5 text-white/90">{item.label}</span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-white/60">{item.text}</p>
+                    </div>
+                  )
+                })}
               </div>
 
-              <div className="mt-4 h-2 rounded-full bg-white/12">
-                <div className="h-2 w-3/4 rounded-full bg-[linear-gradient(90deg,#39B54A,#0EA5E9)]" />
+              <div className="mt-5 rounded-lg border border-white/18 bg-white p-4 text-[#0B1F33] shadow-[0_22px_48px_rgba(0,0,0,0.18)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Secure portal workflow</p>
+                    <p className="mt-1 text-xs leading-5 text-[#52677A]">A guided path into the right billing task.</p>
+                  </div>
+                  <span className="rounded-full bg-[#EAF8EE] px-2.5 py-1 text-xs font-semibold text-[#248D36]">
+                    Protected
+                  </span>
+                </div>
+
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#E8F0F7]">
+                  <div className="h-full w-full rounded-full bg-[linear-gradient(90deg,#0066B3,#0EA5E9,#39B54A)]" />
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {gatewayWorkflow.map((step, index) => {
+                    const Icon = step.icon
+                    return (
+                      <div
+                        key={step.title}
+                        className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-md border border-[#DDE8F1] bg-[linear-gradient(135deg,#FFFFFF,#F6FAFE)] p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#0066B3]/28 hover:shadow-[0_12px_26px_rgba(6,43,85,0.10)]"
+                      >
+                        <span className="flex size-10 items-center justify-center rounded-md bg-[linear-gradient(135deg,#05264A,#0066B3)] text-white shadow-[0_10px_20px_rgba(0,102,179,0.20)]">
+                          <Icon size={17} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 text-sm font-semibold text-[#0B1F33]">
+                            <span className="text-xs font-bold text-[#0066B3]">0{index + 1}</span>
+                            {step.title}
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-[#52677A]">{step.description}</span>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </aside>
@@ -220,15 +311,15 @@ export default function PublicPortal() {
             return (
               <Card
                 key={action.title}
-                className={`relative overflow-hidden rounded-lg border border-[#D8E6F2] bg-white py-0 shadow-[0_18px_45px_rgba(6,43,85,0.10)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_62px_rgba(6,43,85,0.16)] ${action.borderClass}`}
+                className={`relative overflow-hidden rounded-lg border border-[#D8E6F2] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFE_100%)] py-0 shadow-[0_18px_45px_rgba(6,43,85,0.10)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_66px_rgba(6,43,85,0.17)] ${action.borderClass}`}
               >
                 <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${action.accentClass}`} />
-                <CardContent className="flex h-full min-h-[250px] flex-col p-5 sm:p-6">
+                <CardContent className="flex h-full min-h-[260px] flex-col p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className={`flex size-14 items-center justify-center rounded-md ${action.iconClass}`}>
                       <Icon size={24} />
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${action.helperClass}`}>
+                    <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${action.helperClass}`}>
                       {action.helper}
                     </span>
                   </div>
@@ -248,8 +339,8 @@ export default function PublicPortal() {
       </section>
 
       <section id="billing-help" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
-        <div className="relative overflow-hidden rounded-xl border border-[#D8E6F2] bg-[linear-gradient(135deg,#FFFFFF_0%,#F3F8FD_54%,#EAF8EE_100%)] p-5 shadow-[0_18px_50px_rgba(6,43,85,0.08)] sm:p-7">
-          <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(0,102,179,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,102,179,0.06)_1px,transparent_1px)] [background-size:36px_36px]" />
+        <div className="relative overflow-hidden rounded-lg border border-[#D8E6F2] bg-[linear-gradient(135deg,#FFFFFF_0%,#F3F8FD_60%,#EAF8EE_100%)] p-5 shadow-[0_18px_50px_rgba(6,43,85,0.08)] sm:p-7">
+          <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(0,102,179,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(0,102,179,0.055)_1px,transparent_1px)] [background-size:36px_36px]" />
           <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase text-[#0066B3]">Why use this portal?</p>
@@ -269,9 +360,9 @@ export default function PublicPortal() {
               return (
                 <Card
                   key={feature.title}
-                  className="rounded-lg border border-white/80 bg-white/90 py-0 shadow-[0_12px_35px_rgba(6,43,85,0.07)] backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-[#0066B3]/30 hover:shadow-[0_18px_44px_rgba(6,43,85,0.12)]"
+                  className="rounded-lg border border-white/80 bg-white/95 py-0 shadow-[0_12px_35px_rgba(6,43,85,0.07)] backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-[#0066B3]/30 hover:bg-white hover:shadow-[0_18px_44px_rgba(6,43,85,0.12)]"
                 >
-                  <CardContent className="min-h-[190px] p-5">
+                  <CardContent className="min-h-[180px] p-5">
                     <div className="flex size-11 items-center justify-center rounded-md bg-[linear-gradient(135deg,#EAF4FF,#EAF8EE)] text-[#0066B3] ring-1 ring-[#0066B3]/10">
                       <Icon size={20} />
                     </div>
