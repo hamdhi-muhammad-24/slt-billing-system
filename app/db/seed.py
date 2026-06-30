@@ -127,9 +127,8 @@ class _AcctSpec:
 
 _ACCOUNTS: list[_AcctSpec] = [
 
-    # ── 1. Sample-1 — exact replica of docs/DATABASE.md §7 ─────────────────
-    # Voice + Broadband, split-period rentals.
-    # Check: 7703.28 − 5000.00 + 1925.24 = 4628.52 ✓
+    # ── 1. Sample-1 — Voice + Broadband, split-period rentals + excess usage ─
+    # Check: 7703.28 − 5000.00 + 2080.48 = 4783.76 ✓
     _AcctSpec(
         full_name="Pavithim Nayapila Senadira",
         address_line1="No 807/102 Welimada Road",
@@ -150,10 +149,10 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0038474527-0337",
             balance_bf=_d("7703.28"),
             payments_received=_d("5000.00"),
-            charges_total=_d("1559.03"),      # 0+0+1154.84+404.19
-            taxes_total=_d("366.21"),
-            charges_for_period=_d("1925.24"), # 1559.03+366.21
-            total_payable=_d("4628.52"),       # 2703.28+1925.24
+            charges_total=_d("1809.03"),      # 0+0+1154.84+404.19+250.00
+            taxes_total=_d("271.45"),         # 1809.03×0.15
+            charges_for_period=_d("2080.48"), # 1809.03+271.45
+            total_payable=_d("4783.76"),       # 2703.28+2080.48
             lines=[
                 _LineSpec("0359236535",   LineType.RENTAL,
                           "SLT Voice Service 4G Net pal [Rental]",
@@ -167,14 +166,17 @@ _ACCOUNTS: list[_AcctSpec] = [
                 _LineSpec("940359236535", LineType.RENTAL,
                           "SLT BroadBand Service LTE Web Family Plus [Rental]",
                           date(2024, 2, 17), date(2024, 2, 23), _d("404.19"), 4),
+                _LineSpec("940359236535", LineType.USAGE,
+                          "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("250.00"), 5),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("366.21"), 99),
+                          None, None, _d("271.45"), 99),
             ],
         ),
     ),
 
     # ── 2. Single sub-account (Broadband only), partial payment ────────────
-    # Check: 2000.00 − 1500.00 + 2070.00 = 2570.00 ✓
+    # Check: 2000.00 − 1500.00 + 2990.00 = 3490.00 ✓
     _AcctSpec(
         full_name="Ruwan Jayasinghe",
         address_line1="45 Kandy Road",
@@ -194,22 +196,34 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0041928374-0201",
             balance_bf=_d("2000.00"),
             payments_received=_d("1500.00"),
-            charges_total=_d("1800.00"),
-            taxes_total=_d("270.00"),         # 1800 × 0.15
-            charges_for_period=_d("2070.00"),
-            total_payable=_d("2570.00"),       # 500 arrears + 2070
+            charges_total=_d("2600.00"),      # 1800+250+500+150-100
+            taxes_total=_d("390.00"),         # 2600×0.15
+            charges_for_period=_d("2990.00"),
+            total_payable=_d("3490.00"),       # 500 arrears + 2990
             lines=[
                 _LineSpec("0112345678", LineType.RENTAL,
                           "SLT ADSL Service Unlimited [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("1800.00"), 1),
+                _LineSpec("0112345678", LineType.USAGE,
+                          "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("250.00"), 2),
+                _LineSpec("0112345678", LineType.FEE,
+                          "Static IP address",
+                          None, None, _d("500.00"), 3),
+                _LineSpec("0112345678", LineType.FEE,
+                          "Modem rental",
+                          None, None, _d("150.00"), 4),
+                _LineSpec("0112345678", LineType.DISCOUNT,
+                          "Promotional discount",
+                          None, None, _d("-100.00"), 5),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("270.00"), 99),
+                          None, None, _d("390.00"), 99),
             ],
         ),
     ),
 
     # ── 3. Three sub-accounts (Voice + Broadband + PeoTV) ──────────────────
-    # Check: 3500.00 − 3000.00 + 2530.00 = 3030.00 ✓
+    # Check: 3500.00 − 3000.00 + 2760.00 = 3260.00 ✓
     _AcctSpec(
         full_name="Kumari Wickramasinghe",
         address_line1="No 12 Galle Road",
@@ -231,26 +245,28 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0052837401-0312",
             balance_bf=_d("3500.00"),
             payments_received=_d("3000.00"),
-            charges_total=_d("2200.00"),      # 250 + 1500 + 450
-            taxes_total=_d("330.00"),         # 2200 × 0.15
-            charges_for_period=_d("2530.00"),
-            total_payable=_d("3030.00"),       # 500 arrears + 2530
+            charges_total=_d("2400.00"),      # 250+1500+200+450
+            taxes_total=_d("360.00"),         # 2400×0.15
+            charges_for_period=_d("2760.00"),
+            total_payable=_d("3260.00"),       # 500 arrears + 2760
             lines=[
                 _LineSpec("0412230011",   LineType.RENTAL, "SLT Voice Service [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("250.00"), 1),
                 _LineSpec("940412230011", LineType.RENTAL, "SLT Fiber Broadband 100 Mbps [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("1500.00"), 2),
+                _LineSpec("940412230011", LineType.USAGE, "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("200.00"), 3),
                 _LineSpec("AD1293847",    LineType.RENTAL, "PeoTV Package [Rental]",
-                          _PERIOD_START, _PERIOD_END, _d("450.00"), 3),
+                          _PERIOD_START, _PERIOD_END, _d("450.00"), 4),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("330.00"), 99),
+                          None, None, _d("360.00"), 99),
             ],
         ),
     ),
 
     # ── 4. Negative DISCOUNT line ──────────────────────────────────────────
-    # Rental 2500 − discount 250 = charges_total 2250; tax on net = 337.50.
-    # Check: 2000.00 − 2000.00 + 2587.50 = 2587.50 ✓
+    # LTE rental + usage + fees − discount = 2980; tax = 447.
+    # Check: 2000.00 − 2000.00 + 3427.00 = 3427.00 ✓
     _AcctSpec(
         full_name="Sanath Perera",
         address_line1="88 Main Street",
@@ -270,19 +286,28 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0067483920-0422",
             balance_bf=_d("2000.00"),
             payments_received=_d("2000.00"),
-            charges_total=_d("2250.00"),      # 2500 + (−250)
-            taxes_total=_d("337.50"),         # 2250 × 0.15
-            charges_for_period=_d("2587.50"),
-            total_payable=_d("2587.50"),       # 0 arrears + 2587.50
+            charges_total=_d("2980.00"),      # 2500+180+350+200-250
+            taxes_total=_d("447.00"),         # 2980×0.15
+            charges_for_period=_d("3427.00"),
+            total_payable=_d("3427.00"),       # 0 arrears + 3427
             lines=[
                 _LineSpec("0372244556", LineType.RENTAL,
                           "SLT LTE Home Broadband [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("2500.00"), 1),
+                _LineSpec("0372244556", LineType.USAGE,
+                          "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("180.00"), 2),
+                _LineSpec("0372244556", LineType.FEE,
+                          "Static IP address",
+                          None, None, _d("350.00"), 3),
+                _LineSpec("0372244556", LineType.FEE,
+                          "Router rental",
+                          None, None, _d("200.00"), 4),
                 _LineSpec("0372244556", LineType.DISCOUNT,
                           "Loyalty discount",
-                          None, None, _d("-250.00"), 2),
+                          None, None, _d("-250.00"), 5),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("337.50"), 99),
+                          None, None, _d("447.00"), 99),
             ],
         ),
     ),
@@ -317,7 +342,7 @@ _ACCOUNTS: list[_AcctSpec] = [
 
     # ── 6. Carried arrears — no payment received, OVERDUE ─────────────────
     # Exercises BILLING.md §7 "no payments → arrears = balance_bf".
-    # Check: 3200.00 − 0.00 + 2070.00 = 5270.00 ✓
+    # Check: 3200.00 − 0.00 + 2817.50 = 6017.50 ✓
     _AcctSpec(
         full_name="Dilrukshi Amarasinghe",
         address_line1="15 Rajapaksha Road",
@@ -335,23 +360,35 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0084729301-0634",
             balance_bf=_d("3200.00"),
             payments_received=_d("0.00"),
-            charges_total=_d("1800.00"),
-            taxes_total=_d("270.00"),         # 1800 × 0.15
-            charges_for_period=_d("2070.00"),
-            total_payable=_d("5270.00"),       # 3200 arrears + 2070
+            charges_total=_d("2450.00"),      # 1800+350+250+150-100
+            taxes_total=_d("367.50"),         # 2450×0.15
+            charges_for_period=_d("2817.50"),
+            total_payable=_d("6017.50"),       # 3200 arrears + 2817.50
             status=InvoiceStatus.OVERDUE,
             lines=[
                 _LineSpec("0812890034", LineType.RENTAL,
                           "SLT ADSL Unlimited Plus [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("1800.00"), 1),
+                _LineSpec("0812890034", LineType.USAGE,
+                          "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("350.00"), 2),
+                _LineSpec("0812890034", LineType.FEE,
+                          "Late payment fee",
+                          None, None, _d("250.00"), 3),
+                _LineSpec("0812890034", LineType.FEE,
+                          "Reconnection fee",
+                          None, None, _d("150.00"), 4),
+                _LineSpec("0812890034", LineType.DISCOUNT,
+                          "Waiver adjustment",
+                          None, None, _d("-100.00"), 5),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("270.00"), 99),
+                          None, None, _d("367.50"), 99),
             ],
         ),
     ),
 
     # ── 7. Two sub-accounts (Broadband + PeoTV) ────────────────────────────
-    # Check: 4500.00 − 4000.00 + 3910.00 = 4410.00 ✓
+    # Check: 4500.00 − 4000.00 + 4450.50 = 4950.50 ✓
     _AcctSpec(
         full_name="Anura Dissanayake",
         address_line1="67 Baseline Road",
@@ -372,25 +409,31 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0095827304-0712",
             balance_bf=_d("4500.00"),
             payments_received=_d("4000.00"),
-            charges_total=_d("3400.00"),      # 2800 + 600
-            taxes_total=_d("510.00"),         # 3400 × 0.15
-            charges_for_period=_d("3910.00"),
-            total_payable=_d("4410.00"),       # 500 arrears + 3910
+            charges_total=_d("3870.00"),      # 2800+320+600+150
+            taxes_total=_d("580.50"),         # 3870×0.15
+            charges_for_period=_d("4450.50"),
+            total_payable=_d("4950.50"),       # 500 arrears + 4450.50
             lines=[
                 _LineSpec("0113344556", LineType.RENTAL,
                           "SLT Fiber Broadband 50 Mbps [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("2800.00"), 1),
+                _LineSpec("0113344556", LineType.USAGE,
+                          "Broadband excess usage",
+                          _PERIOD_START, _PERIOD_END, _d("320.00"), 2),
                 _LineSpec("AD7382910",  LineType.RENTAL,
                           "PeoTV Plus [Rental]",
-                          _PERIOD_START, _PERIOD_END, _d("600.00"), 2),
+                          _PERIOD_START, _PERIOD_END, _d("600.00"), 3),
+                _LineSpec("AD7382910",  LineType.FEE,
+                          "PeoTV HD decoder rental",
+                          None, None, _d("150.00"), 4),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("510.00"), 99),
+                          None, None, _d("580.50"), 99),
             ],
         ),
     ),
 
     # ── 8. Single sub-account (Voice only), exact payment — zero arrears ───
-    # Check: 500.00 − 500.00 + 402.50 = 402.50 ✓
+    # Check: 500.00 − 500.00 + 885.50 = 885.50 ✓
     _AcctSpec(
         full_name="Thilini Rathnayake",
         address_line1="34 Temple Road",
@@ -410,15 +453,23 @@ _ACCOUNTS: list[_AcctSpec] = [
             number="0106748291-0823",
             balance_bf=_d("500.00"),
             payments_received=_d("500.00"),
-            charges_total=_d("350.00"),
-            taxes_total=_d("52.50"),          # 350 × 0.15
-            charges_for_period=_d("402.50"),
-            total_payable=_d("402.50"),        # 0 arrears + 402.50
+            charges_total=_d("770.00"),       # 350+120+280+50-30
+            taxes_total=_d("115.50"),         # 770×0.15
+            charges_for_period=_d("885.50"),
+            total_payable=_d("885.50"),        # 0 arrears + 885.50
             lines=[
                 _LineSpec("0312567890", LineType.RENTAL, "SLT Voice Local [Rental]",
                           _PERIOD_START, _PERIOD_END, _d("350.00"), 1),
+                _LineSpec("0312567890", LineType.USAGE, "Local call charges",
+                          _PERIOD_START, _PERIOD_END, _d("120.00"), 2),
+                _LineSpec("0312567890", LineType.USAGE, "IDD call charges",
+                          _PERIOD_START, _PERIOD_END, _d("280.00"), 3),
+                _LineSpec("0312567890", LineType.FEE, "Caller ID service",
+                          None, None, _d("50.00"), 4),
+                _LineSpec("0312567890", LineType.DISCOUNT, "Loyalty discount",
+                          None, None, _d("-30.00"), 5),
                 _LineSpec(None, LineType.TAX, "Taxes & Levies",
-                          None, None, _d("52.50"), 99),
+                          None, None, _d("115.50"), 99),
             ],
         ),
     ),
@@ -903,6 +954,9 @@ def _seed_invoice_history(session: Session, packages: dict[str, Package], period
             subtotal = _d("0.00")
             sort_order = 1
             package_names: list[str] = []
+            num_services = len(services)
+            first_bb_service: ServiceAccount | None = None
+
             for service in services:
                 package = package_by_id.get(service.package_id)
                 if package is None:
@@ -918,13 +972,42 @@ def _seed_invoice_history(session: Session, packages: dict[str, Package], period
                     sort_order += 1
                 _upsert_usage(session, service, package, period, month_index, account_index, usage_charge)
 
-            if account_index % 5 == 0:
-                line_specs.append((None, LineType.DISCOUNT, "Loyalty discount", _d("-250.00"), sort_order))
+                # Realistic additional charge lines per service type.
+                # For 3-service accounts, skip Voice/PeoTV extras to keep rows ≤ ~14.
+                if service.service_type == ServiceType.BROADBAND:
+                    if first_bb_service is None:
+                        first_bb_service = service
+                    # Data usage charge — always present (varies by account/month)
+                    bb_usage = _d("100.00") + Decimal((month_index + account_index) % 6) * _d("50.00")
+                    line_specs.append((service, LineType.USAGE, "Broadband usage charges", bb_usage, sort_order))
+                    subtotal += bb_usage
+                    sort_order += 1
+                    # Static IP fee for ~one-third of accounts (1-2 service accounts only)
+                    if num_services <= 2 and account_index % 3 == 1:
+                        line_specs.append((service, LineType.FEE, "Static IP address", _d("350.00"), sort_order))
+                        subtotal += _d("350.00")
+                        sort_order += 1
+
+                elif service.service_type == ServiceType.VOICE and num_services <= 2:
+                    call_charge = _d("80.00") + Decimal((month_index + account_index) % 4) * _d("40.00")
+                    line_specs.append((service, LineType.USAGE, "Local call charges", call_charge, sort_order))
+                    subtotal += call_charge
+                    sort_order += 1
+
+                elif service.service_type == ServiceType.PEOTV and num_services <= 2:
+                    line_specs.append((service, LineType.FEE, "PeoTV HD decoder rental", _d("150.00"), sort_order))
+                    subtotal += _d("150.00")
+                    sort_order += 1
+
+            # Discount and addon tied to an actual service so they appear in the PDF group
+            discount_service = first_bb_service or (services[0] if services else None)
+            if account_index % 5 == 0 and discount_service is not None:
+                line_specs.append((discount_service, LineType.DISCOUNT, "Loyalty discount", _d("-250.00"), sort_order))
                 subtotal -= _d("250.00")
                 sort_order += 1
             addon_total = _d("350.00") if account_index % 6 == 0 and month_index >= 4 else _d("0.00")
-            if addon_total:
-                line_specs.append((None, LineType.FEE, "Extra GB add-on", addon_total, sort_order))
+            if addon_total and first_bb_service is not None:
+                line_specs.append((first_bb_service, LineType.FEE, "Extra GB add-on", addon_total, sort_order))
                 subtotal += addon_total
 
             taxes = (subtotal * Decimal("0.15")).quantize(Decimal("0.01"))
