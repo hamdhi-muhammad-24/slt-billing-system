@@ -27,7 +27,7 @@ const actionCards = [
     icon: FileText,
     title: 'View My Bill',
     description: 'Verify your account, view the latest bill, and continue to protected PDF access.',
-    cta: 'Continue to bill access',
+    cta: 'View bill',
     helper: 'OTP verification',
     path: '/bill-access',
     accentClass: 'from-[#0EA5E9] to-[#0066B3]',
@@ -40,7 +40,7 @@ const actionCards = [
     icon: CreditCard,
     title: 'Pay Bill',
     description: 'Look up your account and continue through a protected payment journey.',
-    cta: 'Continue to payment',
+    cta: 'Pay bill',
     helper: 'Secure payment path',
     path: '/pay-bill',
     accentClass: 'from-[#39B54A] to-[#11A870]',
@@ -53,7 +53,7 @@ const actionCards = [
     icon: LockKeyhole,
     title: 'Sign In',
     description: 'Enter the customer portal or staff billing console with your credentials.',
-    cta: 'Sign in to portal',
+    cta: 'Sign in',
     helper: 'Customer or staff',
     path: 'signin' as const,
     accentClass: 'from-[#05264A] to-[#0066B3]',
@@ -85,7 +85,7 @@ const featureCards = [
 const supportLinks = [
   { label: 'Contact support', href: 'mailto:support@slt.lk' },
   { label: 'Billing help', href: '#billing-help' },
-  { label: 'Terms and privacy', href: '#terms-privacy' },
+  { label: 'Terms & privacy', href: '#terms-privacy' },
 ]
 
 export default function PublicPortal() {
@@ -160,7 +160,9 @@ export default function PublicPortal() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold">Billing gateway</h2>
-                <p className="mt-1 text-sm leading-5 text-white/72">Secure access preview for bill tasks.</p>
+                <p className="mt-1 text-sm leading-5 text-white/72">
+                  Secure access preview for bill and account tasks.
+                </p>
               </div>
             </div>
 
@@ -180,22 +182,26 @@ export default function PublicPortal() {
             <div className="mt-5 rounded-lg border border-white/14 bg-white/10 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-medium uppercase text-white/55">Latest bill</p>
-                  <p className="mt-1 text-xl font-semibold">PDF ready</p>
+                  <p className="text-xs font-medium uppercase text-white/55">Secure workflow</p>
+                  <p className="mt-1 text-xl font-semibold">Billing data protected</p>
                 </div>
                 <span className="rounded-full bg-[#39B54A]/18 px-3 py-1 text-xs font-semibold text-[#8CF09B]">
                   Protected
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div className="rounded-md border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs text-white/55">Secure access</p>
-                  <p className="mt-1 text-sm font-semibold">Verified</p>
+                  <p className="text-xs text-white/55">Verification</p>
+                  <p className="mt-1 text-sm font-semibold">Required</p>
+                </div>
+                <div className="rounded-md border border-white/10 bg-white/8 p-3">
+                  <p className="text-xs text-white/55">PDF access</p>
+                  <p className="mt-1 text-sm font-semibold">After sign in</p>
                 </div>
                 <div className="rounded-md border border-white/10 bg-white/8 p-3">
                   <p className="text-xs text-white/55">Payment path</p>
-                  <p className="mt-1 text-sm font-semibold text-[#8CF09B]">Enabled</p>
+                  <p className="mt-1 text-sm font-semibold text-[#8CF09B]">Secure</p>
                 </div>
               </div>
 
@@ -230,7 +236,7 @@ export default function PublicPortal() {
                   <p className="mt-3 flex-1 text-sm leading-6 text-[#536B7D]">{action.description}</p>
                   <Button asChild className={`mt-6 h-11 w-full justify-between px-3 font-semibold shadow-sm ${action.buttonClass}`}>
                     <Link to={resolveActionPath(action)}>
-                      {action.cta}
+                      <span className="truncate">{action.cta}</span>
                       <ArrowRight size={15} />
                     </Link>
                   </Button>
@@ -248,7 +254,7 @@ export default function PublicPortal() {
             <div>
               <p className="text-sm font-semibold uppercase text-[#0066B3]">Why use this portal?</p>
               <h2 className="mt-2 text-2xl font-semibold text-[#0B1F33] sm:text-3xl">
-                Built for modern telecom e-billing
+                Modern telecom e-billing made simple
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-[#52677A]">
@@ -298,7 +304,7 @@ export default function PublicPortal() {
               <a
                 key={link.label}
                 href={link.href}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#DDE8F1] bg-white/90 px-3 text-sm font-medium text-[#0B1F33] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0066B3]/35 hover:bg-white hover:text-[#0066B3] hover:shadow-[0_10px_24px_rgba(6,43,85,0.10)]"
+                className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#DDE8F1] bg-white/90 px-3 text-sm font-medium text-[#0B1F33] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0066B3]/35 hover:bg-white hover:text-[#0066B3] hover:shadow-[0_10px_24px_rgba(6,43,85,0.10)]"
               >
                 <HelpCircle size={15} />
                 {link.label}

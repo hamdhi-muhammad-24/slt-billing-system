@@ -270,8 +270,7 @@ export default function BillAccess() {
                     <ShieldCheck size={18} />
                   </div>
                   <p className="text-sm leading-6 text-[#52677A]">
-                    Public bill access should be connected to OTP and secure PDF token APIs before
-                    displaying real customer billing data.
+                    A one-time verification step is required before bill details are displayed.
                   </p>
                 </div>
               </div>

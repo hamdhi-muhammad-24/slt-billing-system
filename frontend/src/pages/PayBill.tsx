@@ -34,7 +34,7 @@ const paymentSteps = [
   {
     icon: CreditCard,
     title: 'Secure payment',
-    text: 'Continue through a protected payment gateway handoff.',
+    text: 'Continue through a secure payment gateway.',
   },
 ]
 
@@ -131,7 +131,7 @@ export default function PayBill() {
                 <div className="rounded-lg border border-white/14 bg-white/10 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.14)] backdrop-blur">
                   <div className="flex items-center gap-2 text-sm font-semibold text-white">
                     <CheckCircle2 size={16} className="text-[#6FE17D]" />
-                    Payment details stay protected before gateway handoff
+                    Payment details stay protected before secure payment
                   </div>
                 </div>
               </div>
@@ -144,14 +144,14 @@ export default function PayBill() {
                 <div>
                   <p className="text-sm font-semibold uppercase text-[#248D36]">Payment access</p>
                   <h2 className="mt-2 text-3xl font-semibold text-[#0B1F33]">
-                    {step === 'lookup' ? 'Find your bill' : step === 'review' ? 'Review payment' : 'Gateway ready'}
+                    {step === 'lookup' ? 'Find your bill for payment' : step === 'review' ? 'Review payment' : 'Payment ready'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[#52677A]">
                     {step === 'lookup'
                       ? 'Use account details to prepare a secure bill payment summary.'
                       : step === 'review'
-                        ? 'Confirm the amount and continue to the protected gateway handoff.'
-                        : 'Your payment journey is ready for gateway integration.'}
+                        ? 'Confirm the amount before continuing to the secure payment gateway.'
+                        : 'Your payment journey is ready to continue securely.'}
                   </p>
                 </div>
                 <div className="hidden size-12 shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,#EAF8EE,#EAF4FF)] text-[#248D36] ring-1 ring-[#39B54A]/15 sm:flex">
@@ -190,7 +190,7 @@ export default function PayBill() {
                   </div>
 
                   <Button type="submit" className="h-11 w-full justify-between bg-[linear-gradient(135deg,#39B54A,#11A870)] px-3 font-semibold text-white shadow-sm hover:shadow-[0_14px_30px_rgba(57,181,74,0.24)]">
-                    Find bill
+                    Continue to payment summary
                     <ArrowRight size={15} />
                   </Button>
                 </form>
@@ -235,7 +235,7 @@ export default function PayBill() {
                   </div>
 
                   <Button type="submit" className="h-11 w-full justify-between bg-[linear-gradient(135deg,#39B54A,#11A870)] px-3 font-semibold text-white shadow-sm hover:shadow-[0_14px_30px_rgba(57,181,74,0.24)]">
-                    Continue to payment gateway
+                    Continue to secure payment
                     <ArrowRight size={15} />
                   </Button>
                 </form>
@@ -249,7 +249,7 @@ export default function PayBill() {
                         <CheckCircle2 size={19} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[#0B1F33]">Payment gateway handoff ready</p>
+                        <p className="text-sm font-semibold text-[#0B1F33]">Secure payment ready</p>
                         <p className="mt-1 text-sm leading-6 text-[#52677A]">
                           Amount {amount || 'selected'} is prepared for secure payment processing.
                         </p>
@@ -272,8 +272,8 @@ export default function PayBill() {
                     <Smartphone size={18} />
                   </div>
                   <p className="text-sm leading-6 text-[#52677A]">
-                    Real payments should be connected to a payment gateway initiation and callback
-                    API before collecting live transactions.
+                    Payment will continue through a secure payment gateway after your bill details
+                    are verified.
                   </p>
                 </div>
               </div>

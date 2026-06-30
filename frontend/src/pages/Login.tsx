@@ -57,7 +57,7 @@ const trustItems = [
 ]
 
 function modeSubtitle(mode: GatewayMode): string {
-  if (mode === 'staff') return 'Use authorized SLT-MOBITEL staff credentials to continue.'
+  if (mode === 'staff') return 'Use authorized staff credentials to manage billing operations securely.'
   return 'Use registered customer credentials to open your billing workspace.'
 }
 
@@ -238,7 +238,7 @@ export default function Login() {
                       href="mailto:support@slt.lk?subject=Billing%20portal%20password%20help"
                       className="text-xs font-semibold text-[#0066B3] hover:text-[#05264A]"
                     >
-                      Forgot password?
+                      Need help signing in?
                     </a>
                   </div>
                   <div className="relative">
