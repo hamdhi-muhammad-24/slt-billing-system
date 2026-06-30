@@ -4,11 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.errors import register_exception_handlers
 from app.api.routers import accounts, billing, customers, health, invoices, service_accounts
 from app.auth import router as auth_router
-
-_CORS_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+from app.core.config import settings
 
 
 def create_app() -> FastAPI:
@@ -19,7 +15,7 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=_CORS_ORIGINS,
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

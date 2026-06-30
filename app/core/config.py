@@ -44,5 +44,11 @@ class Settings(BaseSettings):
     # Notifications — general
     notify_max_attempts: int = 3
 
+    # CORS — space-separated list of allowed origins
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 
 settings = Settings()
