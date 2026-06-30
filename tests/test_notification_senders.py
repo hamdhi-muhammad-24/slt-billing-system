@@ -86,8 +86,12 @@ def test_get_email_sender_returns_smtp(monkeypatch):
 
 
 def test_get_email_sender_returns_ses(monkeypatch):
+    import sys
     monkeypatch.setattr("app.core.config.settings.email_backend", "ses")
-    sender = get_email_sender()
+    monkeypatch.setattr("app.core.config.settings.aws_region", "ap-southeast-1")
+    fake_boto3 = MagicMock()
+    with patch.dict(sys.modules, {"boto3": fake_boto3}):
+        sender = get_email_sender()
     assert isinstance(sender, SesEmailSender)
 
 
@@ -134,13 +138,28 @@ def test_console_sms_sender_different_refs():
 
 
 # ---------------------------------------------------------------------------
-# SesEmailSender — stub raises NotImplementedError
+# SesEmailSender — calls boto3 send_raw_email with correct parameters
 # ---------------------------------------------------------------------------
 
-def test_ses_sender_raises_not_implemented():
-    sender = SesEmailSender()
-    with pytest.raises(NotImplementedError, match="Phase 6"):
-        sender.send("x@example.com", "subj", "<p>body</p>")
+def test_ses_sender_sends_via_boto3(monkeypatch):
+    import sys
+    monkeypatch.setattr("app.core.config.settings.aws_region", "ap-southeast-1")
+    monkeypatch.setattr("app.core.config.settings.email_from", "billing@slt.lk")
+
+    mock_ses_client = MagicMock()
+    mock_ses_client.send_raw_email.return_value = {"MessageId": "ses-abc123"}
+    fake_boto3 = MagicMock()
+    fake_boto3.client.return_value = mock_ses_client
+
+    with patch.dict(sys.modules, {"boto3": fake_boto3}):
+        sender = SesEmailSender()
+        ref = sender.send("user@example.com", "Test subject", "<p>hello</p>")
+
+    assert ref == "ses-abc123"
+    mock_ses_client.send_raw_email.assert_called_once()
+    call_kwargs = mock_ses_client.send_raw_email.call_args[1]
+    assert call_kwargs["Source"] == "billing@slt.lk"
+    assert "user@example.com" in call_kwargs["Destinations"]
 
 
 # ---------------------------------------------------------------------------

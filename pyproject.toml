@@ -36,6 +36,8 @@ dependencies = [
     "flower>=2.0",
     # Notifications
     "twilio>=8.0",
+    # AWS (S3 PDF storage, SES email)
+    "boto3>=1.34",
 ]
 
 [project.optional-dependencies]

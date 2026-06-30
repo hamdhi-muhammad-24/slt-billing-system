@@ -1,0 +1,114 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: slt_ebill
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web UI to see sent emails
+      - "1025:1025"   # SMTP
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/slt_ebill
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PDF_TOKEN_SECRET: ${PDF_TOKEN_SECRET:-change-me-in-production}
+      EMAIL_BACKEND: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      EMAIL_FROM: "SLT Billing <billing@slt.lk>"
+      CORS_ORIGINS: '["http://localhost", "http://localhost:80", "http://127.0.0.1"]'
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A app.scheduler.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/slt_ebill
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PDF_TOKEN_SECRET: ${PDF_TOKEN_SECRET:-change-me-in-production}
+      EMAIL_BACKEND: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      EMAIL_FROM: "SLT Billing <billing@slt.lk>"
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A app.scheduler.celery_app beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/slt_ebill
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LOG_LEVEL: INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  redis_data:

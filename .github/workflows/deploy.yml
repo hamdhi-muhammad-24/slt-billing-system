@@ -1,0 +1,90 @@
+name: Build & Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_BACKEND_REPO: slt-backend
+  ECR_FRONTEND_REPO: slt-frontend
+  ECS_CLUSTER: slt-cluster
+  ECS_SERVICE_BACKEND: slt-backend-service
+  ECS_SERVICE_WORKER: slt-worker-service
+  ECS_SERVICE_BEAT: slt-beat-service
+
+jobs:
+  deploy:
+    name: Build images and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG .
+          docker tag  $REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG \
+                      $REGISTRY/$ECR_BACKEND_REPO:latest
+          docker push $REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG
+          docker push $REGISTRY/$ECR_BACKEND_REPO:latest
+
+      - name: Build and push frontend image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
+            -t $REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
+            ./frontend
+          docker tag  $REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
+                      $REGISTRY/$ECR_FRONTEND_REPO:latest
+          docker push $REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
+          docker push $REGISTRY/$ECR_FRONTEND_REPO:latest
+
+      - name: Deploy backend service
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE_BACKEND \
+            --force-new-deployment \
+            --output text --query "service.serviceName"
+
+      - name: Deploy worker service
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE_WORKER \
+            --force-new-deployment \
+            --output text --query "service.serviceName"
+
+      - name: Deploy beat service
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE_BEAT \
+            --force-new-deployment \
+            --output text --query "service.serviceName"
+
+      - name: Wait for backend to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE_BACKEND
+          echo "Backend deployed successfully."
