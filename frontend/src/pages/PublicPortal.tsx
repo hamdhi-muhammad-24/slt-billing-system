@@ -114,23 +114,6 @@ const gatewayStatusRows = [
   },
 ]
 
-const gatewayWorkflow = [
-  {
-    icon: FileText,
-    title: 'Select service',
-    description: 'Choose bill access, payment, or sign in.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Verify access',
-    description: 'Customer details stay protected before viewing bills.',
-  },
-  {
-    icon: LockKeyhole,
-    title: 'Continue securely',
-    description: 'Proceed to the correct billing workspace.',
-  },
-]
 
 const supportLinks = [
   { label: 'Contact support', href: 'mailto:support@slt.lk' },
@@ -219,85 +202,51 @@ export default function PublicPortal() {
             </div>
           </div>
 
-          <aside className="relative overflow-hidden rounded-lg border border-white/18 bg-[linear-gradient(160deg,rgba(255,255,255,0.17),rgba(255,255,255,0.08))] p-5 shadow-[0_30px_86px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-            <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#39B54A,#0EA5E9,#FFFFFF)] opacity-80" />
-            <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:28px_28px]" />
+          <aside className="relative overflow-hidden rounded-3xl border border-white/18 bg-[linear-gradient(155deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.07)_100%)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),transparent)]" />
+            <div className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[radial-gradient(circle,rgba(57,181,74,0.12),transparent_70%)]" />
 
             <div className="relative">
-              <div className="flex items-start justify-between gap-4 border-b border-white/15 pb-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-[0_12px_28px_rgba(255,255,255,0.16)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ring-white/18">
                     <ReceiptText size={22} />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold">Billing gateway</h2>
-                    <p className="mt-1 text-sm leading-5 text-white/72">
-                      Secure access for bill viewing, payment entry, and staff administration.
+                    <h2 className="text-lg font-semibold text-white">Billing gateway</h2>
+                    <p className="mt-0.5 text-sm leading-5 text-white/72">
+                      Secure access for billing and administration.
                     </p>
                   </div>
                 </div>
-                <span className="hidden rounded-full border border-[#39B54A]/30 bg-[#39B54A]/15 px-2.5 py-1 text-xs font-semibold text-[#8CF09B] sm:inline-flex">
+                <span className="shrink-0 rounded-full border border-[#39B54A]/35 bg-[#39B54A]/18 px-2.5 py-1 text-xs font-semibold text-[#8CF09B]">
                   Secure
                 </span>
               </div>
 
-              <div className="mt-5 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="mt-6 grid gap-2.5">
                 {gatewayStatusRows.map((item) => {
                   const Icon = item.icon
                   return (
                     <div
                       key={item.label}
-                      className="rounded-md border border-white/15 bg-white/10 p-3 text-sm shadow-sm transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/15"
+                      className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[0.08] p-3.5 transition-all duration-200 hover:border-white/20 hover:bg-white/[0.14]"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-sm">
-                          <Icon size={16} />
-                        </span>
-                        <span className="font-semibold leading-5 text-white/90">{item.label}</span>
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/15">
+                        <Icon size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white">{item.label}</p>
+                        <p className="mt-0.5 text-xs leading-4 text-white/72">{item.text}</p>
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-white/60">{item.text}</p>
                     </div>
                   )
                 })}
               </div>
 
-              <div className="mt-5 rounded-lg border border-white/18 bg-white p-4 text-[#0B1F33] shadow-[0_22px_48px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">Secure portal workflow</p>
-                    <p className="mt-1 text-xs leading-5 text-[#52677A]">A guided path into the right billing task.</p>
-                  </div>
-                  <span className="rounded-full bg-[#EAF8EE] px-2.5 py-1 text-xs font-semibold text-[#248D36]">
-                    Protected
-                  </span>
-                </div>
-
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#E8F0F7]">
-                  <div className="h-full w-full rounded-full bg-[linear-gradient(90deg,#0066B3,#0EA5E9,#39B54A)]" />
-                </div>
-
-                <div className="mt-4 grid gap-3">
-                  {gatewayWorkflow.map((step, index) => {
-                    const Icon = step.icon
-                    return (
-                      <div
-                        key={step.title}
-                        className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-md border border-[#DDE8F1] bg-[linear-gradient(135deg,#FFFFFF,#F6FAFE)] p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#0066B3]/28 hover:shadow-[0_12px_26px_rgba(6,43,85,0.10)]"
-                      >
-                        <span className="flex size-10 items-center justify-center rounded-md bg-[linear-gradient(135deg,#05264A,#0066B3)] text-white shadow-[0_10px_20px_rgba(0,102,179,0.20)]">
-                          <Icon size={17} />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2 text-sm font-semibold text-[#0B1F33]">
-                            <span className="text-xs font-bold text-[#0066B3]">0{index + 1}</span>
-                            {step.title}
-                          </span>
-                          <span className="mt-1 block text-xs leading-5 text-[#52677A]">{step.description}</span>
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
+              <div className="mt-6 flex items-center gap-2 border-t border-white/12 pt-4">
+                <LockKeyhole size={13} className="shrink-0 text-white/70" />
+                <p className="text-xs leading-5 text-white/70">Encrypted billing access, verified before viewing.</p>
               </div>
             </div>
           </aside>
