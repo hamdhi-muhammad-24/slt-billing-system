@@ -31,26 +31,128 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-AwsRawSafe {
+    param(
+        [object[]]$AwsArgs,
+        [switch]$TextOutput
+    )
+
+    $allArgs = @($AwsArgs | ForEach-Object { [string]$_ }) + @("--region", $Region)
+    if ($TextOutput) {
+        $allArgs += @("--output", "text")
+    }
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = "aws.exe"
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WorkingDirectory = (Get-Location).ProviderPath
+
+    $argumentListProperty = $startInfo.PSObject.Properties.Match("ArgumentList") | Select-Object -First 1
+    if ($null -ne $argumentListProperty) {
+        foreach ($arg in $allArgs) {
+            [void]$startInfo.ArgumentList.Add($arg)
+        }
+    }
+    else {
+        $startInfo.Arguments = (($allArgs | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join " ")
+    }
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    try {
+        [void]$process.Start()
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $process.WaitForExit()
+        $stdoutTask.Wait()
+        $stderrTask.Wait()
+
+        $stdout = $stdoutTask.Result
+        $stderr = $stderrTask.Result
+
+        return [pscustomobject]@{
+            ExitCode = $process.ExitCode
+            Stdout   = $stdout.Trim()
+            Stderr   = $stderr.Trim()
+        }
+    }
+    finally {
+        $process.Dispose()
+    }
+}
+
+function ConvertTo-ProcessArgument {
+    param([AllowNull()][object]$Argument)
+
+    if ($null -eq $Argument) {
+        return '""'
+    }
+
+    $value = [string]$Argument
+    if ($value.Length -eq 0) {
+        return '""'
+    }
+
+    if ($value -notmatch '[\s"]') {
+        return $value
+    }
+
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append('"')
+    $backslashCount = 0
+
+    foreach ($char in $value.ToCharArray()) {
+        if ($char -eq [char]'\') {
+            $backslashCount++
+            continue
+        }
+
+        if ($char -eq [char]'"') {
+            if ($backslashCount -gt 0) {
+                [void]$builder.Append('\' * ($backslashCount * 2))
+                $backslashCount = 0
+            }
+            [void]$builder.Append('\"')
+            continue
+        }
+
+        if ($backslashCount -gt 0) {
+            [void]$builder.Append('\' * $backslashCount)
+            $backslashCount = 0
+        }
+        [void]$builder.Append($char)
+    }
+
+    if ($backslashCount -gt 0) {
+        [void]$builder.Append('\' * ($backslashCount * 2))
+    }
+    [void]$builder.Append('"')
+
+    return $builder.ToString()
+}
+
 function Invoke-AwsText {
     param([object[]]$AwsArgs)
 
-    $output = & aws @AwsArgs --region $Region --output text 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "aws $($AwsArgs -join ' ') failed: $($output | Out-String)"
+    $result = Invoke-AwsRawSafe -AwsArgs $AwsArgs -TextOutput
+    if ($result.ExitCode -ne 0) {
+        throw "aws $($AwsArgs -join ' ') failed: $($result.Stderr)"
     }
-
-    return (($output | Out-String).Trim())
+    return $result.Stdout
 }
 
 function Invoke-AwsJson {
     param([object[]]$AwsArgs)
 
-    $output = & aws @AwsArgs --region $Region --output json 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "aws $($AwsArgs -join ' ') failed: $($output | Out-String)"
+    $result = Invoke-AwsRawSafe -AwsArgs ($AwsArgs + @("--output", "json"))
+    if ($result.ExitCode -ne 0) {
+        throw "aws $($AwsArgs -join ' ') failed: $($result.Stderr)"
     }
 
-    $text = ($output | Out-String).Trim()
+    $text = $result.Stdout
     if ([string]::IsNullOrWhiteSpace($text)) {
         return $null
     }
@@ -61,19 +163,19 @@ function Invoke-AwsJson {
 function Invoke-AwsNoOutput {
     param([object[]]$AwsArgs)
 
-    $output = & aws @AwsArgs --region $Region 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "aws $($AwsArgs -join ' ') failed: $($output | Out-String)"
+    $result = Invoke-AwsRawSafe -AwsArgs $AwsArgs
+    if ($result.ExitCode -ne 0) {
+        throw "aws $($AwsArgs -join ' ') failed: $($result.Stderr)"
     }
 }
 
 function Invoke-AwsIgnoreDuplicate {
     param([object[]]$AwsArgs)
 
-    $output = & aws @AwsArgs --region $Region 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        $text = ($output | Out-String)
-        if ($text -notmatch "InvalidPermission\.Duplicate") {
+    $result = Invoke-AwsRawSafe -AwsArgs $AwsArgs
+    if ($result.ExitCode -ne 0) {
+        $text = "$($result.Stdout) $($result.Stderr)"
+        if ($text -notmatch "InvalidPermission\.Duplicate|already exists|AlreadyExists|Duplicate|ResourceAlreadyExistsException") {
             throw "aws $($AwsArgs -join ' ') failed: $text"
         }
     }
@@ -109,12 +211,12 @@ function ConvertTo-AwsFileUri {
         [switch]$Binary
     )
 
-    $resolved = Resolve-Path -LiteralPath $Path
-    $prefix = "file:///"
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).ProviderPath -replace "\\", "/"
+    $prefix = "file://"
     if ($Binary) {
-        $prefix = "fileb:///"
+        $prefix = "fileb://"
     }
-    return $prefix + ($resolved.ProviderPath -replace "\\", "/")
+    return $prefix + $resolvedPath
 }
 
 function Ensure-SecurityGroup {
@@ -358,11 +460,13 @@ function Register-TaskDefinitionFile {
     param([string]$Path)
 
     $resolved = Resolve-Path -LiteralPath $Path
-    $fileUri = ConvertTo-AwsFileUri -Path $resolved.ProviderPath
-    Write-Host "Registering task definition $($resolved.ProviderPath)"
+    $relativePath = Resolve-Path -LiteralPath $resolved.ProviderPath -Relative
+    $awsPath = ($relativePath -replace "\\", "/") -replace "^\./", ""
+
+    Write-Host "Registering task definition $awsPath"
     return Invoke-AwsText @(
         "ecs", "register-task-definition",
-        "--cli-input-json", $fileUri,
+        "--cli-input-json", "file://$awsPath",
         "--query", "taskDefinition.taskDefinitionArn"
     )
 }
@@ -400,8 +504,8 @@ function Ensure-FrontendBucket {
         $script:FrontendBucket = "slt-billing-frontend-$AccountId-$Region"
     }
 
-    $head = & aws s3api head-bucket --bucket $FrontendBucket --region $Region 2>&1
-    if ($LASTEXITCODE -ne 0) {
+    $head = Invoke-AwsRawSafe @("s3api", "head-bucket", "--bucket", $FrontendBucket)
+    if ($head.ExitCode -ne 0) {
         Write-Host "Creating frontend S3 bucket $FrontendBucket"
         Invoke-AwsNoOutput @(
             "s3api", "create-bucket",
@@ -452,7 +556,10 @@ function Ensure-OriginAccessControl {
 }
 
 function New-ApiCacheBehavior {
-    param([string]$PathPattern)
+    param(
+        [string]$PathPattern,
+        [string]$OriginRequestPolicyId
+    )
 
     return [ordered]@{
         PathPattern = $PathPattern
@@ -468,8 +575,24 @@ function New-ApiCacheBehavior {
         }
         Compress = $true
         CachePolicyId = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-        OriginRequestPolicyId = "b689b0a8e-53d0-40ab-baf-68738e2966ac"
+        OriginRequestPolicyId = $OriginRequestPolicyId
     }
+}
+
+function Get-ManagedOriginRequestPolicyId {
+    param([string]$PolicyName = "Managed-AllViewerExceptHostHeader")
+
+    $policyId = Invoke-AwsText @(
+        "cloudfront", "list-origin-request-policies",
+        "--type", "managed",
+        "--query", "OriginRequestPolicyList.Items[?OriginRequestPolicy.OriginRequestPolicyConfig.Name=='$PolicyName'].OriginRequestPolicy.Id | [0]"
+    )
+
+    if (Test-Missing $policyId) {
+        throw "Could not find AWS managed CloudFront origin request policy $PolicyName."
+    }
+
+    return $policyId
 }
 
 function Ensure-CloudFrontFunction {
@@ -491,7 +614,26 @@ function Ensure-CloudFrontFunction {
         Write-Host "CloudFront Function $functionName does not exist in LIVE stage yet."
     }
 
-    $functionCode = @'
+    $development = $null
+    try {
+        $development = Invoke-AwsJson @(
+            "cloudfront", "describe-function",
+            "--name", $functionName,
+            "--stage", "DEVELOPMENT"
+        )
+    }
+    catch {
+        if ($_.Exception.Message -notmatch "NoSuchFunctionExists|does not exist") {
+            throw
+        }
+    }
+
+    if ($null -ne $development) {
+        Write-Host "CloudFront Function already exists in DEVELOPMENT. Publishing existing version."
+        $etag = $development.ETag
+    }
+    else {
+        $functionCode = @'
 function handler(event) {
     var request = event.request;
     var uri = request.uri;
@@ -503,30 +645,39 @@ function handler(event) {
     return request;
 }
 '@
-    $codePath = Write-TempText $functionCode
-    $codeUri = ConvertTo-AwsFileUri -Path $codePath -Binary
+        $codePath = Write-TempText $functionCode
+        $codeUri = ConvertTo-AwsFileUri -Path $codePath -Binary
 
-    try {
-        Write-Host "Creating CloudFront Function $functionName"
-        $created = Invoke-AwsJson @(
-            "cloudfront", "create-function",
-            "--name", $functionName,
-            "--function-config", "Comment=SLT Billing SPA route rewrite,Runtime=cloudfront-js-1.0",
-            "--function-code", $codeUri
-        )
-        $etag = $created.ETag
+        try {
+            Write-Host "Creating CloudFront Function $functionName"
+            $created = Invoke-AwsJson @(
+                "cloudfront", "create-function",
+                "--name", $functionName,
+                "--function-config", "Comment=SLT Billing SPA route rewrite,Runtime=cloudfront-js-1.0",
+                "--function-code", $codeUri
+            )
+            $etag = $created.ETag
+        }
+        catch {
+            if ($_.Exception.Message -notmatch "FunctionAlreadyExists|already exists|AlreadyExists|ResourceAlreadyExistsException") {
+                throw
+            }
+
+            Write-Host "CloudFront Function was created by another run. Publishing existing DEVELOPMENT version."
+            $development = Invoke-AwsJson @(
+                "cloudfront", "describe-function",
+                "--name", $functionName,
+                "--stage", "DEVELOPMENT"
+            )
+            $etag = $development.ETag
+        }
+        finally {
+            Remove-Item -LiteralPath $codePath -Force
+        }
     }
-    catch {
-        Write-Host "CloudFront Function already exists in DEVELOPMENT. Publishing existing version."
-        $development = Invoke-AwsJson @(
-            "cloudfront", "describe-function",
-            "--name", $functionName,
-            "--stage", "DEVELOPMENT"
-        )
-        $etag = $development.ETag
-    }
-    finally {
-        Remove-Item -LiteralPath $codePath -Force
+
+    if (Test-Missing $etag) {
+        throw "Could not resolve ETag for CloudFront Function $functionName."
     }
 
     $published = Invoke-AwsJson @(
@@ -573,7 +724,10 @@ function Ensure-CloudFrontDistribution {
         "/redoc*",
         "/openapi.json"
     )
-    $apiBehaviors = @($apiPatterns | ForEach-Object { New-ApiCacheBehavior -PathPattern $_ })
+    $apiOriginRequestPolicyId = Get-ManagedOriginRequestPolicyId
+    $apiBehaviors = @($apiPatterns | ForEach-Object {
+        New-ApiCacheBehavior -PathPattern $_ -OriginRequestPolicyId $apiOriginRequestPolicyId
+    })
 
     $aliases = [ordered]@{ Quantity = 0 }
     $viewerCertificate = [ordered]@{
