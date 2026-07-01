@@ -4,12 +4,12 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/slt-task-role",
+  "executionRoleArn": "arn:aws:iam::757905896932:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::757905896932:role/slt-task-role",
   "containerDefinitions": [
     {
       "name": "slt-worker",
-      "image": "ACCOUNT_ID.dkr.ecr.ap-southeast-1.amazonaws.com/slt-backend:latest",
+      "image": "757905896932.dkr.ecr.ap-southeast-1.amazonaws.com/slt-backend:latest",
       "command": ["celery", "-A", "app.scheduler.celery_app", "worker", "--loglevel=info"],
       "environment": [
         { "name": "EMAIL_BACKEND", "value": "ses" },
@@ -19,15 +19,15 @@
         { "name": "LOG_LEVEL",     "value": "INFO" }
       ],
       "secrets": [
-        { "name": "DATABASE_URL",         "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/database_url" },
-        { "name": "JWT_SECRET",           "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/jwt_secret" },
-        { "name": "PDF_TOKEN_SECRET",     "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/pdf_token_secret" },
-        { "name": "CELERY_BROKER_URL",    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/redis_url" },
-        { "name": "CELERY_RESULT_BACKEND","valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/redis_url_1" },
-        { "name": "EMAIL_FROM",           "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/email_from" },
-        { "name": "TWILIO_ACCOUNT_SID",   "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/twilio_sid" },
-        { "name": "TWILIO_AUTH_TOKEN",    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/twilio_token" },
-        { "name": "TWILIO_FROM",          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:ACCOUNT_ID:secret:slt/twilio_from" }
+        { "name": "DATABASE_URL",         "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/database_url" },
+        { "name": "JWT_SECRET",           "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/jwt_secret" },
+        { "name": "PDF_TOKEN_SECRET",     "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/pdf_token_secret" },
+        { "name": "CELERY_BROKER_URL",    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/redis_url" },
+        { "name": "CELERY_RESULT_BACKEND","valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/redis_url_1" },
+        { "name": "EMAIL_FROM",           "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/email_from" },
+        { "name": "TWILIO_ACCOUNT_SID",   "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/twilio_sid" },
+        { "name": "TWILIO_AUTH_TOKEN",    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/twilio_token" },
+        { "name": "TWILIO_FROM",          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:757905896932:secret:slt/twilio_from" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
@@ -40,3 +40,4 @@
     }
   ]
 }
+
