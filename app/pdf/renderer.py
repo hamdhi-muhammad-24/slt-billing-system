@@ -19,6 +19,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
     BaseDocTemplate,
+    CondPageBreak,
     Flowable,
     Frame,
     NextPageTemplate,
@@ -266,9 +267,9 @@ def _draw_identity(c: rl_canvas.Canvas, bill: Bill, top_y: float) -> float:
     c.setFont("Noto-Bold", 7.6)
     c.setFillColor(L.TEXT_COLOR)
     _fit_text(c, "Rev./Mr./Mrs.", right_x + 15, ry + cust_h - 18, inner_w - 30, "Noto-Bold", 7.6)
-    _fit_text(c, bill.customer_name, right_x + 15, ry + cust_h - 42, inner_w - 30, "Noto-Bold", 7.6)
+    _fit_text(c, bill.customer_name, right_x + 15, ry + cust_h - 34, inner_w - 30, "Noto-Bold", 7.6)
     c.setFont("Noto-Bold", 7.3)
-    addr_y = ry + cust_h - 55
+    addr_y = ry + cust_h - 47
     for line in bill.address_lines:
         _fit_text(c, line, right_x + 15, addr_y, inner_w - 30, "Noto-Bold", 7.3)
         addr_y -= 11
@@ -672,14 +673,14 @@ class _SlipFlowable(Flowable):
         def date_boxes(start_x: float, fy: float) -> None:
             ex = start_x
             for group_digits, group_label in ((2, "DD"), (2, "MM"), (4, "YYYY")):
-                c.setFont("Noto", 4.7)
-                c.setFillColor(L.MUTED_COLOR)
-                c.drawString(ex, fy + FH - 1, group_label)
-                for _ in range(group_digits):
+                for ch in group_label[:group_digits]:
                     c.setStrokeColor(L.BOX_BORDER)
                     c.setFillColor(L.WHITE)
                     c.setLineWidth(0.4)
                     c.rect(ex, fy + 2, bsz, bsz, stroke=1, fill=1)
+                    c.setFont("Noto-Bold", 4.2)
+                    c.setFillColor(L.MUTED_COLOR)
+                    c.drawCentredString(ex + bsz / 2, fy + 5.1, ch)
                     ex += bsz + 1
                 ex += 4
 
@@ -723,19 +724,7 @@ class _SlipFlowable(Flowable):
         c.setFont("Noto-Bold", 6.2)
         c.setFillColor(L.LABEL_BLUE)
         c.drawString(6, fy + 4, "Card Expiry Date")
-        ex = LBL_W + 3
-        # DD (2 boxes) / MM (2 boxes) / YYYY (4 boxes) with labels
-        for group_digits, group_label in ((2, "DD"), (2, "MM"), (4, "YYYY")):
-            c.setFont("Noto", 4.7)
-            c.setFillColor(L.MUTED_COLOR)
-            c.drawString(ex, fy + FH - 1, group_label)
-            for _ in range(group_digits):
-                c.setStrokeColor(L.BOX_BORDER)
-                c.setFillColor(L.WHITE)
-                c.setLineWidth(0.4)
-                c.rect(ex, fy + 2, bsz, bsz, stroke=1, fill=1)
-                ex += bsz + 1
-            ex += 4  # gap between groups
+        date_boxes(LBL_W + 3, fy)
 
         # ── Right panel: "Payment Slip" tag + barcode ───────────────────
         # Top strip: teal "Payment Slip" label
@@ -818,10 +807,12 @@ class _SlipFlowable(Flowable):
 _DESC_W = CONTENT_W - 90.0
 _AMT_W  = 90.0
 _DATE_W = 78.0
+_SLIP_FIT_EPSILON = 1.0
+_LOWER_SLIP_GAP = 2.0
 
 def _para_styles() -> dict[str, ParagraphStyle]:
     base = ParagraphStyle("base", fontName="Noto", fontSize=7.2,
-                          leading=9.2, textColor=L.TEXT_COLOR,
+                          leading=8.8, textColor=L.TEXT_COLOR,
                           spaceAfter=0, spaceBefore=0)
     return {
         "base":  base,
@@ -837,8 +828,8 @@ _BASE_TS = [
     ("FONTNAME",      (0, 0), (-1, -1), "Noto"),
     ("FONTSIZE",      (0, 0), (-1, -1), 7.2),
     ("TEXTCOLOR",     (0, 0), (-1, -1), L.TEXT_COLOR),
-    ("TOPPADDING",    (0, 0), (-1, -1), 1),
-    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+    ("TOPPADDING",    (0, 0), (-1, -1), 0.6),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 0.6),
     ("LEFTPADDING",   (0, 0), (-1, -1), 0),
     ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
     ("ALIGN",         (1, 0), (1, -1), "RIGHT"),
@@ -872,23 +863,43 @@ class _ChargesHeadingFlowable(Flowable):
         c.setFillColor(L.TEXT_COLOR)
         c.drawRightString(CONTENT_W - 4, 0, "(Rs.)")
 
+def _flowables_height(flowables: list, avail_w: float) -> float:
+    total = 0.0
+    for flowable in flowables:
+        _, h = flowable.wrap(avail_w, 10000)
+        total += h
+    return total
 
-def _build_story(bill: Bill) -> list:
+
+def _build_story(
+    bill: Bill,
+    first_avail_h: float | None = None,
+    later_avail_h: float | None = None,
+) -> list:
     st = _para_styles()
-    story: list = []
+    charge_story: list = []
 
     # ── D. Details of Charges ─────────────────────────────────────────────
-    story.append(_ChargesHeadingFlowable())
+    charge_story.append(_ChargesHeadingFlowable())
 
     # Charge rows (grouped by service account)
     data: list[list] = []
     cmds: list       = list(_BASE_TS)
+    row_heights: list[float | None] = []
     ri = 0
 
-    for grp in bill.groups:
+    for gi, grp in enumerate(bill.groups):
+        if gi:
+            data.append(["", ""])
+            row_heights.append(2.5)
+            cmds += [("TOPPADDING",    (0, ri), (-1, ri), 0),
+                     ("BOTTOMPADDING", (0, ri), (-1, ri), 0)]
+            ri += 1
+
         data.append([Paragraph(grp.service_number, st["bold"]), ""])
-        cmds += [("TOPPADDING",    (0, ri), (-1, ri), 3),
-                 ("BOTTOMPADDING", (0, ri), (-1, ri), 2)]
+        row_heights.append(None)
+        cmds += [("TOPPADDING",    (0, ri), (-1, ri), 1.4),
+                 ("BOTTOMPADDING", (0, ri), (-1, ri), 0.4)]
         ri += 1
 
         for li in grp.lines:
@@ -898,41 +909,54 @@ def _build_story(bill: Bill) -> list:
                 label += f"  [{period}]"
             data.append([Paragraph(label, st["base"]),
                          Paragraph(_fmt_amount(li.amount), st["right"])])
+            row_heights.append(None)
             ri += 1
 
+    if bill.tax_lines and data:
         data.append(["", ""])
+        row_heights.append(2.0)
         cmds += [("TOPPADDING",    (0, ri), (-1, ri), 0),
-                 ("BOTTOMPADDING", (0, ri), (-1, ri), 3)]
+                 ("BOTTOMPADDING", (0, ri), (-1, ri), 0)]
         ri += 1
 
     if bill.tax_lines:
         data.append([Paragraph("Taxes &amp; Levies", st["bold"]), ""])
-        cmds.append(("TOPPADDING", (0, ri), (-1, ri), 3))
+        row_heights.append(None)
+        cmds += [("TOPPADDING",    (0, ri), (-1, ri), 1.4),
+                 ("BOTTOMPADDING", (0, ri), (-1, ri), 0.4)]
         ri += 1
         for li in bill.tax_lines:
             data.append([Paragraph(f"    {li.description}", st["base"]),
                          Paragraph(_fmt_amount(li.amount), st["right"])])
+            row_heights.append(None)
             ri += 1
 
     # Gap row + totals
     data.append(["", ""])
+    row_heights.append(8.0)
     cmds += [("TOPPADDING",    (0, ri), (-1, ri), 0),
              ("BOTTOMPADDING", (0, ri), (-1, ri), 0)]
     ri += 1
 
     data.append([Paragraph("Total Charges for the Period", st["bold"]),
                  Paragraph(_fmt_amount(bill.summary.charges_for_period), st["rbold"])])
+    row_heights.append(None)
     cmds += [("LINEABOVE",     (0, ri), (-1, ri), 0.6, L.TEXT_COLOR),
              ("LINEBELOW",     (0, ri), (-1, ri), 0.6, L.TEXT_COLOR),
-             ("TOPPADDING",    (0, ri), (-1, ri), 4),
-             ("BOTTOMPADDING", (0, ri), (-1, ri), 4)]
+             ("TOPPADDING",    (0, ri), (-1, ri), 2.4),
+             ("BOTTOMPADDING", (0, ri), (-1, ri), 2.4)]
 
     if data:
-        charge_table = Table(data, colWidths=[_DESC_W, _AMT_W], splitByRow=True)
+        charge_table = Table(
+            data,
+            colWidths=[_DESC_W, _AMT_W],
+            rowHeights=row_heights,
+            splitByRow=True,
+        )
         charge_table.setStyle(TableStyle(cmds))
-        story.append(charge_table)
+        charge_story.append(charge_table)
 
-    story.append(Spacer(0, 6))
+    charge_story.append(Spacer(0, 5))
 
     # ── E. Details of Payments ────────────────────────────────────────────
     pdata: list[list] = []
@@ -940,8 +964,8 @@ def _build_story(bill: Bill) -> list:
         ("FONTNAME",      (0, 0), (-1, -1), "Noto"),
         ("FONTSIZE",      (0, 0), (-1, -1), 7.2),
         ("TEXTCOLOR",     (0, 0), (-1, -1), L.TEXT_COLOR),
-        ("TOPPADDING",    (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0.6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.6),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (2, 0), (2, -1), 8),
@@ -949,7 +973,7 @@ def _build_story(bill: Bill) -> list:
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
     ]
     pdata.append([Paragraph("Details of Payments Received", st["hdg"]), "", ""])
-    pcmds += [("SPAN", (0, 0), (2, 0)), ("BOTTOMPADDING", (0, 0), (-1, 0), 4)]
+    pcmds += [("SPAN", (0, 0), (2, 0)), ("BOTTOMPADDING", (0, 0), (-1, 0), 2)]
     pri = 1
 
     if bill.payments:
@@ -971,8 +995,8 @@ def _build_story(bill: Bill) -> list:
                   _fmt_amount(bill.summary.payments_received)])
     pcmds += [("FONTNAME",   (0, pri), (0, pri), "Noto-Bold"),
               ("FONTNAME",   (2, pri), (2, pri), "Noto-Bold"),
-              ("TOPPADDING", (0, pri), (-1, pri), 3),
-              ("BOTTOMPADDING", (0, pri), (-1, pri), 1)]
+              ("TOPPADDING", (0, pri), (-1, pri), 2),
+              ("BOTTOMPADDING", (0, pri), (-1, pri), 0.8)]
 
     left_block_w = CONTENT_W * 0.49
     right_block_w = CONTENT_W - left_block_w - 10
@@ -982,7 +1006,7 @@ def _build_story(bill: Bill) -> list:
     pmt_table = Table(
         pdata,
         colWidths=[dw, date_w, amount_w],
-        rowHeights=[12] + [11.5] * (len(pdata) - 1),
+        rowHeights=[11] + [10.5] * (len(pdata) - 1),
         splitByRow=True,
     )
     pmt_table.setStyle(TableStyle(pcmds))
@@ -1012,10 +1036,12 @@ def _build_story(bill: Bill) -> list:
         ("TEXTCOLOR",     (0, 0), (-1, -1), L.TEXT_COLOR),
         ("LEFTPADDING",   (0, 0), (-1, -1), 2),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 2),
-        ("TOPPADDING",    (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0.6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.6),
         ("SPAN",          (0, 0), (-1, 0)),
         ("FONTNAME",      (0, 0), (0, 0), "Noto-Bold"),
+        ("VALIGN",        (0, 0), (-1, 0), "TOP"),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 3.0),
         ("LINEABOVE",     (0, 1), (-1, 1), 0.7, L.TEXT_COLOR),
         ("LINEBELOW",     (0, 1), (-1, 1), 0.7, L.TEXT_COLOR),
         ("BOX",           (0, 1), (-1, -1), 0.5, L.TEXT_COLOR),
@@ -1024,7 +1050,7 @@ def _build_story(bill: Bill) -> list:
     usage_table = Table(
         udata,
         colWidths=[right_block_w * 0.24, right_block_w * 0.23, right_block_w * 0.34, right_block_w * 0.19],
-        rowHeights=[10, 10] + [8] * max(0, len(udata) - 2),
+        rowHeights=[13.8, 9.2] + [7.6] * max(0, len(udata) - 2),
         splitByRow=True,
     )
     usage_table.setStyle(TableStyle(ucmds))
@@ -1034,9 +1060,25 @@ def _build_story(bill: Bill) -> list:
         ("VALIGN",       (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING",  (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING",   (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING",(0, 0), (-1, -1), 0),
         ("LINEBEFORE",   (1, 0), (1, 0), 0.8, L.TEXT_COLOR),
         ("LEFTPADDING",  (1, 0), (1, 0), 10),
     ]))
+
+    story: list = list(charge_story)
+    details_h = _flowables_height(charge_story + [lower], CONTENT_W)
+    fits_first = (
+        first_avail_h is not None
+        and details_h + _SlipFlowable._MIN_H <= first_avail_h + _SLIP_FIT_EPSILON
+    )
+
+    if not fits_first and later_avail_h is not None:
+        lower_h = _flowables_height([lower], CONTENT_W)
+        needed_h = lower_h + _SlipFlowable._MIN_H + _LOWER_SLIP_GAP
+        if needed_h <= later_avail_h:
+            story.append(CondPageBreak(needed_h))
+
     story.append(lower)
 
     # ── I/G/H — Payment slip (anchored to bottom of last page) ───────────
@@ -1058,21 +1100,23 @@ def render_bill(bill: Bill, out_path: str | None = None) -> str:
 
     frame_top = _measure_frame_top(bill)
 
-    # Page-1 frame: from below C (summary) to bottom margin.
-    # Slip/legal/notice are all in _SlipFlowable — no reservation needed.
+    # Page-1 frame: from below C (summary) to bottom margin. _build_story()
+    # measures the fixed slip/legal/notice area before adding _SlipFlowable.
+    p1_top_padding = 4
     p1_frame = Frame(
         LEFT, MARGIN,
         CONTENT_W, max(frame_top - MARGIN, 1),
-        leftPadding=0, rightPadding=0, topPadding=4, bottomPadding=0,
+        leftPadding=0, rightPadding=0, topPadding=p1_top_padding, bottomPadding=0,
         showBoundary=0,
     )
 
     # Continuation-page frame: from below slim header to bottom margin.
     later_h = PAGE_H - SLIM_H - 6 - MARGIN
+    later_top_padding = 6
     later_frame = Frame(
         LEFT, MARGIN,
         CONTENT_W, later_h,
-        leftPadding=0, rightPadding=0, topPadding=6, bottomPadding=0,
+        leftPadding=0, rightPadding=0, topPadding=later_top_padding, bottomPadding=0,
         showBoundary=0,
     )
 
@@ -1092,7 +1136,11 @@ def render_bill(bill: Bill, out_path: str | None = None) -> str:
                           topMargin=0, bottomMargin=0)
     doc.addPageTemplates([p1_tpl, later_tpl])
 
-    story = [NextPageTemplate("later")] + _build_story(bill)
+    story = [NextPageTemplate("later")] + _build_story(
+        bill,
+        first_avail_h=max(frame_top - MARGIN - p1_top_padding, 1),
+        later_avail_h=max(later_h - later_top_padding, 1),
+    )
     doc.build(story, canvasmaker=_NumberedCanvas)
     return out_path
 
