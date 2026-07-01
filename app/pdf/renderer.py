@@ -443,8 +443,8 @@ class _SlipFlowable(Flowable):
         y=_SLIP_H + 4 + _NOTICE_H            ← notice box top
         y=_SLIP_H + 4 + _NOTICE_H + _LEGAL_H ← legal text top
     """
-    _SLIP_H   = 136.0   # slip content below dashed line
-    _NOTICE_H = 60.0    # notice box height
+    _SLIP_H   = 126.0   # slip content below dashed line
+    _NOTICE_H = 66.0    # notice box height
     _LEGAL_H  = 12.0    # legal text block
     _MIN_H    = _SLIP_H + 4 + _NOTICE_H + 4 + _LEGAL_H
 
@@ -465,6 +465,31 @@ class _SlipFlowable(Flowable):
     _NOTICE_TA = (
         "இந்த பட்டியலில் குறிப்பிடப்பட்ட நிலுவைத் தொகையை 7 நாட்களுக்குள் செலுத்தி "
         "சேவை துண்டிப்பை தவிர்க்கவும்."
+    )
+
+    _LEGAL = (
+        "*This electric form of the bill has the same legal recognition, effect, validity or "
+        "enforceability as the original form of the bill, in terms of the "
+        "Electronic Transactions Act No.19 of 2006."
+    )
+    _NOTICE_HEADING_SI = "දැනුම්දීම /"
+    _NOTICE_HEADING_TA = "அறிவிப்பு /"
+    _NOTICE_HEADING_EN = "Notice"
+    _NOTICE_SI = (
+        "මෙම බිල්පතේ සඳහන් මුදල ගෙවීමට ඇති බවත්, ගෙවිය යුතු මුදල ගෙවීමේ නියමිත දිනය "
+        "ඉක්මවා ඇති බැවින් සේවා අත්හිටුවීම වළක්වා ගැනීම සඳහා දින 7ක් ඇතුළත මෙම "
+        "බිල්පතේ සඳහන් බකී මුදල ගෙවන ලෙස කාරුණිකව දැනුම් දෙමු."
+    )
+    _NOTICE_TA = (
+        "தயவுசெய்து இந்த விலைப்பட்டியலில் குறிப்பிடப்பட்டுள்ள நிலுவைத் தொகையை செலுத்த "
+        "வேண்டிய இறுதி தேதியிலிருந்து 7 நாட்களுக்குள் செலுத்தவும். சேவைகள் "
+        "துண்டிக்கப்படுவதைத் தவிர்க்க இதனைச் செய்யவும். நீங்கள் ஏற்கனவே நிலுவைத் "
+        "தொகையைச் செலுத்தியிருந்தால், தயவுசெய்து இந்த அறிவிப்பை புறக்கணிக்கவும்."
+    )
+    _NOTICE_EN = (
+        "Please settle the arrears indicated in this invoice within 7 days to avoid possible "
+        "disconnection of services as the due date has lapsed. If you have already settled "
+        "the arrears please disregard this notice."
     )
 
     def __init__(self, bill: Bill) -> None:
@@ -524,6 +549,72 @@ class _SlipFlowable(Flowable):
         ly -= 7.0
         _fit_text(c, second, 4, ly, CONTENT_W - 8, "Noto", 4.7, 3.8)
 
+        # Redraw the notice with the exact current SLT wording and wrapped text.
+        c.setFillColor(L.WHITE)
+        c.rect(0, nb_y + 1, PAGE_W - LEFT, nb_h - 2, stroke=0, fill=1)
+        c.setFillColor(_NOTICE_FILL)
+        c.roundRect(0, nb_y, CONTENT_W, nb_h, 8, stroke=0, fill=1)
+        c.setStrokeColor(_NOTICE_RED)
+        c.setLineWidth(0.8)
+        c.roundRect(0, nb_y, CONTENT_W, nb_h, 8, stroke=1, fill=0)
+
+        def draw_para(text: str, font: str, size: float, leading: float,
+                      x: float, top_y: float, width: float) -> float:
+            def pieces(source: str) -> list[str]:
+                out: list[str] = []
+                for word in source.split():
+                    if c.stringWidth(word, font, size) <= width:
+                        out.append(word)
+                        continue
+                    chunk = ""
+                    for ch in word:
+                        candidate = chunk + ch
+                        if chunk and c.stringWidth(candidate, font, size) > width:
+                            out.append(chunk)
+                            chunk = ch
+                        else:
+                            chunk = candidate
+                    if chunk:
+                        out.append(chunk)
+                return out
+
+            c.setFont(font, size)
+            c.setFillColor(L.TEXT_COLOR)
+            lines: list[str] = []
+            current = ""
+            for part in pieces(text):
+                candidate = part if not current else f"{current} {part}"
+                if current and c.stringWidth(candidate, font, size) > width:
+                    lines.append(current)
+                    current = part
+                else:
+                    current = candidate
+            if current:
+                lines.append(current)
+
+            baseline = top_y - size
+            for line in lines:
+                c.drawString(x, baseline, line)
+                baseline -= leading
+            return baseline + size
+
+        hx = 5.0
+        ht_y = nb_y + nb_h - 12.0
+        c.setFillColor(_NOTICE_RED)
+        c.setFont("NotoSinhala", 8.0)
+        c.drawString(hx, ht_y, self._NOTICE_HEADING_SI)
+        hx += c.stringWidth(self._NOTICE_HEADING_SI, "NotoSinhala", 8.0) + 8
+        c.setFont("NotoTamil", 8.0)
+        c.drawString(hx, ht_y, self._NOTICE_HEADING_TA)
+        hx += c.stringWidth(self._NOTICE_HEADING_TA, "NotoTamil", 8.0) + 8
+        c.setFont("Noto-Bold", 8.0)
+        c.drawString(hx, ht_y, self._NOTICE_HEADING_EN)
+
+        text_top = ht_y - 7.0
+        text_top = draw_para(self._NOTICE_SI, "NotoSinhala", 4.85, 5.7, 5, text_top, CONTENT_W - 10) - 1.0
+        text_top = draw_para(self._NOTICE_TA, "NotoTamil", 4.75, 5.6, 5, text_top, CONTENT_W - 10) - 1.0
+        draw_para(self._NOTICE_EN, "Noto", 4.85, 5.7, 5, text_top, CONTENT_W - 10)
+
         # ── Dashed tear-off separator (full page width) ─────────────────
         c.saveState()
         c.setDash(4, 3)
@@ -544,34 +635,34 @@ class _SlipFlowable(Flowable):
         rx    = lw + 10            # right panel start (local)
         rw    = CONTENT_W - rx
 
-        FH    = 13.0   # field height
-        FG    = 2.0    # gap between fields
-        LBL_W = 82.0   # left-panel label box width
-        RLW   = 80.0   # right-panel label box width
+        FH    = 15.0   # field height
+        FG    = 2.1    # gap between fields
+        LBL_W = 86.0   # left-panel label box width
+        RLW   = 82.0   # right-panel label box width
 
         # Helper: left-panel field (blue label | light value)
         def lfield(label: str, value: str, fy: float) -> None:
             c.setFillColor(_SLIP_LABEL)
             c.roundRect(0, fy, LBL_W, FH, 7, stroke=0, fill=1)
-            c.setFont("Noto-Bold", 5.8)
+            c.setFont("Noto-Bold", 6.2)
             c.setFillColor(L.LABEL_BLUE)
-            c.drawString(6, fy + 3, label)
+            c.drawString(6, fy + 4, label)
             vw = lw - LBL_W
             c.setFillColor(L.WHITE)
             c.setStrokeColor(_SLIP_BORDER)
             c.setLineWidth(0.4)
             c.roundRect(LBL_W + 3, fy, vw - 3, FH, 7, stroke=1, fill=1)
-            c.setFont("Noto", 7.5)
+            c.setFont("Noto", 7.8)
             c.setFillColor(L.TEXT_COLOR)
-            _fit_text(c, value, LBL_W + 15, fy + 3, vw - 22, "Noto", 7.2, 5.0)
+            _fit_text(c, value, LBL_W + 15, fy + 4, vw - 22, "Noto", 7.6, 5.0)
 
         # Helper: right-panel field (blue label | empty white box)
         def rfield(label: str, fy: float) -> None:
             c.setFillColor(_SLIP_LABEL)
             c.roundRect(rx, fy, RLW, FH, 7, stroke=0, fill=1)
-            c.setFont("Noto-Bold", 5.8)
+            c.setFont("Noto-Bold", 6.2)
             c.setFillColor(L.LABEL_BLUE)
-            c.drawString(rx + 6, fy + 3, label)
+            c.drawString(rx + 6, fy + 4, label)
             vw = rw - RLW
             c.setFillColor(L.WHITE)
             c.setStrokeColor(_SLIP_BORDER)
@@ -581,7 +672,7 @@ class _SlipFlowable(Flowable):
         def date_boxes(start_x: float, fy: float) -> None:
             ex = start_x
             for group_digits, group_label in ((2, "DD"), (2, "MM"), (4, "YYYY")):
-                c.setFont("Noto", 4.5)
+                c.setFont("Noto", 4.7)
                 c.setFillColor(L.MUTED_COLOR)
                 c.drawString(ex, fy + FH - 1, group_label)
                 for _ in range(group_digits):
@@ -609,11 +700,11 @@ class _SlipFlowable(Flowable):
         fy -= FG + FH
         c.setFillColor(_SLIP_LABEL)
         c.roundRect(0, fy, LBL_W, FH, 7, stroke=0, fill=1)
-        c.setFont("Noto-Bold", 5.8)
+        c.setFont("Noto-Bold", 6.2)
         c.setFillColor(L.LABEL_BLUE)
-        c.drawString(6, fy + 3, "Credit Card No.")
+        c.drawString(6, fy + 4, "Credit Card No.")
         # Draw 16 small input boxes
-        bsz = 8.0   # box size
+        bsz = 8.8   # box size
         bsp = 2.0   # space between groups
         cx  = LBL_W + 3
         for i in range(16):
@@ -629,13 +720,13 @@ class _SlipFlowable(Flowable):
         fy -= FG + FH
         c.setFillColor(_SLIP_LABEL)
         c.roundRect(0, fy, LBL_W, FH, 7, stroke=0, fill=1)
-        c.setFont("Noto-Bold", 5.8)
+        c.setFont("Noto-Bold", 6.2)
         c.setFillColor(L.LABEL_BLUE)
-        c.drawString(6, fy + 3, "Card Expiry Date")
+        c.drawString(6, fy + 4, "Card Expiry Date")
         ex = LBL_W + 3
         # DD (2 boxes) / MM (2 boxes) / YYYY (4 boxes) with labels
         for group_digits, group_label in ((2, "DD"), (2, "MM"), (4, "YYYY")):
-            c.setFont("Noto", 4.5)
+            c.setFont("Noto", 4.7)
             c.setFillColor(L.MUTED_COLOR)
             c.drawString(ex, fy + FH - 1, group_label)
             for _ in range(group_digits):
@@ -649,22 +740,22 @@ class _SlipFlowable(Flowable):
         # ── Right panel: "Payment Slip" tag + barcode ───────────────────
         # Top strip: teal "Payment Slip" label
         tag_y  = sh - 2 - FH     # same top as left field row 1
-        tag_w  = 68.0
+        tag_w  = 73.0
         c.setFillColor(L.HEADER_BLUE)
         c.roundRect(rx, tag_y, tag_w, FH, 7, stroke=0, fill=1)
-        c.setFont("Noto-Bold", 7.5)
+        c.setFont("Noto-Bold", 8.0)
         c.setFillColor(L.WHITE)
-        c.drawString(rx + 3, tag_y + 3, "Payment Slip")
+        c.drawString(rx + 4, tag_y + 4, "Payment Slip")
 
-        qr_sz = 31.0
+        qr_sz = 33.0
         qr_bx = rx + rw - qr_sz
-        qr_by = tag_y - 19
-        logo_w = 39.0
-        logo_h = 13.0
+        qr_by = tag_y - 18
+        logo_w = 42.0
+        logo_h = 14.0
         logo_x = qr_bx - logo_w - 4
 
         bc_x = rx + tag_w + 5
-        bc_y = tag_y + 1
+        bc_y = tag_y + 1.5
         bc_w = max(72.0, logo_x - bc_x - 4)
         draw_barcode(c, b.invoice_number, bc_x, bc_y, w=bc_w, h=13)
 
@@ -678,7 +769,7 @@ class _SlipFlowable(Flowable):
         except Exception:
             pass
 
-        c.setFont("Noto", 4.5)
+        c.setFont("Noto", 4.8)
         c.setFillColor(L.MUTED_COLOR)
         c.drawCentredString(logo_x + logo_w / 2, tag_y - 8, "LANKAQR")
 
@@ -699,11 +790,11 @@ class _SlipFlowable(Flowable):
             c.setStrokeColor(_SLIP_BORDER)
             c.setFillColor(L.WHITE)
             c.setLineWidth(0.5)
-            c.rect(cbx, ry + 2, 8, 8, stroke=1, fill=0)
-            c.setFont("Noto-Bold", 6)
+            c.rect(cbx, ry + 3, 8.5, 8.5, stroke=1, fill=0)
+            c.setFont("Noto-Bold", 6.4)
             c.setFillColor(L.LABEL_BLUE)
-            c.drawString(cbx + 10, ry + 3, label)
-            cbx += 56
+            c.drawString(cbx + 11, ry + 4, label)
+            cbx += 58
 
         ry -= FG
         rfield("Name of Bank",          ry - FH);  ry -= FH + FG
@@ -713,25 +804,13 @@ class _SlipFlowable(Flowable):
         date_y = ry - FH
         c.setFillColor(_SLIP_LABEL)
         c.roundRect(rx, date_y, RLW, FH, 7, stroke=0, fill=1)
-        c.setFont("Noto-Bold", 5.8)
+        c.setFont("Noto-Bold", 6.2)
         c.setFillColor(L.LABEL_BLUE)
-        c.drawString(rx + 6, date_y + 3, "Date")
+        c.drawString(rx + 6, date_y + 4, "Date")
         date_boxes(rx + RLW + 3, date_y)
-        c.setFont("Noto", 5.2)
+        c.setFont("Noto", 5.4)
         c.setFillColor(L.TEXT_COLOR)
-        c.drawRightString(rx + rw - 2, date_y + 3, "1B56510565")
-
-        # ── Bottom section: SLT logo (left) + QR + LANKAQR label ────────
-        bottom_h = max(ry, 4)           # available height above y=0
-        # Leave 8pt below the QR start for the LANKAQR label (7pt) + 1pt gap
-        qr_sz = min(30.0, max(bottom_h - 8, 8))
-        qr_by = bottom_h - qr_sz       # QR bottom y
-        qr_bx = rx + rw - qr_sz        # QR x (right-aligned)
-
-        # LANKAQR label sits below the QR code
-        # SLT Mobitel logo — left portion of bottom section, centred on QR height
-        logo_h = min(16.0, qr_sz)
-        logo_w = min(qr_bx - rx - 4, rw * 0.42)
+        c.drawRightString(rx + rw - 2, date_y + 4, "1B56510565")
 
 # ---------------------------------------------------------------------------
 # Platypus story — D (charges) + E (payments) + I/G/H (slip)
@@ -865,10 +944,12 @@ def _build_story(bill: Bill) -> list:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (2, 0), (2, -1), 8),
         ("ALIGN",         (2, 0), (2, -1), "RIGHT"),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
     ]
     pdata.append([Paragraph("Details of Payments Received", st["hdg"]), "", ""])
-    pcmds += [("SPAN", (0, 0), (2, 0)), ("BOTTOMPADDING", (0, 0), (-1, 0), 3)]
+    pcmds += [("SPAN", (0, 0), (2, 0)), ("BOTTOMPADDING", (0, 0), (-1, 0), 4)]
     pri = 1
 
     if bill.payments:
@@ -890,18 +971,18 @@ def _build_story(bill: Bill) -> list:
                   _fmt_amount(bill.summary.payments_received)])
     pcmds += [("FONTNAME",   (0, pri), (0, pri), "Noto-Bold"),
               ("FONTNAME",   (2, pri), (2, pri), "Noto-Bold"),
-              ("LINEABOVE",  (0, pri), (-1, pri), 0.5, L.BOX_BORDER),
-              ("TOPPADDING", (0, pri), (-1, pri), 3)]
+              ("TOPPADDING", (0, pri), (-1, pri), 3),
+              ("BOTTOMPADDING", (0, pri), (-1, pri), 1)]
 
     left_block_w = CONTENT_W * 0.49
     right_block_w = CONTENT_W - left_block_w - 10
-    date_w = 56.0
-    amount_w = 52.0
+    date_w = 58.0
+    amount_w = 58.0
     dw = left_block_w - date_w - amount_w
     pmt_table = Table(
         pdata,
         colWidths=[dw, date_w, amount_w],
-        rowHeights=[10] + [9] * (len(pdata) - 1),
+        rowHeights=[12] + [11.5] * (len(pdata) - 1),
         splitByRow=True,
     )
     pmt_table.setStyle(TableStyle(pcmds))
