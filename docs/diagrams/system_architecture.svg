@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1150" viewBox="0 0 1600 1150">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#245b86"/>
+    </marker>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0b2944" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #0b1f33; }
+      .subtitle { font: 400 18px Arial, sans-serif; fill: #52677a; }
+      .label { font: 700 18px Arial, sans-serif; fill: #0b1f33; }
+      .small { font: 400 14px Arial, sans-serif; fill: #52677a; }
+      .tiny { font: 400 12px Arial, sans-serif; fill: #61788d; }
+      .section { font: 700 16px Arial, sans-serif; fill: #0066b3; letter-spacing: 0.5px; }
+      .node { fill: #ffffff; stroke: #c8dae9; stroke-width: 2; filter: url(#shadow); }
+      .node-blue { fill: #eef7ff; stroke: #5aa9e8; stroke-width: 2; filter: url(#shadow); }
+      .node-green { fill: #eefaf2; stroke: #39b54a; stroke-width: 2; filter: url(#shadow); }
+      .node-dark { fill: #0d4778; stroke: #0d4778; stroke-width: 2; filter: url(#shadow); }
+      .node-dark-text { font: 700 18px Arial, sans-serif; fill: #ffffff; }
+      .node-dark-small { font: 400 14px Arial, sans-serif; fill: #d8ecff; }
+      .aws { fill: #fafdff; stroke: #b9d3e8; stroke-width: 2; stroke-dasharray: 10 8; }
+      .arrow { fill: none; stroke: #245b86; stroke-width: 2.6; marker-end: url(#arrow); }
+      .arrow-soft { fill: none; stroke: #6d8ba3; stroke-width: 2.2; marker-end: url(#arrow); }
+      .chip { fill: #e8f3fc; stroke: #bdd9ee; stroke-width: 1; }
+      .chip-text { font: 600 12px Arial, sans-serif; fill: #245b86; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1150" fill="#f3f8fd"/>
+  <text x="800" y="54" text-anchor="middle" class="title">SLT Billing System - System Architecture</text>
+  <text x="800" y="84" text-anchor="middle" class="subtitle">Production e-billing flow from browser portal to API, billing engine, database, PDF generation, and notifications</text>
+
+  <rect x="70" y="125" width="1460" height="980" rx="28" class="aws"/>
+  <text x="105" y="160" class="section">AWS PRODUCTION ENVIRONMENT</text>
+
+  <!-- User and edge layer -->
+  <rect x="500" y="115" width="600" height="82" rx="16" class="node-dark"/>
+  <text x="800" y="148" text-anchor="middle" class="node-dark-text">Users in Browser</text>
+  <text x="800" y="172" text-anchor="middle" class="node-dark-small">Public Portal / Admin Portal / Customer Portal</text>
+
+  <rect x="500" y="245" width="600" height="88" rx="16" class="node-blue"/>
+  <text x="800" y="281" text-anchor="middle" class="label">CloudFront Distribution</text>
+  <text x="800" y="306" text-anchor="middle" class="small">HTTPS entry point, routes frontend assets and API requests</text>
+
+  <path d="M800 197 L800 238" class="arrow"/>
+  <text x="818" y="224" class="tiny">HTTPS</text>
+
+  <!-- Frontend and API routing -->
+  <rect x="145" y="390" width="385" height="105" rx="16" class="node"/>
+  <text x="337" y="426" text-anchor="middle" class="label">S3 Frontend Hosting</text>
+  <text x="337" y="451" text-anchor="middle" class="small">React + TypeScript + Vite build</text>
+  <text x="337" y="474" text-anchor="middle" class="small">Public, admin, and customer UI</text>
+
+  <rect x="1070" y="390" width="385" height="105" rx="16" class="node"/>
+  <text x="1262" y="426" text-anchor="middle" class="label">Application Load Balancer</text>
+  <text x="1262" y="451" text-anchor="middle" class="small">Forwards API traffic to backend</text>
+  <text x="1262" y="474" text-anchor="middle" class="small">Health check path: /health</text>
+
+  <path d="M690 333 C610 365 500 380 370 390" class="arrow"/>
+  <path d="M910 333 C990 365 1110 380 1230 390" class="arrow"/>
+  <text x="515" y="372" class="tiny">Static assets</text>
+  <text x="1018" y="372" class="tiny">API routes</text>
+
+  <!-- CI/CD support -->
+  <rect x="1120" y="210" width="285" height="88" rx="16" class="node-green"/>
+  <text x="1262" y="246" text-anchor="middle" class="label">GitHub Actions + ECR</text>
+  <text x="1262" y="271" text-anchor="middle" class="small">Build Docker image and deploy</text>
+  <path d="M1262 298 L1262 383" class="arrow-soft"/>
+
+  <!-- Backend app -->
+  <rect x="455" y="515" width="690" height="150" rx="18" class="node-blue"/>
+  <text x="800" y="548" text-anchor="middle" class="label">ECS Fargate - FastAPI Backend</text>
+  <text x="800" y="573" text-anchor="middle" class="small">REST API for authentication, customers, accounts, invoices, billing, and PDFs</text>
+  <rect x="500" y="598" width="116" height="32" rx="10" class="chip"/>
+  <text x="558" y="619" text-anchor="middle" class="chip-text">Auth / JWT</text>
+  <rect x="630" y="598" width="132" height="32" rx="10" class="chip"/>
+  <text x="696" y="619" text-anchor="middle" class="chip-text">Customers</text>
+  <rect x="776" y="598" width="124" height="32" rx="10" class="chip"/>
+  <text x="838" y="619" text-anchor="middle" class="chip-text">Accounts</text>
+  <rect x="914" y="598" width="116" height="32" rx="10" class="chip"/>
+  <text x="972" y="619" text-anchor="middle" class="chip-text">Invoices</text>
+  <rect x="1044" y="598" width="70" height="32" rx="10" class="chip"/>
+  <text x="1079" y="619" text-anchor="middle" class="chip-text">Billing</text>
+
+  <path d="M1262 495 C1262 538 1195 590 1150 590" class="arrow"/>
+
+  <!-- Core billing path -->
+  <rect x="500" y="720" width="600" height="88" rx="16" class="node"/>
+  <text x="800" y="756" text-anchor="middle" class="label">Billing Engine</text>
+  <text x="800" y="781" text-anchor="middle" class="small">Framework-independent calculation and bill assembly</text>
+
+  <rect x="500" y="855" width="600" height="88" rx="16" class="node"/>
+  <text x="800" y="891" text-anchor="middle" class="label">Repository Layer</text>
+  <text x="800" y="916" text-anchor="middle" class="small">Single SQL access layer for billing data</text>
+
+  <rect x="500" y="990" width="600" height="86" rx="16" class="node-green"/>
+  <text x="800" y="1025" text-anchor="middle" class="label">RDS PostgreSQL Database</text>
+  <text x="800" y="1050" text-anchor="middle" class="small">customers, accounts, service accounts, invoices, line items, payments</text>
+
+  <path d="M800 665 L800 713" class="arrow"/>
+  <path d="M800 808 L800 848" class="arrow"/>
+  <path d="M800 943 L800 983" class="arrow"/>
+  <text x="818" y="699" class="tiny">Bill object</text>
+  <text x="818" y="838" class="tiny">Typed queries</text>
+  <text x="818" y="975" class="tiny">SQLAlchemy</text>
+
+  <!-- PDF branch -->
+  <rect x="145" y="705" width="300" height="92" rx="16" class="node"/>
+  <text x="295" y="741" text-anchor="middle" class="label">PDF Renderer</text>
+  <text x="295" y="766" text-anchor="middle" class="small">ReportLab invoice layout</text>
+
+  <rect x="145" y="850" width="300" height="92" rx="16" class="node-green"/>
+  <text x="295" y="886" text-anchor="middle" class="label">S3 PDF Storage</text>
+  <text x="295" y="911" text-anchor="middle" class="small">Generated bill PDFs</text>
+
+  <path d="M500 764 L452 764" class="arrow"/>
+  <path d="M295 797 L295 843" class="arrow"/>
+  <path d="M445 896 C480 896 480 620 455 620" class="arrow-soft"/>
+  <text x="335" y="825" class="tiny">PDF file</text>
+  <text x="268" y="988" class="small" text-anchor="middle">Protected PDF download uses JWT or short-lived signed token</text>
+
+  <!-- Scheduler and notification branch -->
+  <rect x="1190" y="590" width="250" height="70" rx="16" class="node"/>
+  <text x="1315" y="619" text-anchor="middle" class="label">Celery Beat</text>
+  <text x="1315" y="641" text-anchor="middle" class="small">Monthly schedule</text>
+
+  <rect x="1190" y="695" width="250" height="70" rx="16" class="node"/>
+  <text x="1315" y="724" text-anchor="middle" class="label">Redis</text>
+  <text x="1315" y="746" text-anchor="middle" class="small">Broker / result store</text>
+
+  <rect x="1190" y="800" width="250" height="82" rx="16" class="node-blue"/>
+  <text x="1315" y="833" text-anchor="middle" class="label">Celery Worker</text>
+  <text x="1315" y="858" text-anchor="middle" class="small">Runs billing and notifier jobs</text>
+
+  <rect x="1190" y="920" width="250" height="82" rx="16" class="node"/>
+  <text x="1315" y="953" text-anchor="middle" class="label">Notification Service</text>
+  <text x="1315" y="978" text-anchor="middle" class="small">Outbox pattern: email / SMS</text>
+
+  <rect x="1190" y="1030" width="250" height="58" rx="16" class="node-green"/>
+  <text x="1315" y="1054" text-anchor="middle" class="label">SES / Twilio</text>
+  <text x="1315" y="1074" text-anchor="middle" class="small">Customer delivery channels</text>
+
+  <path d="M1315 660 L1315 688" class="arrow"/>
+  <path d="M1315 765 L1315 793" class="arrow"/>
+  <path d="M1190 840 C1150 830 1120 790 1100 765" class="arrow-soft"/>
+  <path d="M1315 882 L1315 913" class="arrow"/>
+  <path d="M1315 1002 L1315 1023" class="arrow"/>
+
+  <!-- Shared AWS services -->
+  <rect x="145" y="535" width="300" height="70" rx="16" class="node"/>
+  <text x="295" y="563" text-anchor="middle" class="label">Secrets Manager</text>
+  <text x="295" y="586" text-anchor="middle" class="small">DB URL, JWT secret, Redis URL</text>
+  <path d="M445 570 L455 570" class="arrow-soft"/>
+
+  <rect x="145" y="620" width="300" height="58" rx="16" class="node"/>
+  <text x="295" y="645" text-anchor="middle" class="label">CloudWatch</text>
+  <text x="295" y="665" text-anchor="middle" class="small">Logs, alarms, dashboard</text>
+  <path d="M455 640 L445 648" class="arrow-soft"/>
+
+  <!-- Footer flow summary -->
+  <rect x="105" y="1110" width="1390" height="1" fill="#c8dae9"/>
+  <text x="800" y="1136" text-anchor="middle" class="tiny">Main flow: Browser -> CloudFront -> React UI / FastAPI API -> Billing Engine -> Repository -> PostgreSQL -> PDF / Notifications</text>
+</svg>
