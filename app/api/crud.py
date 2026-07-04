@@ -17,10 +17,12 @@ from app.db.models import (
     BillingPeriod,
     BillingRun,
     BillingRunFailure,
+    BillingRunItem,
     Customer,
     DailyUsageRecord,
     Invoice,
     InvoiceLineItem,
+    InvoiceTemplate,
     Package,
     Payment,
     ServiceAccount,
@@ -30,6 +32,7 @@ from app.notifications.models import NotificationOutbox
 from app.api.schemas import (
     AdminDashboardSummaryOut,
     AccountOut,
+    BillingRunItemOut,
     BillingRunFailureOut,
     BillingRunOut,
     CustomerOut,
@@ -53,6 +56,10 @@ def _address(c: Customer) -> str | None:
     parts = [c.address_line1, c.address_line2, c.city, c.postal_code]
     filled = [p for p in parts if p]
     return ", ".join(filled) if filled else None
+
+
+def _enum_value(value) -> str:
+    return value.value if hasattr(value, "value") else str(value)
 
 
 def _customer_out(c: Customer) -> CustomerOut:
@@ -392,15 +399,29 @@ def get_bill_coords_for_invoice(
     return row.account_number, row.period_start, row.period_end
 
 
-def get_billing_run_out(db: Session, run_id: int) -> BillingRunOut | None:
-    """Return BillingRunOut (with failures list) for the given run_id, or None."""
-    run = db.get(BillingRun, run_id)
-    if run is None:
+def get_template_metadata_for_invoice(db: Session, invoice_id: int) -> dict[str, str | None] | None:
+    row = db.execute(
+        select(InvoiceTemplate)
+        .join(Invoice, Invoice.template_id == InvoiceTemplate.id)
+        .where(Invoice.id == invoice_id)
+    ).scalar_one_or_none()
+    if row is None:
         return None
+    return {
+        "name": row.name,
+        "template_code": row.template_code,
+        "header_message": row.header_message,
+        "footer_message": row.footer_message,
+        "promotion_message": row.promotion_message,
+        "theme_name": row.theme_name,
+        "theme_color": row.theme_color,
+    }
 
+
+def _billing_run_out(db: Session, run: BillingRun, *, include_items: bool) -> BillingRunOut:
     failure_rows = db.scalars(
         select(BillingRunFailure)
-        .where(BillingRunFailure.billing_run_id == run_id)
+        .where(BillingRunFailure.billing_run_id == run.id)
         .order_by(BillingRunFailure.id)
     ).all()
 
@@ -414,17 +435,101 @@ def get_billing_run_out(db: Session, run_id: int) -> BillingRunOut | None:
         for f in failure_rows
     ]
 
+    item_rows = db.execute(
+        select(BillingRunItem, Account, Customer, Invoice)
+        .outerjoin(Account, BillingRunItem.account_id == Account.id)
+        .outerjoin(Customer, BillingRunItem.customer_id == Customer.id)
+        .outerjoin(Invoice, BillingRunItem.invoice_id == Invoice.id)
+        .where(BillingRunItem.billing_run_id == run.id)
+        .order_by(BillingRunItem.id)
+    ).all()
+
+    email_summary: dict[str, int] = {}
+    sms_summary: dict[str, int] = {}
+    pdf_success_count = 0
+    pdf_failed_count = 0
+    items: list[BillingRunItemOut] = []
+
+    for item, account, customer, invoice in item_rows:
+        pdf_status = _enum_value(item.pdf_status)
+        email_status = _enum_value(item.email_status)
+        sms_status = _enum_value(item.sms_status)
+        email_summary[email_status] = email_summary.get(email_status, 0) + 1
+        sms_summary[sms_status] = sms_summary.get(sms_status, 0) + 1
+        if pdf_status == "SUCCESS":
+            pdf_success_count += 1
+        elif pdf_status == "FAILED":
+            pdf_failed_count += 1
+
+        if include_items:
+            items.append(BillingRunItemOut(
+                id=item.id,
+                billing_run_id=item.billing_run_id,
+                account_id=item.account_id,
+                customer_id=item.customer_id,
+                invoice_id=item.invoice_id,
+                template_id=item.template_id,
+                account_number=account.account_number if account else None,
+                customer_name=customer.full_name if customer else None,
+                phone=customer.mobile_number if customer else None,
+                email=customer.email if customer else None,
+                pdf_status=pdf_status,
+                email_status=email_status,
+                sms_status=sms_status,
+                overall_status=_enum_value(item.overall_status),
+                failure_reason=item.failure_reason,
+                email_failure_reason=item.email_failure_reason,
+                sms_failure_reason=item.sms_failure_reason,
+                email_provider_ref=item.email_provider_ref,
+                sms_provider_ref=item.sms_provider_ref,
+                retry_count=item.retry_count,
+                pdf_path=invoice.pdf_path if invoice else None,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+            ))
+
+    template_name = None
+    if run.template_id is not None:
+        template = db.get(InvoiceTemplate, run.template_id)
+        template_name = template.name if template else None
+
     return BillingRunOut(
         id=run.id,
         period=run.period_start.strftime("%Y-%m"),
         status=run.status.value.lower(),
+        template_id=run.template_id,
+        template_name=template_name,
         total=run.total_accounts,
         succeeded=run.succeeded,
         failed=run.failed,
+        pdf_success_count=pdf_success_count,
+        pdf_failed_count=pdf_failed_count,
+        email_status_summary=email_summary,
+        sms_status_summary=sms_summary,
         started_at=run.started_at,
         finished_at=run.finished_at,
         failures=failures,
+        items=items,
     )
+
+
+def get_billing_run_out(db: Session, run_id: int, *, include_items: bool = True) -> BillingRunOut | None:
+    """Return BillingRunOut for the given run_id, or None."""
+    run = db.get(BillingRun, run_id)
+    if run is None:
+        return None
+    return _billing_run_out(db, run, include_items=include_items)
+
+
+def list_billing_run_outs(db: Session, *, limit: int, offset: int) -> tuple[list[BillingRunOut], int]:
+    total = db.scalar(select(func.count(BillingRun.id))) or 0
+    rows = db.scalars(
+        select(BillingRun)
+        .order_by(BillingRun.started_at.desc(), BillingRun.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return [_billing_run_out(db, run, include_items=False) for run in rows], total
 
 
 def get_admin_dashboard_summary(db: Session) -> AdminDashboardSummaryOut:
@@ -450,32 +555,7 @@ def get_admin_dashboard_summary(db: Session) -> AdminDashboardSummaryOut:
         .order_by(BillingRun.started_at.desc(), BillingRun.id.desc())
         .limit(6)
     ).all()
-    recent_runs = []
-    for run in run_rows:
-        failures = db.scalars(
-            select(BillingRunFailure)
-            .where(BillingRunFailure.billing_run_id == run.id)
-            .order_by(BillingRunFailure.id)
-        ).all()
-        recent_runs.append(BillingRunOut(
-            id=run.id,
-            period=run.period_start.strftime("%Y-%m"),
-            status=run.status.value.lower(),
-            total=run.total_accounts,
-            succeeded=run.succeeded,
-            failed=run.failed,
-            started_at=run.started_at,
-            finished_at=run.finished_at,
-            failures=[
-                BillingRunFailureOut(
-                    id=f.id,
-                    run_id=f.billing_run_id,
-                    account_id=f.account_id,
-                    error=f.error_message,
-                )
-                for f in failures
-            ],
-        ))
+    recent_runs = [_billing_run_out(db, run, include_items=False) for run in run_rows]
 
     invoice_rows = db.execute(
         select(Invoice, Account.account_number, Customer.full_name)

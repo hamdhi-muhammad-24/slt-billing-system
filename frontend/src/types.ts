@@ -119,16 +119,56 @@ export interface DailyUsageRecord {
 }
 
 export type BillingRunStatus = 'pending' | 'running' | 'done' | 'partial' | 'failed'
+export type BillingScheduleMode = 'AUTOMATIC' | 'APPROVAL_REQUIRED'
+export type BillingApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
+
+export type PdfStatus = 'PENDING' | 'SUCCESS' | 'FAILED'
+export type DeliveryStatus = 'NOT_ENABLED' | 'PENDING' | 'SUCCESS' | 'FAILED'
+export type BillingRunItemOverallStatus = 'PENDING' | 'GENERATED' | 'FAILED' | 'READY_TO_SEND' | 'COMPLETED'
+
+export interface BillingRunItem {
+  id: number
+  billing_run_id: number
+  account_id: number | null
+  customer_id: number | null
+  invoice_id: number | null
+  template_id: number | null
+  account_number: string | null
+  customer_name: string | null
+  phone: string | null
+  email: string | null
+  pdf_status: PdfStatus
+  email_status: DeliveryStatus
+  sms_status: DeliveryStatus
+  overall_status: BillingRunItemOverallStatus
+  failure_reason: string | null
+  email_failure_reason: string | null
+  sms_failure_reason: string | null
+  email_provider_ref: string | null
+  sms_provider_ref: string | null
+  retry_count: number
+  pdf_path: string | null
+  created_at: string
+  updated_at: string
+}
 
 export interface BillingRun {
   id: number
   period: string
   status: BillingRunStatus
+  template_id: number | null
+  template_name: string | null
   total: number
   succeeded: number
   failed: number
+  pdf_success_count: number
+  pdf_failed_count: number
+  email_status_summary: Record<string, number>
+  sms_status_summary: Record<string, number>
   started_at: string | null
   finished_at: string | null
+  failures?: BillingRunFailure[]
+  items?: BillingRunItem[]
 }
 
 export interface BillingRunFailure {
@@ -165,6 +205,55 @@ export interface AdminDashboardSummary {
   recent_billing_runs: (BillingRun & { failures: BillingRunFailure[] })[]
   recent_invoices: DashboardRecentInvoice[]
   alerts: DashboardAlert[]
+}
+
+export interface InvoiceTemplate {
+  id: number
+  name: string
+  description: string | null
+  template_code: string
+  is_active: boolean
+  is_system_template: boolean
+  base_template_id: number | null
+  header_message: string | null
+  footer_message: string | null
+  promotion_message: string | null
+  theme_name: string | null
+  theme_color: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BillingSchedule {
+  id: number
+  name: string
+  day_of_month: number
+  run_time: string
+  timezone: string
+  schedule_mode: BillingScheduleMode
+  is_active: boolean
+  send_email: boolean
+  send_sms: boolean
+  approval_lead_days: number
+  approval_email: string | null
+  last_triggered_period: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BillingRunApproval {
+  id: number
+  billing_schedule_id: number
+  billing_run_id: number | null
+  period: string
+  status: BillingApprovalStatus
+  requested_to: string | null
+  requested_at: string
+  expires_at: string | null
+  approved_at: string | null
+  rejected_at: string | null
+  decided_by_user_id: number | null
+  notes: string | null
 }
 
 export interface Paginated<T> {

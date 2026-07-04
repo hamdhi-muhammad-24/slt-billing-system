@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Receipt, Menu, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Receipt, Menu, LogOut, Palette } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin',           label: 'Dashboard', icon: LayoutDashboard, end: true,  pill: 'bg-cyan-400/15 text-cyan-200' },
   { to: '/admin/customers', label: 'Customers', icon: Users,           end: false, pill: 'bg-blue-400/15 text-blue-200' },
   { to: '/admin/billing',   label: 'Billing',   icon: Receipt,         end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
+  { to: '/admin/templates', label: 'Invoice Templates', icon: Palette,  end: false, pill: 'bg-violet-400/15 text-violet-200' },
 ]
 
 function SidebarNav({ onNav }: { onNav?: () => void }) {

@@ -14,6 +14,7 @@ import CustomerDetail from './pages/admin/CustomerDetail'
 import AccountDetail from './pages/admin/AccountDetail'
 import InvoiceDetail from './pages/admin/InvoiceDetail'
 import Billing from './pages/admin/Billing'
+import InvoiceTemplates from './pages/admin/InvoiceTemplates'
 import MyAccounts from './pages/customer/MyAccounts'
 import CustomerAccountDetail from './pages/customer/CustomerAccountDetail'
 import CustomerInvoiceDetail from './pages/customer/CustomerInvoiceDetail'
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="accounts/:id" element={<AccountDetail />} />
             <Route path="invoices/:id" element={<InvoiceDetail />} />
             <Route path="billing" element={<Billing />} />
+            <Route path="templates" element={<InvoiceTemplates />} />
           </Route>
         </Route>
 

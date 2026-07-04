@@ -26,6 +26,8 @@ from app.db.models import (
     AddressType,
     BillDeliveryMethod,
     BillingPeriod,
+    BillingSchedule,
+    BillingScheduleMode,
     ConnectionType,
     Customer,
     CustomerAddress,
@@ -33,6 +35,7 @@ from app.db.models import (
     DailyUsageRecord,
     Invoice,
     InvoiceLineItem,
+    InvoiceTemplate,
     InvoiceStatus,
     LineType,
     Package,
@@ -579,7 +582,13 @@ _PACKAGES = [
     ("PEOTV-PLUS", "PeoTV Plus", ServiceType.PEOTV, _d("600.00"), None, None, _d("0.00")),
 ]
 
-_CUSTOMER_PROFILES = [
+_CustomerProfile = tuple[str, str, str, str, str, str, str, str, str]
+
+_TARGET_CUSTOMER_COUNT = 100
+_HAND_SEEDED_CUSTOMER_COUNT = len(_ACCOUNTS)
+_REALISTIC_PROFILE_TARGET = _TARGET_CUSTOMER_COUNT - _HAND_SEEDED_CUSTOMER_COUNT
+
+_BASE_CUSTOMER_PROFILES: list[_CustomerProfile] = [
     ("Mr", "Kasun", "Perera", "199012345678", "kasun.perera@slt-demo.lk", "0712456789", "Colombo", "Western", "10100"),
     ("Ms", "Ishara", "Fernando", "198875432109", "ishara.fernando@slt-demo.lk", "0723344556", "Gampaha", "Western", "11000"),
     ("Mrs", "Chamari", "Silva", "197765432198", "chamari.silva@slt-demo.lk", "0771122334", "Kalutara", "Western", "12000"),
@@ -602,6 +611,112 @@ _CUSTOMER_PROFILES = [
     ("Mr", "Milan", "Dias", "198901234568", "milan.dias@slt-demo.lk", "0712121212", "Trincomalee", "Eastern", "31000"),
 ]
 
+_HAMDHI_PROFILE: _CustomerProfile = (
+    "Mr",
+    "Muhammad",
+    "Hamdhi",
+    "200012349105",
+    "hamdhimuhammad024@gmail.com",
+    "0774991051",
+    "Colombo",
+    "Western",
+    "10600",
+)
+
+_DEMO_FIRST_NAMES = [
+    "Ayesh",
+    "Binuri",
+    "Charuka",
+    "Devmini",
+    "Eshan",
+    "Fathima",
+    "Gihan",
+    "Harini",
+    "Imalka",
+    "Janith",
+    "Kaveesha",
+    "Lakshan",
+    "Manuja",
+    "Nethmi",
+    "Oshada",
+    "Pramudi",
+    "Ravindu",
+    "Sachini",
+    "Tharindu",
+    "Umaya",
+]
+
+_DEMO_LAST_NAMES = [
+    "Alwis",
+    "Balasuriya",
+    "Chandrasekara",
+    "De Silva",
+    "Edirisinghe",
+    "Fonseka",
+    "Gamage",
+    "Hettiarachchi",
+    "Illangasinghe",
+    "Jayasuriya",
+    "Kodithuwakku",
+    "Liyanage",
+    "Mendis",
+    "Nanayakkara",
+    "Obeyesekere",
+    "Peiris",
+    "Rajapaksha",
+    "Seneviratne",
+    "Tissera",
+    "Wijeratne",
+]
+
+_DEMO_LOCATIONS = [
+    ("Colombo", "Western", "10100"),
+    ("Gampaha", "Western", "11000"),
+    ("Kandy", "Central", "20000"),
+    ("Galle", "Southern", "80000"),
+    ("Matara", "Southern", "81000"),
+    ("Kurunegala", "North Western", "60000"),
+    ("Anuradhapura", "North Central", "50000"),
+    ("Badulla", "Uva", "90000"),
+    ("Ratnapura", "Sabaragamuwa", "70000"),
+    ("Jaffna", "Northern", "40000"),
+    ("Batticaloa", "Eastern", "30000"),
+    ("Trincomalee", "Eastern", "31000"),
+]
+
+
+def _build_demo_customer_profiles(count: int, start_index: int) -> list[_CustomerProfile]:
+    profiles: list[_CustomerProfile] = []
+    for i in range(count):
+        profile_no = start_index + i
+        first = _DEMO_FIRST_NAMES[i % len(_DEMO_FIRST_NAMES)]
+        last = _DEMO_LAST_NAMES[(i + i // len(_DEMO_FIRST_NAMES)) % len(_DEMO_LAST_NAMES)]
+        city, province, postal = _DEMO_LOCATIONS[i % len(_DEMO_LOCATIONS)]
+        title = "Ms" if i % 3 == 1 else "Mrs" if i % 3 == 2 else "Mr"
+        profiles.append((
+            title,
+            first,
+            last,
+            f"2026{profile_no:08d}",
+            f"demo.customer{profile_no:03d}@slt-demo.lk",
+            f"07{30000000 + profile_no:08d}"[:10],
+            city,
+            province,
+            postal,
+        ))
+    return profiles
+
+
+_EXTRA_CUSTOMER_PROFILE_COUNT = _REALISTIC_PROFILE_TARGET - len(_BASE_CUSTOMER_PROFILES) - 1
+_CUSTOMER_PROFILES: list[_CustomerProfile] = [
+    *_BASE_CUSTOMER_PROFILES,
+    _HAMDHI_PROFILE,
+    *_build_demo_customer_profiles(
+        _EXTRA_CUSTOMER_PROFILE_COUNT,
+        start_index=len(_BASE_CUSTOMER_PROFILES) + 2,
+    ),
+]
+
 _PERIODS_2026 = [
     ("2026-01", date(2026, 1, 1), date(2026, 1, 31), date(2026, 2, 1), date(2026, 2, 21)),
     ("2026-02", date(2026, 2, 1), date(2026, 2, 28), date(2026, 3, 1), date(2026, 3, 21)),
@@ -609,6 +724,29 @@ _PERIODS_2026 = [
     ("2026-04", date(2026, 4, 1), date(2026, 4, 30), date(2026, 5, 1), date(2026, 5, 21)),
     ("2026-05", date(2026, 5, 1), date(2026, 5, 31), date(2026, 6, 1), date(2026, 6, 21)),
     ("2026-06", date(2026, 6, 1), date(2026, 6, 30), date(2026, 7, 1), date(2026, 7, 21)),
+]
+
+_TEMPLATE_THEMES = [
+    ("Classic Blue", "#004B8D"),
+    ("Mobitel Green", "#50B848"),
+    ("Enterprise Navy", "#123B63"),
+    ("Fiber Cyan", "#0EA5E9"),
+    ("Digital Teal", "#0F766E"),
+    ("Premium Gold", "#B7791F"),
+]
+
+_INVOICE_TEMPLATE_SEEDS = [
+    {
+        "template_code": f"SLT_TEMPLATE_{idx:02d}",
+        "name": f"SLT Invoice Template {idx:02d}",
+        "description": "Placeholder template metadata for future SLT invoice layout variants.",
+        "header_message": "Thank you for choosing SLT-MOBITEL.",
+        "footer_message": "This is a system generated invoice.",
+        "promotion_message": f"Template {idx:02d} promotional message placeholder.",
+        "theme_name": _TEMPLATE_THEMES[(idx - 1) % len(_TEMPLATE_THEMES)][0],
+        "theme_color": _TEMPLATE_THEMES[(idx - 1) % len(_TEMPLATE_THEMES)][1],
+    }
+    for idx in range(1, 19)
 ]
 
 
@@ -658,6 +796,66 @@ def _period_map(session: Session) -> dict[str, BillingPeriod]:
     return periods
 
 
+def _seed_invoice_templates(session: Session) -> None:
+    active_template_id = session.scalar(
+        select(InvoiceTemplate.id)
+        .where(InvoiceTemplate.is_active.is_(True))
+        .order_by(InvoiceTemplate.id)
+        .limit(1)
+    )
+    first_template: InvoiceTemplate | None = None
+
+    for idx, spec in enumerate(_INVOICE_TEMPLATE_SEEDS, start=1):
+        template = session.scalar(
+            select(InvoiceTemplate).where(InvoiceTemplate.template_code == spec["template_code"])
+        )
+        if template is None:
+            template = InvoiceTemplate(
+                name=spec["name"],
+                description=spec["description"],
+                template_code=spec["template_code"],
+                is_system_template=True,
+                is_active=active_template_id is None and idx == 1,
+                header_message=spec["header_message"],
+                footer_message=spec["footer_message"],
+                promotion_message=spec["promotion_message"],
+                theme_name=spec["theme_name"],
+                theme_color=spec["theme_color"],
+            )
+            session.add(template)
+            session.flush()
+        template.name = spec["name"]
+        template.description = spec["description"]
+        template.header_message = template.header_message or spec["header_message"]
+        template.footer_message = template.footer_message or spec["footer_message"]
+        template.promotion_message = template.promotion_message or spec["promotion_message"]
+        template.theme_name = template.theme_name or spec["theme_name"]
+        template.theme_color = template.theme_color or spec["theme_color"]
+        template.is_system_template = True
+        if idx == 1:
+            first_template = template
+
+    if active_template_id is None and first_template is not None:
+        first_template.is_active = True
+
+
+def _seed_billing_schedule(session: Session) -> None:
+    existing = session.scalar(select(BillingSchedule).order_by(BillingSchedule.id).limit(1))
+    if existing is not None:
+        return
+    session.add(BillingSchedule(
+        name="Monthly SLT billing",
+        day_of_month=1,
+        run_time="02:00",
+        timezone="Asia/Colombo",
+        schedule_mode=BillingScheduleMode.AUTOMATIC,
+        is_active=True,
+        send_email=True,
+        send_sms=True,
+        approval_lead_days=1,
+    ))
+
+
 def _ensure_address(session: Session, customer: Customer, province: str | None = None) -> CustomerAddress:
     existing = session.scalar(
         select(CustomerAddress).where(
@@ -696,6 +894,54 @@ def _upsert_customer_user(session: Session, customer: Customer, email: str) -> N
         session.add(user)
         session.flush()
     customer.user_id = customer.user_id or user.id
+
+
+def _find_customer_by_profile(session: Session, nic: str, email: str) -> Customer | None:
+    return session.scalar(
+        select(Customer)
+        .where((Customer.nic == nic) | (Customer.email == email))
+        .order_by(Customer.id)
+        .limit(1)
+    )
+
+
+def _refresh_seed_customer(
+    session: Session,
+    customer: Customer,
+    *,
+    title: str,
+    first: str,
+    last: str,
+    nic: str,
+    email: str,
+    mobile: str,
+    city: str,
+    province: str,
+    postal: str,
+) -> None:
+    is_hamdhi = email == _HAMDHI_PROFILE[4]
+    if is_hamdhi:
+        customer.full_name = "Muhammad Hamdhi"
+        customer.first_name = "Muhammad"
+        customer.last_name = "Hamdhi"
+        customer.email = email
+        customer.mobile_number = mobile
+    else:
+        customer.full_name = customer.full_name or f"{first} {last}"
+        customer.first_name = customer.first_name or first
+        customer.last_name = customer.last_name or last
+        customer.email = customer.email or email
+        customer.mobile_number = customer.mobile_number or mobile
+    customer.nic = customer.nic or nic
+    customer.title = customer.title or title
+    customer.preferred_language = customer.preferred_language or "en"
+    customer.address_line1 = customer.address_line1 or f"No {20 + (customer.id or 0)}, Demo Road"
+    customer.address_line2 = customer.address_line2 or f"{city} Town"
+    customer.city = customer.city or city
+    customer.postal_code = customer.postal_code or postal
+    customer.status = customer.status or AccountStatus.ACTIVE
+    _upsert_customer_user(session, customer, email)
+    _ensure_address(session, customer, province)
 
 
 def _connection_for(stype: ServiceType, package_code: str) -> ConnectionType:
@@ -774,7 +1020,21 @@ def _enrich_existing_seed_rows(session: Session, packages: dict[str, Package]) -
 
 def _create_realistic_customers(session: Session, packages: dict[str, Package]) -> None:
     for idx, (title, first, last, nic, email, mobile, city, province, postal) in enumerate(_CUSTOMER_PROFILES, start=1):
-        if session.scalar(select(Customer.id).where(Customer.nic == nic)) is not None:
+        existing_customer = _find_customer_by_profile(session, nic, email)
+        if existing_customer is not None:
+            _refresh_seed_customer(
+                session,
+                existing_customer,
+                title=title,
+                first=first,
+                last=last,
+                nic=nic,
+                email=email,
+                mobile=mobile,
+                city=city,
+                province=province,
+                postal=postal,
+            )
             continue
         customer = Customer(
             full_name=f"{first} {last}",
@@ -1106,6 +1366,8 @@ def _backfill_invoice_snapshots(session: Session) -> None:
 def _seed_realistic_upgrade(session: Session) -> None:
     packages = _package_map(session)
     periods = _period_map(session)
+    _seed_invoice_templates(session)
+    _seed_billing_schedule(session)
     _enrich_existing_seed_rows(session, packages)
     _create_realistic_customers(session, packages)
     session.flush()

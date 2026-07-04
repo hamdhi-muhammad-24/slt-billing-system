@@ -1,11 +1,14 @@
 import type {
   Account,
   AdminDashboardSummary,
+  BillingRunApproval,
+  BillingSchedule,
   BillingRun,
   BillingRunFailure,
   Customer,
   DailyUsageRecord,
   Invoice,
+  InvoiceTemplate,
   Paginated,
   Payment,
   ServiceAccount,
@@ -199,6 +202,7 @@ export function generateOne(body: GenerateOneRequest): Promise<Invoice> {
 export interface GenerateBatchRequest {
   period: string
   account_ids?: number[]
+  send_notifications?: boolean
 }
 
 export function generateBatch(body: GenerateBatchRequest): Promise<BillingRun> {
@@ -212,8 +216,119 @@ export interface BillingRunWithFailures extends BillingRun {
   failures: BillingRunFailure[]
 }
 
+export function listBillingRuns(
+  params?: { limit?: number; offset?: number },
+): Promise<Paginated<BillingRun>> {
+  return request(`/billing/runs${paginationQuery(params)}`)
+}
+
 export function getBillingRun(runId: number): Promise<BillingRunWithFailures> {
   return request(`/billing/runs/${runId}`)
+}
+
+export interface BillingScheduleUpdateRequest {
+  name?: string | null
+  day_of_month: number
+  run_time: string
+  timezone: string
+  schedule_mode: 'AUTOMATIC' | 'APPROVAL_REQUIRED'
+  is_active: boolean
+  send_email: boolean
+  send_sms: boolean
+  approval_lead_days: number
+  approval_email?: string | null
+}
+
+export function getBillingSchedule(): Promise<BillingSchedule> {
+  return request('/billing/schedule')
+}
+
+export function updateBillingSchedule(body: BillingScheduleUpdateRequest): Promise<BillingSchedule> {
+  return request('/billing/schedule', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export function listBillingApprovals(): Promise<BillingRunApproval[]> {
+  return request('/billing/schedule/approvals')
+}
+
+export function approveBillingRun(approvalId: number, notes?: string): Promise<BillingRunApproval> {
+  return request(`/billing/schedule/approvals/${approvalId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  })
+}
+
+export function rejectBillingRun(approvalId: number, notes?: string): Promise<BillingRunApproval> {
+  return request(`/billing/schedule/approvals/${approvalId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  })
+}
+
+export function sendBillingRun(
+  runId: number,
+  body: { send_email: boolean; send_sms: boolean },
+): Promise<BillingRunWithFailures> {
+  return request(`/billing/runs/${runId}/send`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function retryBillingRunItem(
+  itemId: number,
+  body: { send_notifications: boolean; send_email: boolean; send_sms: boolean },
+): Promise<BillingRunWithFailures> {
+  return request(`/billing/run-items/${itemId}/retry`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export interface InvoiceTemplateEditRequest {
+  header_message?: string | null
+  footer_message?: string | null
+  promotion_message?: string | null
+  name?: string | null
+  description?: string | null
+  theme_name?: string | null
+  theme_color?: string | null
+  confirm_save_original?: boolean
+}
+
+export function listInvoiceTemplates(): Promise<InvoiceTemplate[]> {
+  return request('/invoice-templates')
+}
+
+export function getInvoiceTemplate(templateId: number): Promise<InvoiceTemplate> {
+  return request(`/invoice-templates/${templateId}`)
+}
+
+export function activateInvoiceTemplate(templateId: number): Promise<InvoiceTemplate> {
+  return request(`/invoice-templates/${templateId}/activate`, { method: 'POST' })
+}
+
+export function saveInvoiceTemplateCopy(
+  templateId: number,
+  body: InvoiceTemplateEditRequest,
+): Promise<InvoiceTemplate> {
+  return request(`/invoice-templates/${templateId}/save-copy`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function saveInvoiceTemplateOriginal(
+  templateId: number,
+  body: InvoiceTemplateEditRequest,
+): Promise<InvoiceTemplate> {
+  return request(`/invoice-templates/${templateId}/save-original`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...body, confirm_save_original: true }),
+  })
 }
 
 interface PdfTokenResponse {

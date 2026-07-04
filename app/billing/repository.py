@@ -17,12 +17,17 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Account,
     AccountStatus,
+    BillingRunItem,
+    BillingRunItemOverallStatus,
     BillingRun,
     BillingRunFailure,
     Customer,
+    DeliveryStatus,
     Invoice,
     InvoiceLineItem,
+    InvoiceTemplate,
     Payment,
+    PdfGenerationStatus,
     RunStatus,
     ServiceAccount,
     UsageRecord,
@@ -351,7 +356,9 @@ class InvoiceForRun:
     period_end:     date
     inv_status:     str          # InvoiceStatus enum value
     pdf_path:       str | None
+    template_id:    int | None
     account_id:     int
+    customer_id:    int
     account_number: str
 
 
@@ -366,7 +373,9 @@ def list_invoices_for_billing_month(
             Invoice.period_end,
             Invoice.status,
             Invoice.pdf_path,
+            Invoice.template_id,
             Account.id.label("account_id"),
+            Account.customer_id,
             Account.account_number,
         )
         .join(Account, Invoice.account_id == Account.id)
@@ -384,7 +393,9 @@ def list_invoices_for_billing_month(
             period_end=r.period_end,
             inv_status=r.status.value,
             pdf_path=r.pdf_path,
+            template_id=r.template_id,
             account_id=r.account_id,
+            customer_id=r.customer_id,
             account_number=r.account_number,
         )
         for r in rows
@@ -396,9 +407,11 @@ def create_billing_run(
     period_end: date,
     total_accounts: int,
     session: Session,
+    template_id: int | None = None,
 ) -> int:
     """Insert a RUNNING billing_run row; flush to get the id (caller must commit)."""
     run = BillingRun(
+        template_id=template_id,
         period_start=period_start,
         period_end=period_end,
         status=RunStatus.RUNNING,
@@ -423,6 +436,96 @@ def record_run_failure(
         account_id=account_id,
         error_message=error_message,
     ))
+
+
+def get_active_invoice_template(session: Session) -> InvoiceTemplate | None:
+    return session.scalar(
+        select(InvoiceTemplate)
+        .where(InvoiceTemplate.is_active.is_(True))
+        .order_by(InvoiceTemplate.id)
+        .limit(1)
+    )
+
+
+def get_invoice_template(template_id: int, session: Session) -> InvoiceTemplate | None:
+    return session.get(InvoiceTemplate, template_id)
+
+
+def create_run_item(
+    run_id: int,
+    invoice: InvoiceForRun,
+    template_id: int | None,
+    session: Session,
+) -> int:
+    item = BillingRunItem(
+        billing_run_id=run_id,
+        account_id=invoice.account_id,
+        customer_id=invoice.customer_id,
+        invoice_id=invoice.inv_id,
+        template_id=template_id,
+        pdf_status=PdfGenerationStatus.PENDING,
+        email_status=DeliveryStatus.NOT_ENABLED,
+        sms_status=DeliveryStatus.NOT_ENABLED,
+        overall_status=BillingRunItemOverallStatus.PENDING,
+        retry_count=0,
+    )
+    session.add(item)
+    session.flush()
+    return item.id
+
+
+def mark_run_item_success(
+    item_id: int,
+    invoice_id: int,
+    template_id: int | None,
+    session: Session,
+) -> None:
+    item = session.get(BillingRunItem, item_id)
+    if item is None:
+        return
+    item.invoice_id = invoice_id
+    item.template_id = template_id
+    item.pdf_status = PdfGenerationStatus.SUCCESS
+    item.email_status = DeliveryStatus.NOT_ENABLED
+    item.sms_status = DeliveryStatus.NOT_ENABLED
+    item.overall_status = BillingRunItemOverallStatus.GENERATED
+    item.failure_reason = None
+    item.email_failure_reason = None
+    item.sms_failure_reason = None
+    item.email_provider_ref = None
+    item.sms_provider_ref = None
+    item.updated_at = func.now()
+    session.flush()
+
+
+def mark_run_item_failed(
+    item_id: int,
+    error_message: str,
+    session: Session,
+) -> None:
+    item = session.get(BillingRunItem, item_id)
+    if item is None:
+        return
+    item.pdf_status = PdfGenerationStatus.FAILED
+    item.email_status = DeliveryStatus.NOT_ENABLED
+    item.sms_status = DeliveryStatus.NOT_ENABLED
+    item.overall_status = BillingRunItemOverallStatus.FAILED
+    item.failure_reason = error_message[:1000]
+    item.email_provider_ref = None
+    item.sms_provider_ref = None
+    item.retry_count = (item.retry_count or 0) + 1
+    item.updated_at = func.now()
+    session.flush()
+
+
+def update_invoice_template_id(
+    invoice_id: int,
+    template_id: int | None,
+    session: Session,
+) -> None:
+    session.execute(
+        sa_update(Invoice).where(Invoice.id == invoice_id).values(template_id=template_id)
+    )
 
 
 def finish_billing_run(

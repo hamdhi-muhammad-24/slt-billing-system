@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input'
 
 const ACCOUNT_COLS: ColumnDef<Account>[] = [
   { header: 'Account No',    cell: (a) => <span className="font-medium">{a.account_no}</span> },
+  { header: 'Telephone',     cell: (a) => a.telephone_number ?? 'Not recorded' },
+  { header: 'Service',       cell: (a) => a.service_label ?? 'Standard service' },
   { header: 'Status',        cell: (a) => <StatusBadge status={a.status} /> },
   { header: 'Billing Cycle', cell: (a) => a.billing_cycle ?? 'Standard monthly' },
 ]

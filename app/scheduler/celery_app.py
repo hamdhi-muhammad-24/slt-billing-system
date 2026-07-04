@@ -12,9 +12,8 @@ celery_app = Celery(
 
 celery_app.conf.beat_schedule = {
     "run_monthly_billing": {
-        "task": "app.scheduler.tasks.run_monthly_billing",
-        "schedule": crontab(day_of_month=1, hour=2, minute=0),
-        "kwargs": {"period": None},
+        "task": "app.scheduler.tasks.evaluate_billing_schedules",
+        "schedule": crontab(minute="*/15"),
     },
     "notify_pending": {
         "task": "app.notifications.tasks.notify_pending",

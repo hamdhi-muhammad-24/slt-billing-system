@@ -12,6 +12,7 @@ import io
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Mapping
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_RIGHT
@@ -118,6 +119,22 @@ def _ref_line(bill: Bill) -> str:
     return f"{bill.invoice_number}_1-1-02-1-LKR-101-1-BILL-RED_1.1_12:19:536426"
 
 
+def _template_text(template_metadata: Mapping[str, str | None] | None, key: str) -> str:
+    if not template_metadata:
+        return ""
+    return (template_metadata.get(key) or "").strip()
+
+
+def _template_color(template_metadata: Mapping[str, str | None] | None) -> HexColor:
+    raw = _template_text(template_metadata, "theme_color")
+    if not raw:
+        return L.HEADER_BLUE
+    try:
+        return HexColor(raw)
+    except Exception:
+        return L.HEADER_BLUE
+
+
 # ---------------------------------------------------------------------------
 # NumberedCanvas — defers showPage so "Page X of N" can be painted last
 # ---------------------------------------------------------------------------
@@ -153,9 +170,9 @@ def _paint_page_number(c: rl_canvas.Canvas, page: int, total: int) -> None:
 # ---------------------------------------------------------------------------
 # A. Full header band (page 1)
 # ---------------------------------------------------------------------------
-def _draw_header(c: rl_canvas.Canvas) -> None:
+def _draw_header(c: rl_canvas.Canvas, template_metadata: Mapping[str, str | None] | None = None) -> None:
     y = PAGE_H - HEADER_H
-    c.setFillColor(L.HEADER_BLUE)
+    c.setFillColor(_template_color(template_metadata))
     c.rect(0, y, PAGE_W, HEADER_H, stroke=0, fill=1)
 
     # "INVOICE" + company info
@@ -167,6 +184,18 @@ def _draw_header(c: rl_canvas.Canvas) -> None:
     c.drawString(LEFT + 130, y + 42, "Sri Lanka Telecom PLC")
     c.setFont("Noto", 8)
     c.drawString(LEFT + 130, y + 32, "Lotus Road, P.O Box 503, Colombo 01.")
+
+    header_message = _template_text(template_metadata, "header_message")
+    if header_message:
+        c.setFont("Noto", 7)
+        c.setFillColor(L.WHITE)
+        _fit_text(c, header_message, LEFT + 130, y + 20, 250, "Noto", 7, 5.5)
+
+    promotion_message = _template_text(template_metadata, "promotion_message")
+    if promotion_message:
+        c.setFont("Noto-Bold", 6.8)
+        c.setFillColor(L.WHITE)
+        c.drawRightString(RIGHT, y + 8, promotion_message[:82])
 
     # SLT MOBITEL logo — right side, preserving aspect ratio, no background
     logo_h = _hpx(88)
@@ -187,9 +216,9 @@ def _draw_header(c: rl_canvas.Canvas) -> None:
 # ---------------------------------------------------------------------------
 # Slim header (continuation pages)
 # ---------------------------------------------------------------------------
-def _draw_slim_header(c: rl_canvas.Canvas) -> None:
+def _draw_slim_header(c: rl_canvas.Canvas, template_metadata: Mapping[str, str | None] | None = None) -> None:
     y = PAGE_H - SLIM_H
-    c.setFillColor(L.HEADER_BLUE)
+    c.setFillColor(_template_color(template_metadata))
     c.rect(0, y, PAGE_W, SLIM_H, stroke=0, fill=1)
 
     c.setFont("Noto-Bold", 9)
@@ -202,6 +231,15 @@ def _draw_slim_header(c: rl_canvas.Canvas) -> None:
                     preserveAspectRatio=True, anchor="c", mask="auto")
     except Exception:
         pass
+
+
+def _draw_template_footer(c: rl_canvas.Canvas, template_metadata: Mapping[str, str | None] | None = None) -> None:
+    footer_message = _template_text(template_metadata, "footer_message")
+    if not footer_message:
+        return
+    c.setFont("Noto", 6.5)
+    c.setFillColor(L.MUTED_COLOR)
+    c.drawCentredString(PAGE_W / 2, 16, footer_message[:120])
 
 
 # ---------------------------------------------------------------------------
@@ -1090,7 +1128,11 @@ def _build_story(
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
-def render_bill(bill: Bill, out_path: str | None = None) -> str:
+def render_bill(
+    bill: Bill,
+    out_path: str | io.BytesIO | None = None,
+    template_metadata: Mapping[str, str | None] | None = None,
+) -> str | io.BytesIO:
     """Render a Bill to PDF. Returns the output path."""
     if out_path is None:
         out_dir = Path("output")
@@ -1121,12 +1163,14 @@ def render_bill(bill: Bill, out_path: str | None = None) -> str:
     )
 
     def on_first(c: rl_canvas.Canvas, doc: BaseDocTemplate) -> None:
-        _draw_header(c)
+        _draw_header(c, template_metadata)
         y = _draw_identity(c, bill, PAGE_H - HEADER_H)
         _draw_summary(c, bill, y)
+        _draw_template_footer(c, template_metadata)
 
     def on_later(c: rl_canvas.Canvas, doc: BaseDocTemplate) -> None:
-        _draw_slim_header(c)
+        _draw_slim_header(c, template_metadata)
+        _draw_template_footer(c, template_metadata)
 
     p1_tpl    = PageTemplate(id="first", frames=[p1_frame],    onPage=on_first)
     later_tpl = PageTemplate(id="later", frames=[later_frame], onPage=on_later)

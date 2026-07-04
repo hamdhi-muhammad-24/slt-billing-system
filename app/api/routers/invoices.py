@@ -39,9 +39,10 @@ def get_invoice_pdf(
 
     account_number, period_start, period_end = coords
     bill = billing_engine.build_bill(db, account_number, period_start, period_end)
+    template_metadata = crud.get_template_metadata_for_invoice(db, invoice_id)
 
     buf = io.BytesIO()
-    render_bill(bill, buf)  # ReportLab accepts a file-like object as the path argument
+    render_bill(bill, buf, template_metadata=template_metadata)  # ReportLab accepts a file-like object as the path argument
 
     return Response(
         content=buf.getvalue(),

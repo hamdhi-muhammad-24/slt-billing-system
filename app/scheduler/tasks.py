@@ -26,7 +26,7 @@ def run_monthly_billing(period: str | None = None) -> dict:
 
     from app.billing.batch import run_billing_batch
 
-    summary = run_billing_batch(period)
+    summary = run_billing_batch(period, send_notifications=True)
 
     log.info(
         "run_monthly_billing complete: period=%s run_id=%s succeeded=%s failed=%s",
@@ -36,3 +36,15 @@ def run_monthly_billing(period: str | None = None) -> dict:
         summary.get("failed"),
     )
     return summary
+
+
+@celery_app.task
+def evaluate_billing_schedules() -> dict:
+    from app.billing.schedules import evaluate_billing_schedules as evaluate
+    from app.db.base import SessionLocal
+
+    with SessionLocal() as db:
+        result = evaluate(db)
+        db.commit()
+        log.info("evaluate_billing_schedules result: %s", result)
+        return result

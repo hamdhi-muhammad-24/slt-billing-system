@@ -187,18 +187,151 @@ class BillingRunFailureOut(BaseModel):
     error: str             # error_message in the DB
 
 
+class BillingRunItemOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    billing_run_id: int
+    account_id: Optional[int] = None
+    customer_id: Optional[int] = None
+    invoice_id: Optional[int] = None
+    template_id: Optional[int] = None
+    account_number: Optional[str] = None
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    pdf_status: str
+    email_status: str
+    sms_status: str
+    overall_status: str
+    failure_reason: Optional[str] = None
+    email_failure_reason: Optional[str] = None
+    sms_failure_reason: Optional[str] = None
+    email_provider_ref: Optional[str] = None
+    sms_provider_ref: Optional[str] = None
+    retry_count: int
+    pdf_path: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class BillingRunOut(BaseModel):
     model_config = {"from_attributes": True}
 
     id: int
     period: str            # "YYYY-MM", derived from period_start by the repo
     status: str            # pending | running | done | failed | partial
+    template_id: Optional[int] = None
+    template_name: Optional[str] = None
     total: int             # total_accounts in the DB
     succeeded: int
     failed: int
+    pdf_success_count: int = 0
+    pdf_failed_count: int = 0
+    email_status_summary: dict[str, int] = Field(default_factory=dict)
+    sms_status_summary: dict[str, int] = Field(default_factory=dict)
     started_at: datetime
     finished_at: Optional[datetime] = None
-    failures: list[BillingRunFailureOut] = []
+    failures: list[BillingRunFailureOut] = Field(default_factory=list)
+    items: list[BillingRunItemOut] = Field(default_factory=list)
+
+
+class InvoiceTemplateOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    description: Optional[str] = None
+    template_code: str
+    is_active: bool
+    is_system_template: bool
+    base_template_id: Optional[int] = None
+    header_message: Optional[str] = None
+    footer_message: Optional[str] = None
+    promotion_message: Optional[str] = None
+    theme_name: Optional[str] = None
+    theme_color: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class InvoiceTemplateEditRequest(BaseModel):
+    header_message: Optional[str] = None
+    footer_message: Optional[str] = None
+    promotion_message: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    theme_name: Optional[str] = None
+    theme_color: Optional[str] = None
+    confirm_save_original: bool = False
+
+
+class BillingScheduleOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    day_of_month: int
+    run_time: str
+    timezone: str
+    schedule_mode: str
+    is_active: bool
+    send_email: bool
+    send_sms: bool
+    approval_lead_days: int
+    approval_email: Optional[str] = None
+    last_triggered_period: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class BillingScheduleUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    day_of_month: int = Field(1, ge=1, le=28)
+    run_time: str = Field("02:00", pattern=r"^\d{2}:\d{2}$")
+    timezone: str = "Asia/Colombo"
+    schedule_mode: str = Field("AUTOMATIC", pattern=r"^(AUTOMATIC|APPROVAL_REQUIRED)$")
+    is_active: bool = True
+    send_email: bool = True
+    send_sms: bool = True
+    approval_lead_days: int = Field(1, ge=1, le=7)
+    approval_email: Optional[str] = None
+
+
+class BillingRunApprovalOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    billing_schedule_id: int
+    billing_run_id: Optional[int] = None
+    period: str
+    status: str
+    requested_to: Optional[str] = None
+    requested_at: datetime
+    expires_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+    decided_by_user_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class ApprovalDecisionRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+class SendBillingRunRequest(BaseModel):
+    send_email: bool = True
+    send_sms: bool = True
+
+
+class RetryBillingRunItemRequest(BaseModel):
+    send_notifications: bool = True
+    send_email: bool = True
+    send_sms: bool = True
+
+
+class EvaluateBillingSchedulesRequest(BaseModel):
+    now: Optional[datetime] = None
 
 
 class DashboardRecentInvoiceOut(BaseModel):
@@ -258,6 +391,10 @@ class GenerateBatchRequest(BaseModel):
     account_ids: Optional[list[int]] = Field(
         default=None,
         description="Omit to run all active accounts.",
+    )
+    send_notifications: bool = Field(
+        default=False,
+        description="When true, attempt email/SMS delivery after PDFs are generated.",
     )
 
     @field_validator("period")

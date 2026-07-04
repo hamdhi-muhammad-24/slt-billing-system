@@ -95,6 +95,39 @@ class RunStatus(enum.Enum):
     FAILED = "FAILED"
 
 
+class PdfGenerationStatus(enum.Enum):
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+
+class DeliveryStatus(enum.Enum):
+    NOT_ENABLED = "NOT_ENABLED"
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+
+class BillingRunItemOverallStatus(enum.Enum):
+    PENDING = "PENDING"
+    GENERATED = "GENERATED"
+    FAILED = "FAILED"
+    READY_TO_SEND = "READY_TO_SEND"
+    COMPLETED = "COMPLETED"
+
+
+class BillingScheduleMode(enum.Enum):
+    AUTOMATIC = "AUTOMATIC"
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+
+
+class BillingApprovalStatus(enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    EXPIRED = "EXPIRED"
+
+
 class BillDeliveryMethod(enum.Enum):
     EMAIL = "EMAIL"
     SMS = "SMS"
@@ -368,10 +401,12 @@ class Invoice(Base):
         UniqueConstraint("account_id", "period_start", "period_end"),
         Index("idx_invoices_account", "account_id"),
         Index("idx_invoices_period", "period_start", "period_end"),
+        Index("idx_invoices_template", "template_id"),
     )
 
     id                 = Column(BigInteger, Identity(always=True), primary_key=True)
     account_id         = Column(BigInteger, ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False)
+    template_id        = Column(BigInteger, ForeignKey("invoice_templates.id", ondelete="SET NULL"), nullable=True)
     invoice_number     = Column(Text, nullable=False, unique=True)
     billing_date       = Column(Date, nullable=False)
     period_start       = Column(Date, nullable=False)
@@ -433,10 +468,34 @@ class Payment(Base):
     created_at   = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class InvoiceTemplate(Base):
+    __tablename__ = "invoice_templates"
+    __table_args__ = (
+        Index("idx_invoice_templates_active", "is_active"),
+        Index("idx_invoice_templates_base", "base_template_id"),
+    )
+
+    id                = Column(BigInteger, Identity(always=True), primary_key=True)
+    name              = Column(Text, nullable=False)
+    description       = Column(Text)
+    template_code     = Column(Text, nullable=False, unique=True)
+    is_active         = Column(Boolean, nullable=False, default=False)
+    is_system_template = Column(Boolean, nullable=False, default=True)
+    base_template_id  = Column(BigInteger, ForeignKey("invoice_templates.id", ondelete="SET NULL"), nullable=True)
+    header_message    = Column(Text)
+    footer_message    = Column(Text)
+    promotion_message = Column(Text)
+    theme_name        = Column(Text)
+    theme_color       = Column(Text)
+    created_at        = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at        = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
 class BillingRun(Base):
     __tablename__ = "billing_runs"
 
     id             = Column(BigInteger, Identity(always=True), primary_key=True)
+    template_id    = Column(BigInteger, ForeignKey("invoice_templates.id", ondelete="SET NULL"), nullable=True)
     period_start   = Column(Date, nullable=False)
     period_end     = Column(Date, nullable=False)
     status         = Column(Enum(RunStatus, name="run_status"), nullable=False, default=RunStatus.PENDING)
@@ -445,6 +504,79 @@ class BillingRun(Base):
     failed         = Column(Integer, nullable=False, default=0)
     started_at     = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     finished_at    = Column(DateTime(timezone=True))
+
+
+class BillingRunItem(Base):
+    __tablename__ = "billing_run_items"
+    __table_args__ = (
+        UniqueConstraint("billing_run_id", "account_id", name="uq_billing_run_items_run_account"),
+        Index("idx_billing_run_items_run", "billing_run_id"),
+        Index("idx_billing_run_items_account", "account_id"),
+        Index("idx_billing_run_items_customer", "customer_id"),
+        Index("idx_billing_run_items_invoice", "invoice_id"),
+    )
+
+    id             = Column(BigInteger, Identity(always=True), primary_key=True)
+    billing_run_id = Column(BigInteger, ForeignKey("billing_runs.id", ondelete="CASCADE"), nullable=False)
+    account_id     = Column(BigInteger, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    customer_id    = Column(BigInteger, ForeignKey("customers.id", ondelete="SET NULL"), nullable=True)
+    invoice_id     = Column(BigInteger, ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True)
+    template_id    = Column(BigInteger, ForeignKey("invoice_templates.id", ondelete="SET NULL"), nullable=True)
+    pdf_status     = Column(Enum(PdfGenerationStatus, name="pdf_generation_status"), nullable=False, default=PdfGenerationStatus.PENDING)
+    email_status   = Column(Enum(DeliveryStatus, name="delivery_status"), nullable=False, default=DeliveryStatus.NOT_ENABLED)
+    sms_status     = Column(Enum(DeliveryStatus, name="delivery_status"), nullable=False, default=DeliveryStatus.NOT_ENABLED)
+    overall_status = Column(Enum(BillingRunItemOverallStatus, name="billing_run_item_overall_status"), nullable=False, default=BillingRunItemOverallStatus.PENDING)
+    failure_reason = Column(Text)
+    email_failure_reason = Column(Text)
+    sms_failure_reason = Column(Text)
+    email_provider_ref = Column(Text)
+    sms_provider_ref = Column(Text)
+    retry_count    = Column(Integer, nullable=False, default=0)
+    created_at     = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at     = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class BillingSchedule(Base):
+    __tablename__ = "billing_schedules"
+
+    id                 = Column(BigInteger, Identity(always=True), primary_key=True)
+    name               = Column(Text, nullable=False, default="Monthly SLT billing")
+    day_of_month       = Column(Integer, nullable=False, default=1)
+    run_time           = Column(Text, nullable=False, default="02:00")
+    timezone           = Column(Text, nullable=False, default="Asia/Colombo")
+    schedule_mode      = Column(Enum(BillingScheduleMode, name="billing_schedule_mode"), nullable=False, default=BillingScheduleMode.AUTOMATIC)
+    is_active          = Column(Boolean, nullable=False, default=True)
+    send_email         = Column(Boolean, nullable=False, default=True)
+    send_sms           = Column(Boolean, nullable=False, default=True)
+    approval_lead_days = Column(Integer, nullable=False, default=1)
+    approval_email     = Column(Text)
+    last_triggered_period = Column(Text)
+    created_at         = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at         = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class BillingRunApproval(Base):
+    __tablename__ = "billing_run_approvals"
+    __table_args__ = (
+        UniqueConstraint("billing_schedule_id", "period", name="uq_billing_run_approvals_schedule_period"),
+        Index("idx_billing_run_approvals_schedule", "billing_schedule_id"),
+        Index("idx_billing_run_approvals_run", "billing_run_id"),
+    )
+
+    id                  = Column(BigInteger, Identity(always=True), primary_key=True)
+    billing_schedule_id = Column(BigInteger, ForeignKey("billing_schedules.id", ondelete="CASCADE"), nullable=False)
+    billing_run_id      = Column(BigInteger, ForeignKey("billing_runs.id", ondelete="SET NULL"), nullable=True)
+    period              = Column(Text, nullable=False)
+    status              = Column(Enum(BillingApprovalStatus, name="billing_approval_status"), nullable=False, default=BillingApprovalStatus.PENDING)
+    requested_to        = Column(Text)
+    requested_at        = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at          = Column(DateTime(timezone=True))
+    approved_at         = Column(DateTime(timezone=True))
+    rejected_at         = Column(DateTime(timezone=True))
+    decided_by_user_id  = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    notes               = Column(Text)
+    created_at          = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at          = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
 class BillingRunFailure(Base):
