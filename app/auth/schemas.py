@@ -10,7 +10,6 @@ class UserOut(BaseModel):
     id: int
     email: str
     role: str
-    customer_id: int | None = None
 
 
 class PdfTokenOut(BaseModel):

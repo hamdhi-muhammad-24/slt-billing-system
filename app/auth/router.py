@@ -29,12 +29,10 @@ def login(
             detail="Account is inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    customer_id = auth_repo.get_customer_id_for_user(db, user.id)
     return Token(
         access_token=create_access_token(
             user_id=user.id,
             role=user.role.value,
-            customer_id=customer_id,
         )
     )
 

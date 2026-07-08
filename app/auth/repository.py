@@ -2,7 +2,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
-from app.db.models import Account, Customer, Invoice
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -11,29 +10,3 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 
 def get_user_by_id(db: Session, user_id: int) -> User | None:
     return db.get(User, user_id)
-
-
-def get_customer_id_for_user(db: Session, user_id: int) -> int | None:
-    """Return the customers.id whose user_id matches, or None for admins."""
-    return db.scalar(select(Customer.id).where(Customer.user_id == user_id))
-
-
-def get_customer_id_by_account_number(db: Session, account_number: str) -> int | None:
-    """Used by the auth seed to find a customer via their unique account number."""
-    return db.scalar(
-        select(Account.customer_id).where(Account.account_number == account_number)
-    )
-
-
-def get_customer_id_for_account(db: Session, account_id: int) -> int | None:
-    """Return the customer_id that owns account_id, or None if not found."""
-    return db.scalar(select(Account.customer_id).where(Account.id == account_id))
-
-
-def get_customer_id_for_invoice(db: Session, invoice_id: int) -> int | None:
-    """Return the customer_id that owns invoice_id (via its account), or None."""
-    return db.scalar(
-        select(Account.customer_id)
-        .join(Invoice, Invoice.account_id == Account.id)
-        .where(Invoice.id == invoice_id)
-    )

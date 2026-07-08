@@ -207,6 +207,8 @@ export interface AdminDashboardSummary {
   alerts: DashboardAlert[]
 }
 
+export type TemplateCategory = 'CLASSIC' | 'MODERN' | 'ENTERPRISE' | 'MINIMAL' | 'CUSTOM'
+
 export interface InvoiceTemplate {
   id: number
   name: string
@@ -215,6 +217,10 @@ export interface InvoiceTemplate {
   is_active: boolean
   is_system_template: boolean
   base_template_id: number | null
+  category: TemplateCategory
+  layout_type: string
+  cover_image_url: string | null
+  template_layout: string | null
   header_message: string | null
   footer_message: string | null
   promotion_message: string | null

@@ -1,19 +1,4 @@
-import type {
-  Account,
-  AdminDashboardSummary,
-  BillingRunApproval,
-  BillingSchedule,
-  BillingRun,
-  BillingRunFailure,
-  Customer,
-  DailyUsageRecord,
-  Invoice,
-  InvoiceTemplate,
-  Paginated,
-  Payment,
-  ServiceAccount,
-  UsageSummary,
-} from '../types'
+// removed paginated import
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -116,242 +101,228 @@ export function authMe(): Promise<MeResponse> {
   return request('/auth/me')
 }
 
-function paginationQuery(params?: { limit?: number; offset?: number }): string {
-  const q = new URLSearchParams()
-  if (params?.limit !== undefined) q.set('limit', String(params.limit))
-  if (params?.offset !== undefined) q.set('offset', String(params.offset))
-  const s = q.toString()
-  return s ? `?${s}` : ''
+// --- Billing / GMF Endpoints ---
+
+export interface DashboardStats {
+  gmfs_received_today: number
+  gmfs_pending_review: number
+  total_invoices_generated: number
+  total_invoices_failed: number
+  success_rate: number
+  active_runs: number
+  active_schedules: number
+  unread_notifications: number
+  cycles: Record<string, { received: number; status: string }>
 }
 
-export interface HealthResponse {
+export interface GmfUploadOut {
+  id: number
+  filename: string
+  file_path: string
+  folder_type: string
+  cycle_number: number | null
+  template_detected: string | null
   status: string
-  db: string
+  detected_at: string
+  processed_at: string | null
+  error_message: string | null
+  rejection_reason: string | null
+  billing_run_id: number | null
 }
 
-export function getHealth(): Promise<HealthResponse> {
-  return request('/health')
+export interface BillingRunOut {
+  id: number
+  batch_name: string
+  cycle_number: number | null
+  status: string
+  total_accounts: number
+  succeeded: number
+  failed: number
+  started_at: string
+  finished_at: string | null
+  output_path: string | null
 }
 
-export function getAdminDashboardSummary(): Promise<AdminDashboardSummary> {
-  return request('/billing/admin-summary')
-}
-
-export function listCustomers(
-  params?: { limit?: number; offset?: number },
-): Promise<Paginated<Customer>> {
-  return request(`/customers${paginationQuery(params)}`)
-}
-
-export function getCustomer(customerId: number): Promise<Customer> {
-  return request(`/customers/${customerId}`)
-}
-
-export function listCustomerAccounts(customerId: number): Promise<Account[]> {
-  return request(`/customers/${customerId}/accounts`)
-}
-
-export function getAccount(accountId: number): Promise<Account> {
-  return request(`/accounts/${accountId}`)
-}
-
-export function listServiceAccounts(accountId: number): Promise<ServiceAccount[]> {
-  return request(`/accounts/${accountId}/service-accounts`)
-}
-
-export function listInvoices(
-  accountId: number,
-  params?: { limit?: number; offset?: number },
-): Promise<Paginated<Invoice>> {
-  return request(`/accounts/${accountId}/invoices${paginationQuery(params)}`)
-}
-
-export function listPayments(accountId: number): Promise<Payment[]> {
-  return request(`/accounts/${accountId}/payments`)
-}
-
-export function listUsage(accountId: number, period?: string): Promise<UsageSummary[]> {
-  const q = period ? `?period=${encodeURIComponent(period)}` : ''
-  return request(`/accounts/${accountId}/usage${q}`)
-}
-
-export function listUsageHistory(accountId: number, months = 6): Promise<UsageSummary[]> {
-  return request(`/accounts/${accountId}/usage/history?months=${months}`)
-}
-
-export function listDailyUsage(serviceAccountId: number, period: string): Promise<DailyUsageRecord[]> {
-  return request(`/service-accounts/${serviceAccountId}/daily-usage?period=${encodeURIComponent(period)}`)
-}
-
-export function getInvoice(invoiceId: number): Promise<Invoice> {
-  return request(`/invoices/${invoiceId}`)
-}
-
-export interface GenerateOneRequest {
-  account_id: number
-  period: string
-}
-
-export function generateOne(body: GenerateOneRequest): Promise<Invoice> {
-  return request('/billing/generate-one', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-export interface GenerateBatchRequest {
-  period: string
-  account_ids?: number[]
-  send_notifications?: boolean
-}
-
-export function generateBatch(body: GenerateBatchRequest): Promise<BillingRun> {
-  return request('/billing/generate-batch', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-export interface BillingRunWithFailures extends BillingRun {
-  failures: BillingRunFailure[]
-}
-
-export function listBillingRuns(
-  params?: { limit?: number; offset?: number },
-): Promise<Paginated<BillingRun>> {
-  return request(`/billing/runs${paginationQuery(params)}`)
-}
-
-export function getBillingRun(runId: number): Promise<BillingRunWithFailures> {
-  return request(`/billing/runs/${runId}`)
-}
-
-export interface BillingScheduleUpdateRequest {
-  name?: string | null
+export interface ScheduleOut {
+  id: number
+  name: string
   day_of_month: number
   run_time: string
   timezone: string
-  schedule_mode: 'AUTOMATIC' | 'APPROVAL_REQUIRED'
+  schedule_mode: string
   is_active: boolean
-  send_email: boolean
-  send_sms: boolean
   approval_lead_days: number
-  approval_email?: string | null
+  created_at: string
 }
 
-export function getBillingSchedule(): Promise<BillingSchedule> {
-  return request('/billing/schedule')
+export interface NotificationOut {
+  id: number
+  event_type: string
+  title: string
+  message: string
+  upload_id: number | null
+  run_id: number | null
+  is_read: boolean
+  created_at: string
 }
 
-export function updateBillingSchedule(body: BillingScheduleUpdateRequest): Promise<BillingSchedule> {
-  return request('/billing/schedule', {
-    method: 'PUT',
-    body: JSON.stringify(body),
-  })
+export function getStats(): Promise<DashboardStats> {
+  return request('/billing/stats')
 }
 
-export function listBillingApprovals(): Promise<BillingRunApproval[]> {
-  return request('/billing/schedule/approvals')
+export function getUploads(status?: string, cycle?: number): Promise<GmfUploadOut[]> {
+  const params = new URLSearchParams()
+  if (status) params.append('status', status)
+  if (cycle) params.append('cycle', cycle.toString())
+  const q = params.toString() ? `?${params.toString()}` : ''
+  return request(`/billing/uploads${q}`)
 }
 
-export function approveBillingRun(approvalId: number, notes?: string): Promise<BillingRunApproval> {
-  return request(`/billing/schedule/approvals/${approvalId}/approve`, {
+export function previewInvoice(uploadId: number): Promise<{ message: string; pdf_url: string; template_detected: string }> {
+  return request(`/billing/preview/${uploadId}`, { method: 'POST' })
+}
+
+export function approveUpload(uploadId: number): Promise<{ message: string; upload_id: number }> {
+  return request(`/billing/approve/${uploadId}`, { method: 'POST' })
+}
+
+export function rejectUpload(uploadId: number, reason: string): Promise<{ message: string; upload_id: number }> {
+  return request(`/billing/reject/${uploadId}`, {
     method: 'POST',
-    body: JSON.stringify({ notes }),
+    body: JSON.stringify({ reason }),
   })
 }
 
-export function rejectBillingRun(approvalId: number, notes?: string): Promise<BillingRunApproval> {
-  return request(`/billing/schedule/approvals/${approvalId}/reject`, {
+export function generateBatch(uploadId: number): Promise<{ message: string; run_id: number }> {
+  return request(`/billing/generate/${uploadId}`, { method: 'POST' })
+}
+
+export interface PendingBatchOut {
+  cycle_number: number
+  date: string
+  batch_index: number
+  file_count: number
+  upload_ids: number[]
+}
+
+export function getPendingBatches(): Promise<PendingBatchOut[]> {
+  return request('/billing/pending-batches')
+}
+
+export function generateGroupBatch(uploadIds: number[]): Promise<{ message: string; run_id: number }> {
+  return request(`/billing/generate-batch`, {
     method: 'POST',
-    body: JSON.stringify({ notes }),
+    body: JSON.stringify({ upload_ids: uploadIds }),
   })
 }
 
-export function sendBillingRun(
-  runId: number,
-  body: { send_email: boolean; send_sms: boolean },
-): Promise<BillingRunWithFailures> {
-  return request(`/billing/runs/${runId}/send`, {
-    method: 'POST',
-    body: JSON.stringify(body),
+export function retryFailedRun(runId: number): Promise<{ message: string }> {
+  return request(`/billing/runs/${runId}/retry`, {
+    method: 'POST'
   })
 }
 
-export function retryBillingRunItem(
-  itemId: number,
-  body: { send_notifications: boolean; send_email: boolean; send_sms: boolean },
-): Promise<BillingRunWithFailures> {
-  return request(`/billing/run-items/${itemId}/retry`, {
-    method: 'POST',
-    body: JSON.stringify(body),
+export function getRuns(): Promise<BillingRunOut[]> {
+  return request('/billing/runs')
+}
+
+export function getRun(runId: number): Promise<BillingRunOut> {
+  return request(`/billing/runs/${runId}`)
+}
+
+export interface RunResultSuccess {
+  date: string
+  cycle: string
+  batch: string
+  filename: string
+  account_number: string
+}
+
+export interface RunResultFailure {
+  account_number: string
+  error_message: string
+}
+
+export interface RunResultsOut {
+  run_id: number
+  successes: RunResultSuccess[]
+  failures: RunResultFailure[]
+}
+
+export function getRunResults(runId: number): Promise<RunResultsOut> {
+  return request(`/billing/runs/${runId}/results`)
+}
+
+export function getOutputDates(): Promise<{ dates: string[] }> {
+  return request('/billing/output/dates')
+}
+
+export function getOutputCycles(dateStr: string): Promise<{ date: string; cycles: string[] }> {
+  return request(`/billing/output/${dateStr}`)
+}
+
+export function getOutputBatches(dateStr: string, cycle: string): Promise<{ date: string; cycle: string; batches: { batch: string; pdf_count: number }[] }> {
+  return request(`/billing/output/${dateStr}/${cycle}`)
+}
+
+export function getOutputPdfs(dateStr: string, cycle: string, batch: string): Promise<{ date: string; cycle: string; batch: string; files: string[] }> {
+  return request(`/billing/output/${dateStr}/${cycle}/${batch}`)
+}
+
+// Fetch PDF securely as a Blob and create an Object URL
+export async function fetchPdfBlobUrl(dateStr: string, cycle: string, batch: string, filename: string): Promise<string> {
+  const token = getToken()
+  const response = await fetch(`${BASE_URL}/billing/output/${dateStr}/${cycle}/${batch}/${filename}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
   })
-}
-
-export interface InvoiceTemplateEditRequest {
-  header_message?: string | null
-  footer_message?: string | null
-  promotion_message?: string | null
-  name?: string | null
-  description?: string | null
-  theme_name?: string | null
-  theme_color?: string | null
-  confirm_save_original?: boolean
-}
-
-export function listInvoiceTemplates(): Promise<InvoiceTemplate[]> {
-  return request('/invoice-templates')
-}
-
-export function getInvoiceTemplate(templateId: number): Promise<InvoiceTemplate> {
-  return request(`/invoice-templates/${templateId}`)
-}
-
-export function activateInvoiceTemplate(templateId: number): Promise<InvoiceTemplate> {
-  return request(`/invoice-templates/${templateId}/activate`, { method: 'POST' })
-}
-
-export function saveInvoiceTemplateCopy(
-  templateId: number,
-  body: InvoiceTemplateEditRequest,
-): Promise<InvoiceTemplate> {
-  return request(`/invoice-templates/${templateId}/save-copy`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-export function saveInvoiceTemplateOriginal(
-  templateId: number,
-  body: InvoiceTemplateEditRequest,
-): Promise<InvoiceTemplate> {
-  return request(`/invoice-templates/${templateId}/save-original`, {
-    method: 'PUT',
-    body: JSON.stringify({ ...body, confirm_save_original: true }),
-  })
-}
-
-interface PdfTokenResponse {
-  token: string
-  expires_in: number
-}
-
-export async function downloadInvoicePdf(invoiceId: number): Promise<void> {
-  const { token } = await request<PdfTokenResponse>(`/invoices/${invoiceId}/pdf-token`)
-  const url = `${BASE_URL}/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`
-  const response = await fetch(url)
-
+  
   if (!response.ok) {
-    throw new Error('PDF download failed')
+    throw new Error('Failed to fetch PDF')
   }
-
+  
   const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = objectUrl
-  a.download = `invoice-${invoiceId}.pdf`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(objectUrl)
+  return URL.createObjectURL(blob)
+}
+
+export function getTemplates(): Promise<{ templates: any[] }> {
+  return request('/billing/templates')
+}
+
+export function getNotifications(unreadOnly = false): Promise<NotificationOut[]> {
+  const q = unreadOnly ? '?unread_only=true' : ''
+  return request(`/billing/notifications${q}`)
+}
+
+export function markNotificationRead(notifId: number): Promise<{ ok: boolean }> {
+  return request(`/billing/notifications/${notifId}/read`, { method: 'PATCH' })
+}
+
+export function markAllNotificationsRead(): Promise<{ ok: boolean }> {
+  return request('/billing/notifications/mark-all-read', { method: 'PATCH' })
+}
+
+export function clearReadNotifications(): Promise<{ ok: boolean }> {
+  return request('/billing/notifications/clear-read', { method: 'DELETE' })
+}
+
+export function getSchedules(): Promise<ScheduleOut[]> {
+  return request('/billing/schedules')
+}
+
+export function createSchedule(data: any): Promise<ScheduleOut> {
+  return request('/billing/schedules', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateSchedule(id: number, data: any): Promise<ScheduleOut> {
+  return request(`/billing/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+export function toggleSchedule(id: number): Promise<{ id: number; is_active: boolean }> {
+  return request(`/billing/schedules/${id}/toggle`, { method: 'PATCH' })
+}
+
+export function deleteSchedule(id: number): Promise<{ ok: boolean }> {
+  return request(`/billing/schedules/${id}`, { method: 'DELETE' })
 }

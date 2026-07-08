@@ -1,321 +1,135 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { CheckCircle2, Copy, Loader2, Palette, Pencil, Save, X } from 'lucide-react'
-import type { InvoiceTemplate } from '../../types'
-import {
-  activateInvoiceTemplate,
-  ApiError,
-  listInvoiceTemplates,
-  saveInvoiceTemplateCopy,
-  saveInvoiceTemplateOriginal,
-} from '../../lib/api'
-import { ErrorState } from '../../components/states'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { LayoutTemplate, Loader2, CheckCircle2, Maximize2, X } from 'lucide-react'
+import { getTemplates } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
-import { CardSkeleton } from '../../components/ui-kit/Skeletons'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
-
-interface TemplateForm {
-  name: string
-  description: string
-  header_message: string
-  footer_message: string
-  promotion_message: string
-  theme_name: string
-  theme_color: string
-}
-
-function errDetail(err: unknown): string {
-  return err instanceof ApiError ? err.detail : String(err)
-}
-
-function formFromTemplate(template: InvoiceTemplate): TemplateForm {
-  return {
-    name: template.name,
-    description: template.description ?? '',
-    header_message: template.header_message ?? '',
-    footer_message: template.footer_message ?? '',
-    promotion_message: template.promotion_message ?? '',
-    theme_name: template.theme_name ?? '',
-    theme_color: template.theme_color ?? '#004B8D',
-  }
-}
-
-function TemplateCard({
-  template,
-  selected,
-  onEdit,
-  onActivate,
-  activating,
-}: {
-  template: InvoiceTemplate
-  selected: boolean
-  onEdit: () => void
-  onActivate: () => void
-  activating: boolean
-}) {
-  return (
-    <article className={cn('surface-section flex min-h-[220px] flex-col p-4 transition-colors', selected && 'border-primary ring-2 ring-primary/15')}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-semibold">{template.name}</h2>
-            {template.is_active && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                <CheckCircle2 size={12} />
-                Active
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs font-medium text-muted-foreground">{template.template_code}</p>
-        </div>
-        <span
-          className="size-8 shrink-0 rounded-md border border-border"
-          style={{ backgroundColor: template.theme_color ?? '#004B8D' }}
-          aria-label={template.theme_name ?? 'Template color'}
-        />
-      </div>
-
-      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
-        {template.description ?? 'Template metadata placeholder.'}
-      </p>
-
-      <div className="mt-4 grid gap-2 text-xs">
-        <div className="rounded-md bg-muted/65 px-3 py-2">
-          <span className="font-medium text-foreground">Header: </span>
-          <span className="text-muted-foreground">{template.header_message ?? 'None'}</span>
-        </div>
-        <div className="rounded-md bg-muted/65 px-3 py-2">
-          <span className="font-medium text-foreground">Promo: </span>
-          <span className="text-muted-foreground">{template.promotion_message ?? 'None'}</span>
-        </div>
-      </div>
-
-      <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <Button size="sm" variant="outline" onClick={onEdit}>
-          <Pencil size={13} />
-          Edit
-        </Button>
-        <Button size="sm" disabled={template.is_active || activating} onClick={onActivate}>
-          {activating ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-          Set Active
-        </Button>
-      </div>
-    </article>
-  )
-}
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function InvoiceTemplates() {
-  const qc = useQueryClient()
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState<TemplateForm | null>(null)
-
-  const templates = useQuery({
-    queryKey: ['invoice-templates'],
-    queryFn: listInvoiceTemplates,
+  const { data, isLoading } = useQuery({
+    queryKey: ['billing-templates'],
+    queryFn: getTemplates,
   })
 
-  const activeTemplate = useMemo(
-    () => templates.data?.find((template) => template.is_active) ?? null,
-    [templates.data],
-  )
-  const editingTemplate = useMemo(
-    () => templates.data?.find((template) => template.id === editingId) ?? null,
-    [templates.data, editingId],
-  )
+  const [selectedPdf, setSelectedPdf] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (editingTemplate) setForm(formFromTemplate(editingTemplate))
-  }, [editingTemplate])
-
-  const activateMutation = useMutation({
-    mutationFn: activateInvoiceTemplate,
-    onSuccess: (template) => {
-      qc.invalidateQueries({ queryKey: ['invoice-templates'] })
-      toast.success(`${template.name} is now active.`)
-    },
-    onError: (err) => toast.error(errDetail(err)),
-  })
-
-  const copyMutation = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: TemplateForm }) => saveInvoiceTemplateCopy(id, body),
-    onSuccess: (template) => {
-      qc.invalidateQueries({ queryKey: ['invoice-templates'] })
-      setEditingId(template.id)
-      toast.success('Custom template copy created.')
-    },
-    onError: (err) => toast.error(errDetail(err)),
-  })
-
-  const originalMutation = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: TemplateForm }) => saveInvoiceTemplateOriginal(id, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['invoice-templates'] })
-      toast.success('Template original updated.')
-    },
-    onError: (err) => toast.error(errDetail(err)),
-  })
-
-  if (templates.isPending) {
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title="Invoice Templates" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => <CardSkeleton key={i} />)}
-        </div>
-      </div>
-    )
-  }
-  if (templates.error) return <ErrorState detail={errDetail(templates.error)} />
-
-  function updateField<K extends keyof TemplateForm>(key: K, value: TemplateForm[K]) {
-    setForm((current) => current ? { ...current, [key]: value } : current)
-  }
-
-  function saveCopy() {
-    if (!editingTemplate || !form) return
-    copyMutation.mutate({ id: editingTemplate.id, body: form })
-  }
-
-  function saveOriginal() {
-    if (!editingTemplate || !form) return
-    const ok = window.confirm('Save changes to the selected original template? This can affect future generated invoices.')
-    if (!ok) return
-    originalMutation.mutate({ id: editingTemplate.id, body: form })
+  // Map template names to the real backend PDF layout files
+  const getTemplatePdf = (name: string) => {
+    const lowerName = name.toLowerCase()
+    if (lowerName.includes('enterprise')) return '/templates/nonvat_enterprise.pdf'
+    if (lowerName.includes('home')) return '/templates/nonvat_home.pdf'
+    if (lowerName.includes('summary')) return '/templates/summary_statement.pdf'
+    if (lowerName.includes('grouping')) return '/templates/product_label_grouping.pdf'
+    if (lowerName.includes('subscription')) return '/templates/subscription_ref_grouping.pdf'
+    return '/templates/invoice_of_summary.pdf'
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Invoice Templates"
-        description="Manage global invoice template metadata used by admin bulk PDF generation."
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
+      <PageHeader 
+        title="Invoice Templates" 
+        description="Available layout templates for SLT billing generation." 
       />
 
-      <section className="grid gap-4 lg:grid-cols-[0.72fr_0.28fr]">
-        <div className="surface-section p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Palette size={18} />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold">Active Template</h2>
-              <p className="text-sm text-muted-foreground">
-                {activeTemplate ? `${activeTemplate.name} (${activeTemplate.template_code})` : 'No active template selected.'}
-              </p>
-            </div>
-          </div>
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <Loader2 className="animate-spin text-muted-foreground size-8" />
         </div>
-
-        <div className="surface-section p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Templates</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums">{templates.data?.length ?? 0}</p>
-          <p className="mt-1 text-sm text-muted-foreground">System and custom templates</p>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1fr_390px]">
-        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {(templates.data ?? []).map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              selected={editingId === template.id}
-              onEdit={() => setEditingId(template.id)}
-              onActivate={() => activateMutation.mutate(template.id)}
-              activating={activateMutation.isPending && activateMutation.variables === template.id}
-            />
-          ))}
-        </div>
-
-        <aside className="surface-section h-fit p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold">Edit Template</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {editingTemplate ? editingTemplate.template_code : 'Select a template to edit messages.'}
-              </p>
-            </div>
-            {editingTemplate && (
-              <Button variant="ghost" size="icon" onClick={() => setEditingId(null)} aria-label="Cancel edit">
-                <X size={16} />
-              </Button>
-            )}
-          </div>
-
-          {!editingTemplate || !form ? (
-            <div className="rounded-md border border-dashed border-border px-3 py-10 text-center text-sm text-muted-foreground">
-              Choose a template card to customize header, footer, and promotion text.
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="template-name">Name</Label>
-                <Input id="template-name" value={form.name} onChange={(event) => updateField('name', event.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="template-description">Description</Label>
-                <textarea
-                  id="template-description"
-                  value={form.description}
-                  onChange={(event) => updateField('description', event.target.value)}
-                  className="min-h-20 rounded-md border border-input bg-white px-3 py-2 text-sm outline-none ring-ring/30 focus:ring-2"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="header-message">Header message</Label>
-                <textarea
-                  id="header-message"
-                  value={form.header_message}
-                  onChange={(event) => updateField('header_message', event.target.value)}
-                  className="min-h-20 rounded-md border border-input bg-white px-3 py-2 text-sm outline-none ring-ring/30 focus:ring-2"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="promotion-message">Promotion message</Label>
-                <textarea
-                  id="promotion-message"
-                  value={form.promotion_message}
-                  onChange={(event) => updateField('promotion_message', event.target.value)}
-                  className="min-h-20 rounded-md border border-input bg-white px-3 py-2 text-sm outline-none ring-ring/30 focus:ring-2"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="footer-message">Footer message</Label>
-                <textarea
-                  id="footer-message"
-                  value={form.footer_message}
-                  onChange={(event) => updateField('footer_message', event.target.value)}
-                  className="min-h-20 rounded-md border border-input bg-white px-3 py-2 text-sm outline-none ring-ring/30 focus:ring-2"
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-                <div className="grid gap-2">
-                  <Label htmlFor="theme-name">Theme name</Label>
-                  <Input id="theme-name" value={form.theme_name} onChange={(event) => updateField('theme_name', event.target.value)} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {data?.templates.map((template: any) => {
+            const pdfUrl = getTemplatePdf(template.name)
+            return (
+              <motion.div 
+                whileHover={{ y: -4 }}
+                key={template.id} 
+                className="flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden transition-all hover:shadow-lg group"
+              >
+                <div 
+                  className="h-64 bg-slate-100 relative cursor-pointer overflow-hidden border-b"
+                  onClick={() => setSelectedPdf(pdfUrl)}
+                >
+                  {/* We use scale to render a zoomed-out thumbnail of the real PDF */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <iframe 
+                      src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                      title={template.name}
+                      className="w-[140%] h-[140%] origin-top-left scale-[0.71] bg-white pointer-events-none"
+                    />
+                  </div>
+                  
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="bg-white/95 text-slate-900 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm backdrop-blur-sm transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                      <Maximize2 size={16} /> View Layout PDF
+                    </span>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="theme-color">Color</Label>
-                  <Input id="theme-color" value={form.theme_color} onChange={(event) => updateField('theme_color', event.target.value)} />
+                
+                <div className="p-5 flex flex-col gap-2 bg-white">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-lg text-slate-800">{template.name}</h3>
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 shadow-sm">
+                      <CheckCircle2 size={12} className="mr-1 text-emerald-600" /> Active
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Template ID: {template.id}</p>
+                  
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                      Supported by SmartAI_Bill
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid gap-2 pt-2 sm:grid-cols-2">
-                <Button onClick={saveCopy} disabled={copyMutation.isPending}>
-                  {copyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
-                  Save as Copy
-                </Button>
-                <Button variant="outline" onClick={saveOriginal} disabled={originalMutation.isPending}>
-                  {originalMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  Save as Original
-                </Button>
-              </div>
+              </motion.div>
+            )
+          })}
+          
+          {data?.templates.length === 0 && (
+            <div className="col-span-full text-center p-12 border border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+              <LayoutTemplate size={48} className="mx-auto mb-4 opacity-20" />
+              <p>No templates discovered in the engine.</p>
             </div>
           )}
-        </aside>
-      </section>
+        </div>
+      )}
+
+      {/* Full Screen PDF Modal */}
+      <AnimatePresence>
+        {selectedPdf && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8"
+            onClick={() => setSelectedPdf(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className="relative max-h-full max-w-5xl w-full h-[90vh] flex flex-col bg-slate-100 rounded-xl overflow-hidden shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <button 
+                  className="text-slate-600 hover:text-slate-900 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm transition-colors backdrop-blur-sm"
+                  onClick={() => setSelectedPdf(null)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <iframe 
+                src={`${selectedPdf}#toolbar=0&navpanes=0`} 
+                title="Full Template Preview" 
+                className="w-full h-full bg-white"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

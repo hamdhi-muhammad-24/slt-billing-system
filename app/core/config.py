@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://postgres:password@localhost:5432/slt_ebill"
     output_dir: Path = Path("./output")
+    gmf_drive_path: Path = Path("G:/My Drive/SLT_GMF_Uploads")
     log_level: str = "INFO"
 
     # JWT / Auth

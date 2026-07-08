@@ -101,8 +101,9 @@ export default function Login() {
           : { role: 'admin' as const }
       login(nextSession)
       navigate(role === 'admin' ? '/admin' : '/app', { replace: true })
-    } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Login failed. Please try again.')
+    } catch (err: any) {
+      console.error("Login error:", err)
+      setError(err?.detail || err?.message || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }

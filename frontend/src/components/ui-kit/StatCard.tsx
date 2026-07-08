@@ -49,29 +49,43 @@ const VARIANTS: Record<Variant, { card: string; iconWrap: string; label: string;
 }
 
 interface Props {
-  label: string
+  label?: string
+  title?: string
   value: string | number
-  icon?: LucideIcon
+  icon?: LucideIcon | React.ReactNode
   sublabel?: string
+  description?: string
   variant?: Variant
+  className?: string
 }
 
-export function StatCard({ label, value, icon: Icon, sublabel, variant = 'default' }: Props) {
+export function StatCard({ label, title, value, icon, sublabel, description, variant = 'default', className }: Props) {
   const v = VARIANTS[variant]
+  const displayLabel = title || label
+  const displaySub = description || sublabel
+  const isLucide = typeof icon === 'function' || (icon && typeof icon === 'object' && '$$typeof' in (icon as any))
 
   return (
-    <div className={cn('flex min-h-[124px] flex-col justify-between rounded-lg p-5', v.card)}>
+    <div className={cn('flex min-h-[124px] flex-col justify-between rounded-lg p-5', v.card, className)}>
       <div className="flex items-center justify-between">
-        <p className={cn('text-xs font-semibold uppercase tracking-wide', v.label)}>{label}</p>
-        {Icon && (
+        <p className={cn('text-xs font-semibold uppercase tracking-wide', v.label)}>{displayLabel}</p>
+        {icon && (
           <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', v.iconWrap)}>
-            <Icon size={18} />
+            {typeof icon === 'function' || (icon && typeof icon === 'object' && 'render' in (icon as any)) ? (
+              // @ts-ignore
+              <icon.render size={18} />
+            ) : isLucide ? (
+              // @ts-ignore
+              <icon size={18} />
+            ) : (
+              icon
+            )}
           </div>
         )}
       </div>
       <div>
         <p className={cn('text-3xl font-semibold tabular-nums leading-none', v.value)}>{value}</p>
-        {sublabel && <p className={cn('mt-2 text-xs leading-5', v.sub)}>{sublabel}</p>}
+        {displaySub && <p className={cn('mt-2 text-xs leading-5', v.sub)}>{displaySub}</p>}
       </div>
     </div>
   )

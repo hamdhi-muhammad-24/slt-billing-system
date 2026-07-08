@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Receipt, Menu, LogOut, Palette } from 'lucide-react'
+import { LayoutDashboard, Menu, LogOut, Moon, Sun, FileSearch, Eye, Zap, Archive, Bell, LayoutTemplate, CalendarClock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
@@ -8,6 +8,7 @@ import { authMe } from '../lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { useTheme } from 'next-themes'
 import Brand from './Brand'
 
 interface NavItem {
@@ -19,10 +20,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/admin',           label: 'Dashboard', icon: LayoutDashboard, end: true,  pill: 'bg-cyan-400/15 text-cyan-200' },
-  { to: '/admin/customers', label: 'Customers', icon: Users,           end: false, pill: 'bg-blue-400/15 text-blue-200' },
-  { to: '/admin/billing',   label: 'Billing',   icon: Receipt,         end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
-  { to: '/admin/templates', label: 'Invoice Templates', icon: Palette,  end: false, pill: 'bg-violet-400/15 text-violet-200' },
+  { to: '/admin',                   label: 'Overview',          icon: LayoutDashboard, end: true,  pill: 'bg-indigo-400/15 text-indigo-200' },
+  { to: '/admin/gmf-monitor',       label: 'GMF Monitor',       icon: FileSearch,      end: false, pill: 'bg-cyan-400/15 text-cyan-200' },
+  { to: '/admin/invoice-preview',   label: 'Invoice Preview',   icon: Eye,             end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
+  { to: '/admin/generation-hub',    label: 'Generation Hub',    icon: Zap,             end: false, pill: 'bg-amber-400/15 text-amber-200' },
+  { to: '/admin/output-archive',    label: 'Output Archive',    icon: Archive,         end: false, pill: 'bg-purple-400/15 text-purple-200' },
+  { to: '/admin/activity-log',      label: 'Activity Log',      icon: Bell,            end: false, pill: 'bg-rose-400/15 text-rose-200' },
+  { to: '/admin/invoice-templates', label: 'Invoice Templates', icon: LayoutTemplate,  end: false, pill: 'bg-blue-400/15 text-blue-200' },
+  { to: '/admin/schedule-manager',  label: 'Schedule Manager',  icon: CalendarClock,   end: false, pill: 'bg-orange-400/15 text-orange-200' },
 ]
 
 function SidebarNav({ onNav }: { onNav?: () => void }) {
@@ -92,6 +97,7 @@ export default function AdminLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -139,6 +145,18 @@ export default function AdminLayout() {
           </div>
 
           <span className="flex-1" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title="Toggle theme"
+          >
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
 
           {me?.email && (
             <span className="hidden rounded-full border border-border bg-muted/45 px-3 py-1 text-xs font-medium text-muted-foreground sm:block">{me.email}</span>

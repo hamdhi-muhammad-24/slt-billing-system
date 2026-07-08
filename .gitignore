@@ -35,3 +35,20 @@ Thumbs.db
 
 # Alembic compiled
 migrations/versions/__pycache__/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads & Previews (Dynamic Data)
+app/uploads/
+frontend/public/previews/
+
+# SmartAI Data
+Models/SmartAI_Bill/data/processed/
+Models/SmartAI_Bill/data/raw/
+Models/SmartAI_Bill/data/logs/
+
+# Scratch Files
+test_browser.py
