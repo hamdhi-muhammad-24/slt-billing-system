@@ -75,10 +75,7 @@ export default function InvoiceTemplates() {
                   </div>
                   <p className="text-sm text-muted-foreground">Template ID: {template.id}</p>
                   
-                  <div className="mt-4 flex flex-wrap gap-2 items-center justify-between w-full">
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                      Supported by SmartAI_Bill
-                    </span>
+                  <div className="mt-4 flex flex-wrap gap-2 items-center justify-end w-full">
                     <button 
                       className="text-xs flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
                       onClick={(e) => {
