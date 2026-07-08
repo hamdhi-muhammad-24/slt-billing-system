@@ -1,0 +1,14 @@
+2026-07-08 00:49:06,479 [INFO]                                                                       
+2026-07-08 00:49:06,480 [INFO]   SLT BILL GENERATOR
+2026-07-08 00:49:06,480 [INFO]                                                                       
+2026-07-08 00:49:06,480 [INFO]   Inbound folder:  C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\data\inbound
+2026-07-08 00:49:06,480 [INFO]   Files found:     2
+2026-07-08 00:49:06,480 [INFO]   Workers:         7
+2026-07-08 00:49:06,480 [INFO]   ZIP batch size:  1500
+2026-07-08 00:49:06,480 [INFO]   Log file:        C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\slt_bills_20260708_004906.log
+2026-07-08 00:49:06,482 [INFO]                                                                       
+2026-07-08 00:49:08,289 [INFO] Filtering files for template: usd_open_item
+2026-07-08 00:49:08,290 [INFO]   Matched: 0 | Skipped: 2 | Errors: 0
+2026-07-08 00:49:08,290 [INFO] 
+  No files matching 'usd_open_item' found.
+

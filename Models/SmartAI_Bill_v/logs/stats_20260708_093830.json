@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-08T09:38:30.155109",
+  "summary": {
+    "total_files": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_duration_seconds": 0.37,
+    "rate_per_second": 2.67,
+    "rate_per_hour": 9608.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "usd_open_item": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 41.18
+      }
+    }
+  },
+  "failed_files": []
+}

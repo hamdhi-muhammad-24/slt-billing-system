@@ -52,7 +52,7 @@ def process_single_file(args):
         account_number = account_number.replace(" ", "")
 
         # Get template-specific pattern or fallback
-        name_pattern = OUTPUT_PDF_NAMES.get(template_id, OUTPUT_PDF_NAME_DEFAULT)
+        name_pattern = OUTPUT_PDF_NAMES.get(str(template_id), OUTPUT_PDF_NAME_DEFAULT)
 
         output_name = name_pattern.format(
             account_number=account_number,
@@ -85,7 +85,7 @@ def process_batch(files, temp_pdf_dir, workers=DEFAULT_WORKERS,
     if not files:
         return []
 
-    MAX_RETRIES = 1
+    MAX_RETRIES = 3
     all_results = {}
     pending = list(files)
     total_files = len(files)

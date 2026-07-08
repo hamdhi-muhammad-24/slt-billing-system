@@ -1,0 +1,54 @@
+2026-07-08 09:06:54,515 [INFO]                                                                       
+2026-07-08 09:06:54,515 [INFO]   SLT BILL GENERATOR
+2026-07-08 09:06:54,515 [INFO]                                                                       
+2026-07-08 09:06:54,516 [INFO]   Inbound folder:  C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\data\inbound
+2026-07-08 09:06:54,516 [INFO]   Files found:     2
+2026-07-08 09:06:54,516 [INFO]   Workers:         7
+2026-07-08 09:06:54,516 [INFO]   ZIP batch size:  1500
+2026-07-08 09:06:54,516 [INFO]   Log file:        C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\slt_bills_20260708_090654.log
+2026-07-08 09:06:54,517 [INFO]                                                                       
+2026-07-08 09:06:56,175 [INFO] Filtering files for template: usd_open_item
+2026-07-08 09:06:56,201 [INFO]   Matched: 1 | Skipped: 1 | Errors: 0
+2026-07-08 09:06:56,202 [INFO] 
+  Generating 1 'usd_open_item' bills
+
+2026-07-08 09:06:56,204 [INFO]   Temp PDF dir: C:\Users\vishm\AppData\Local\Temp\slt_bills_noqa0nf2
+
+2026-07-08 09:06:56,204 [INFO] Starting: 1 files, 7 workers
+2026-07-08 09:06:56,558 [INFO]     Progress: 1/1 (100%)
+2026-07-08 09:06:56,589 [INFO]   Round 1: 1 success, 0 failed in 0.4s (9362/hr)
+2026-07-08 09:06:56,592 [INFO] 
+Batch complete: 1 success, 0 failed in 0.4s (9280/hr)
+2026-07-08 09:06:56,593 [INFO] 
+======================================================================
+2026-07-08 09:06:56,593 [INFO] PROCESSING SUMMARY
+2026-07-08 09:06:56,593 [INFO] ======================================================================
+2026-07-08 09:06:56,593 [INFO] Total files:      1
+2026-07-08 09:06:56,593 [INFO] Successful:       1
+2026-07-08 09:06:56,593 [INFO] Failed:           0
+2026-07-08 09:06:56,593 [INFO] Success rate:     100.0%
+2026-07-08 09:06:56,594 [INFO] Total duration:   0.39s
+2026-07-08 09:06:56,594 [INFO] Rate:             2.57 files/sec
+2026-07-08 09:06:56,594 [INFO]                   9,269 files/hour
+2026-07-08 09:06:56,594 [INFO] Target:           40,000 files/hour
+2026-07-08 09:06:56,594 [INFO] Target met:       NO
+2026-07-08 09:06:56,594 [INFO] 
+By template:
+2026-07-08 09:06:56,594 [INFO]   usd_open_item: 1/1 (avg 29.97ms)
+2026-07-08 09:06:56,595 [INFO] ======================================================================
+
+2026-07-08 09:06:56,596 [INFO]   Detailed report: C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\stats_20260708_090656.json
+2026-07-08 09:06:56,596 [INFO] 
+
+2026-07-08 09:06:56,596 [INFO]   CREATING OUTPUT ZIP
+2026-07-08 09:06:56,596 [INFO]                                                                       
+2026-07-08 09:06:56,597 [INFO] 
+Zipping 1 PDFs in batches of 1500
+2026-07-08 09:06:56,630 [INFO]   OK: SLT_BILLS_usd_open_item_0001_20260708_090656.zip (1 PDFs, 0.2 MB)
+2026-07-08 09:06:56,631 [INFO] Created 1 ZIP file(s)
+2026-07-08 09:06:56,631 [INFO] 
+  Total ZIPs created: 1
+2026-07-08 09:06:56,631 [INFO]   ZIP output folder: C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\output\zips
+2026-07-08 09:06:56,631 [INFO] 
+  Processing complete
+
