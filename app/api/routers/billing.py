@@ -383,8 +383,16 @@ def _background_generate(upload_id: int, run_id: int):
             # Determine cycle label for output folder organisation
             cycle_label = upload.folder_type  # e.g. 'Cycle_1' or 'Test_GMFs'
 
+            def update_progress(done, total):
+                with SessionLocal() as inner_db:
+                    inner_run = inner_db.query(BillingRun).filter(BillingRun.id == run_id).first()
+                    if inner_run:
+                        inner_run.succeeded = done
+                        inner_run.total_accounts = total
+                        inner_db.commit()
+
             # Call friend's batch processor
-            results = process_batch([upload.file_path], temp_pdf_dir)
+            results = process_batch([upload.file_path], temp_pdf_dir, progress_callback=update_progress)
 
             success_count = sum(1 for r in results if r.success)
             fail_count = len(results) - success_count
@@ -455,7 +463,15 @@ def _background_generate_batch(upload_ids: List[int], run_id: int):
             cycle_label = uploads[0].folder_type
             file_paths = [u.file_path for u in uploads]
 
-            results = process_batch(file_paths, temp_pdf_dir)
+            def update_progress(done, total):
+                with SessionLocal() as inner_db:
+                    inner_run = inner_db.query(BillingRun).filter(BillingRun.id == run_id).first()
+                    if inner_run:
+                        inner_run.succeeded = done
+                        inner_run.total_accounts = total
+                        inner_db.commit()
+
+            results = process_batch(file_paths, temp_pdf_dir, progress_callback=update_progress)
 
             success_count = sum(1 for r in results if r.success)
             fail_count = len(results) - success_count

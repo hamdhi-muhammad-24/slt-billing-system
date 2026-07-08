@@ -49,7 +49,7 @@ export default function GmfMonitor() {
   const { data: uploads, isLoading } = useQuery({
     queryKey: ['billing-uploads'],
     queryFn: () => getUploads(),
-    refetchInterval: 5000,
+    refetchInterval: 1000,
   })
 
   const COLS: ColumnDef<GmfUploadOut>[] = [

@@ -127,7 +127,7 @@ export default function GenerationHub() {
   const { data: runs, isLoading: loadingRuns } = useQuery({
     queryKey: ['billing-runs'],
     queryFn: () => getRuns(),
-    refetchInterval: 3000,
+    refetchInterval: 1000,
   })
 
   const batchMutation = useMutation({

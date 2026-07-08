@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # JWT / Auth
     jwt_secret: str = "change-me-to-a-long-random-secret"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 1440
 
     # Short-lived signed PDF link tokens
     pdf_token_secret: str = "change-me-pdf-token-secret"

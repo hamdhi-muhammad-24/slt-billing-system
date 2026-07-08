@@ -16,6 +16,14 @@ from templates.summary_statement.parser import parse_summary_statement
 from templates.invoice_of_summary.renderer import InvoiceOfSummaryRenderer
 from templates.invoice_of_summary.parser import parse_invoice_of_summary
 
+from templates.vat_creditnote.renderer import VATCreditNoteRenderer
+from templates.vat_creditnote.parser import parse_vat_creditnote
+
+from templates.nonvat_creditnote.renderer import NonVATCreditNoteRenderer
+from templates.nonvat_creditnote.parser import parse_nonvat_creditnote
+
+from templates.usd_open_item.renderer import USDOpenItemRenderer
+from templates.usd_open_item.parser import parse_usd_open_item
 
 TEMPLATE_REGISTRY = {
     "nonvat_home": {
@@ -59,6 +67,27 @@ TEMPLATE_REGISTRY = {
         "renderer": InvoiceOfSummaryRenderer,
         "parser": parse_invoice_of_summary,
         "ready": False,
+    },
+    "vat_creditnote": {
+        "name": "VAT Credit Note",
+        "description": "BILLSTYLE=6",
+        "renderer": VATCreditNoteRenderer,
+        "parser": parse_vat_creditnote,
+        "ready": True,
+    },
+    "nonvat_creditnote": {
+        "name": "NonVAT Credit Note",
+        "description": "BILLSTYLE=16",
+        "renderer": NonVATCreditNoteRenderer,
+        "parser": parse_nonvat_creditnote,
+        "ready": True,
+    },
+    "usd_open_item": {
+        "name": "USD Open Item",
+        "description": "BILLSTYLE=21",
+        "renderer": USDOpenItemRenderer,
+        "parser": parse_usd_open_item,
+        "ready": True,
     },
 }
 

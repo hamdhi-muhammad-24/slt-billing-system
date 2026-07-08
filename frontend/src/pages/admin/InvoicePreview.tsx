@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch } from 'lucide-react'
+import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X } from 'lucide-react'
 import { getUploads, previewInvoice, approveUpload, rejectUpload } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ export default function InvoicePreview() {
   const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   
   const { data: uploads, isLoading } = useQuery({
     queryKey: ['billing-uploads'],
@@ -205,8 +206,16 @@ export default function InvoicePreview() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full h-full"
+                      className="w-full h-full relative"
                     >
+                      <div className="absolute top-2 right-4 flex gap-2 z-10">
+                        <Button variant="secondary" size="sm" className="h-8 shadow-sm opacity-80 hover:opacity-100" onClick={() => setIsFullscreen(true)}>
+                          <Maximize2 size={14} className="mr-1.5" /> Maximize
+                        </Button>
+                        <Button variant="secondary" size="sm" className="h-8 shadow-sm opacity-80 hover:opacity-100" onClick={() => window.open(previewPdfUrl, '_blank')}>
+                          <Download size={14} className="mr-1.5" /> Download
+                        </Button>
+                      </div>
                       <iframe 
                         src={`${previewPdfUrl}#toolbar=0`} 
                         className="w-full h-full rounded-lg shadow-md border border-slate-200 bg-white"
@@ -243,6 +252,43 @@ export default function InvoicePreview() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Full Screen PDF Modal */}
+      <AnimatePresence>
+        {isFullscreen && previewPdfUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8"
+            onClick={() => setIsFullscreen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className="relative max-h-full max-w-5xl w-full h-[90vh] flex flex-col bg-slate-100 rounded-xl overflow-hidden shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <button 
+                  className="text-slate-600 hover:text-slate-900 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm transition-colors backdrop-blur-sm"
+                  onClick={() => setIsFullscreen(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <iframe 
+                src={`${previewPdfUrl}#toolbar=0&navpanes=0`} 
+                title="Full Template Preview" 
+                className="w-full h-full bg-white"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { LayoutTemplate, Loader2, CheckCircle2, Maximize2, X } from 'lucide-react'
+import { LayoutTemplate, Loader2, CheckCircle2, Maximize2, X, Download } from 'lucide-react'
 import { getTemplates } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -75,10 +75,24 @@ export default function InvoiceTemplates() {
                   </div>
                   <p className="text-sm text-muted-foreground">Template ID: {template.id}</p>
                   
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2 items-center justify-between w-full">
                     <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
                       Supported by SmartAI_Bill
                     </span>
+                    <button 
+                      className="text-xs flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const a = document.createElement('a');
+                        a.href = pdfUrl;
+                        a.download = `${template.name}_template.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }}
+                    >
+                      <Download size={14} /> Download Sample
+                    </button>
                   </div>
                 </div>
               </motion.div>

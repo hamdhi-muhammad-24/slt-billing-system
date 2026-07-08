@@ -4,7 +4,7 @@ Multi-process batch processor with retry logic.
 import os
 import time
 import shutil
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core.template_identifier import identify_template
 from templates.registry import get_renderer, get_parser
@@ -105,7 +105,7 @@ def process_batch(files, temp_pdf_dir, workers=DEFAULT_WORKERS,
         round_start = time.perf_counter()
         args_list = [(f, temp_pdf_dir, attempt) for f in pending]
 
-        with ProcessPoolExecutor(max_workers=workers) as executor:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(process_single_file, args): args[0]
                 for args in args_list
@@ -147,7 +147,12 @@ def process_batch(files, temp_pdf_dir, workers=DEFAULT_WORKERS,
                     f"{round_fail} still failing"
                 )
 
-        pending = [f for f in pending if not all_results[f].success]
+        pending = [
+            f for f in pending 
+            if not all_results[f].success 
+            and "Unsupported template" not in str(all_results[f].error)
+            and "Unknown template" not in str(all_results[f].error)
+        ]
 
     if MOVE_AFTER_PROCESS:
         _move_processed_files(list(all_results.values()), log_callback)
