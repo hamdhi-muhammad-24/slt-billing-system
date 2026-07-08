@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
-import { Progress } from '@/components/ui/progress'
 import { useState } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 
