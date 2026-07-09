@@ -49,27 +49,41 @@ def create_output_batches(temp_pdf_dir, cycle_label="Cycle_1", log_callback=None
         )
 
     batch_folders = []
-    total_batches = (len(pdfs) + BATCH_FOLDER_SIZE - 1) // BATCH_FOLDER_SIZE
-
-    for batch_num in range(1, total_batches + 1):
-        start = (batch_num - 1) * BATCH_FOLDER_SIZE
-        end = start + BATCH_FOLDER_SIZE
-        batch_pdfs = pdfs[start:end]
-
-        batch_dir = os.path.join(base, f"Batch_{batch_num}")
+    
+    current_batch_num = 1
+    pdf_index = 0
+    
+    while pdf_index < len(pdfs):
+        batch_dir = os.path.join(base, f"Batch_{current_batch_num}")
         os.makedirs(batch_dir, exist_ok=True)
-
-        for pdf_path in batch_pdfs:
+        
+        existing_files = [f for f in os.listdir(batch_dir) if f.lower().endswith(".pdf")]
+        existing_count = len(existing_files)
+        
+        space_left = BATCH_FOLDER_SIZE - existing_count
+        
+        if space_left <= 0:
+            current_batch_num += 1
+            continue
+            
+        moved_in_this_batch = 0
+        while moved_in_this_batch < space_left and pdf_index < len(pdfs):
+            pdf_path = pdfs[pdf_index]
             dest = os.path.join(batch_dir, os.path.basename(pdf_path))
             shutil.move(pdf_path, dest)
-
+            moved_in_this_batch += 1
+            pdf_index += 1
+            
         if log_callback:
             log_callback(
-                f"  Batch {batch_num}/{total_batches}: "
-                f"{len(batch_pdfs)} invoices → {batch_dir}"
+                f"  Batch {current_batch_num}: "
+                f"added {moved_in_this_batch} invoices → {batch_dir}"
             )
-
-        batch_folders.append(batch_dir)
+            
+        if batch_dir not in batch_folders:
+            batch_folders.append(batch_dir)
+            
+        current_batch_num += 1
 
     # Clean up temp dir
     try:

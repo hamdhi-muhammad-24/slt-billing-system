@@ -61,13 +61,19 @@ def process_single_file(args):
 
         os.makedirs(temp_pdf_dir, exist_ok=True)
         output_path = os.path.join(temp_pdf_dir, output_name)
-        renderer.save(output_path)
-
         result.output_pdf = output_path
+        
+        renderer.save(output_path)
+        
         result.success = True
 
     except Exception as e:
         result.error = f"{type(e).__name__}: {str(e)}"
+        if result.output_pdf and os.path.exists(result.output_pdf):
+            try:
+                os.remove(result.output_pdf)
+            except OSError:
+                pass
 
     finally:
         result.duration = time.perf_counter() - start_time
