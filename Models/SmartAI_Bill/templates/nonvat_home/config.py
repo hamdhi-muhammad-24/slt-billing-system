@@ -27,7 +27,7 @@ COORDS = {
     "payment_due_date":     (510, 512),
 
     # Page indicators
-    "page_indicator_p1":    (555, 742),
+    "page_indicator_p1":    (555, 749),
     "page_indicator_p2":    (555, 780),
     "page_invoice_no_p2":   (45, 780),
 
