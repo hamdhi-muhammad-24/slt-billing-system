@@ -1,0 +1,14 @@
+[Unit]
+Description=SLT Billing Google Drive Sync Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/slt-billing
+ExecStart=/bin/bash /root/slt-billing/sync.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

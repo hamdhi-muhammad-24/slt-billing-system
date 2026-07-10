@@ -16,7 +16,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { authLogin, authMe, setToken, clearToken, ApiError } from '../lib/api'
+import { authLogin, authMe, setToken, clearToken } from '../lib/api'
 import Brand from '../components/Brand'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'

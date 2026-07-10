@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, Play, CheckCircle2, Zap, Loader2, XCircle, AlertTriangle, Download, Eye } from 'lucide-react'
-import { getPendingBatches, getRuns, generateGroupBatch, retryFailedRun, getRunResults, fetchPdfBlobUrl, type BillingRunOut, type PendingBatchOut, type RunResultsOut } from '../../lib/api'
+import { getPendingBatches, getRuns, generateGroupBatch, retryFailedRun, getRunResults, fetchPdfBlobUrl, type BillingRunOut } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -51,13 +51,13 @@ function RunCard({ run, onRetry, onClick }: { run: BillingRunOut, onRetry?: (id:
           {run.failed > 0 && <span className="text-red-600 font-medium">{run.failed} Failed</span>}
         </div>
         
-        {run.failures && run.failures.length > 0 && (
+        {(run as any).failures && (run as any).failures.length > 0 && (
           <div className="mt-2 bg-red-50 rounded-md border border-red-100 p-2 text-xs">
             <p className="font-semibold text-red-700 mb-1 flex items-center gap-1">
               <AlertTriangle size={12} /> Failure Details:
             </p>
             <ul className="list-disc pl-4 text-red-600 space-y-1 mb-2">
-              {run.failures.map((f: any, i: number) => (
+              {(run as any).failures.map((f: any, i: number) => (
                 <li key={i}>
                   <strong>{f.account_number}:</strong> {f.error_message}
                 </li>
@@ -80,6 +80,21 @@ function RunCard({ run, onRetry, onClick }: { run: BillingRunOut, onRetry?: (id:
             )}
           </div>
         )}
+        
+        <div className="flex justify-end gap-2 mt-3 pt-2 border-t border-slate-100">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs font-semibold"
+            onClick={(e) => {
+              e.stopPropagation()
+              onClick && onClick(run.id)
+            }}
+          >
+            <Eye size={12} className="mr-1.5" />
+            View Details
+          </Button>
+        </div>
       </div>
     </div>
   )

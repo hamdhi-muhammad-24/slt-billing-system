@@ -15,7 +15,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy only the runtime directories
 COPY app/ ./app/
 COPY migrations/ ./migrations/
+COPY Models/ ./Models/
 COPY alembic.ini .
+COPY reset_test_data.py .
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

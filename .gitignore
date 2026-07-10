@@ -52,3 +52,9 @@ Models/SmartAI_Bill/data/logs/
 
 # Scratch Files
 test_browser.py
+
+# Deployment Archives & Binary folders (too large for GitHub)
+deploy.tar.gz
+deploy.zip
+rclone.zip
+rclone_bin/

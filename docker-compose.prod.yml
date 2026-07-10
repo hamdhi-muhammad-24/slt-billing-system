@@ -5,8 +5,7 @@ services:
       POSTGRES_DB: slt_ebill
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      TZ: Asia/Colombo
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,8 +16,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    environment:
+      TZ: Asia/Colombo
     volumes:
       - redis_data:/data
     healthcheck:
@@ -48,10 +47,14 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       EMAIL_FROM: "SLT Billing <billing@slt.lk>"
-      CORS_ORIGINS: '["http://localhost", "http://localhost:80", "http://127.0.0.1"]'
+      CORS_ORIGINS: '["http://localhost", "http://127.0.0.1", "http://206.189.159.175", "http://206.189.159.175:8080"]'
       LOG_LEVEL: INFO
+      GMF_DRIVE_PATH: /app/gmf_uploads
+      TZ: Asia/Colombo
     ports:
       - "8000:8000"
+    volumes:
+      - /root/SLT_GMF_Uploads:/app/gmf_uploads
     depends_on:
       db:
         condition: service_healthy
@@ -75,6 +78,10 @@ services:
       SMTP_PORT: 1025
       EMAIL_FROM: "SLT Billing <billing@slt.lk>"
       LOG_LEVEL: INFO
+      GMF_DRIVE_PATH: /app/gmf_uploads
+      TZ: Asia/Colombo
+    volumes:
+      - /root/SLT_GMF_Uploads:/app/gmf_uploads
     depends_on:
       db:
         condition: service_healthy
@@ -92,6 +99,10 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       LOG_LEVEL: INFO
+      GMF_DRIVE_PATH: /app/gmf_uploads
+      TZ: Asia/Colombo
+    volumes:
+      - /root/SLT_GMF_Uploads:/app/gmf_uploads
     depends_on:
       redis:
         condition: service_healthy
@@ -102,11 +113,27 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost:8000
+        VITE_API_BASE_URL: http://206.189.159.175:8000
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
+    restart: unless-stopped
+
+  watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m app.uploads.watcher
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/slt_ebill
+      GMF_DRIVE_PATH: /app/gmf_uploads
+      TZ: Asia/Colombo
+    volumes:
+      - /root/SLT_GMF_Uploads:/app/gmf_uploads
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
