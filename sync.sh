@@ -16,7 +16,7 @@ while true; do
     --exclude "/Failed/**" \
     --exclude "/Failed/" \
     --quiet
-  sleep 5
+  sleep 30
 done &
 
 # LOOP 2: Output, Processed, & Failed Uploads (Runs in foreground, check every 60 seconds)
