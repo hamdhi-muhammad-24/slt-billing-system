@@ -5,10 +5,10 @@
 echo "Starting SLT Billing Google Drive Sync Daemon..."
 echo "Syncing every 5 seconds..."
 
-# LOOP 1: GMF Downloads (Runs in background, check every 5 seconds)
+# LOOP 1: GMF Downloads (Runs in background, check every 30 seconds)
 # This loop is never blocked by slow upload operations.
 while true; do
-  rclone copy gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
+  rclone move gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
     --exclude "/Output/**" \
     --exclude "/Output/" \
     --exclude "/Processed/**" \
@@ -26,14 +26,14 @@ while true; do
     rclone copy /root/SLT_GMF_Uploads/Output gdrive:SLT_GMF_Uploads/Output --quiet &
   fi
 
-  # Copy Processed folders from VM to Google Drive (if not already syncing)
-  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Processed" > /dev/null; then
-    rclone copy /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed --quiet &
+  # Move Processed folders from VM to Google Drive (if not already syncing)
+  if ! pgrep -f "rclone move /root/SLT_GMF_Uploads/Processed" > /dev/null; then
+    rclone move /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed --delete-empty-src-dirs --quiet &
   fi
 
-  # Copy Failed folders from VM to Google Drive (if not already syncing)
-  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Failed" > /dev/null; then
-    rclone copy /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed --quiet &
+  # Move Failed folders from VM to Google Drive (if not already syncing)
+  if ! pgrep -f "rclone move /root/SLT_GMF_Uploads/Failed" > /dev/null; then
+    rclone move /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed --delete-empty-src-dirs --quiet &
   fi
 
   sleep 60
