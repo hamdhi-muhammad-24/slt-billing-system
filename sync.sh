@@ -15,7 +15,6 @@ while true; do
     --exclude "/Processed/" \
     --exclude "/Failed/**" \
     --exclude "/Failed/" \
-    --delete-empty-src-dirs \
     --quiet
 
   # 2. COPY generated output PDFs from the VM back to Google Drive.
