@@ -22,14 +22,12 @@ while true; do
   rclone copy /root/SLT_GMF_Uploads/Output gdrive:SLT_GMF_Uploads/Output \
     --quiet
 
-  # 3. MOVE Processed & Failed archive folders from the VM back to Google Drive.
-  # This cleans up VM storage while keeping archives safe in Google Drive.
-  rclone move /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
-    --delete-empty-src-dirs \
+  # 3. COPY Processed & Failed archive folders from the VM back to Google Drive.
+  # This keeps archives on both the VM and Google Drive.
+  rclone copy /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
     --quiet
     
-  rclone move /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed \
-    --delete-empty-src-dirs \
+  rclone copy /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed \
     --quiet
 
   # Check every 5 seconds
