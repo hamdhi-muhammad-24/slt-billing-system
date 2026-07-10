@@ -6,9 +6,9 @@ echo "Starting SLT Billing Google Drive Sync Daemon..."
 echo "Syncing every 5 seconds..."
 
 while true; do
-  # 1. MOVE new GMF files from Google Drive to the VM.
-  # This deletes them from Drive's Cycle folders after downloading to prevent loops.
-  rclone move gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
+  # 1. COPY new GMF files from Google Drive to the VM.
+  # This leaves the original files on Google Drive.
+  rclone copy gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
     --exclude "/Output/**" \
     --exclude "/Output/" \
     --exclude "/Processed/**" \
