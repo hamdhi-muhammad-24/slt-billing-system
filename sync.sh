@@ -5,9 +5,9 @@
 echo "Starting SLT Billing Google Drive Sync Daemon..."
 echo "Syncing every 5 seconds..."
 
+# LOOP 1: GMF Downloads (Runs in background, check every 5 seconds)
+# This loop is never blocked by slow upload operations.
 while true; do
-  # 1. COPY new GMF files from Google Drive to the VM.
-  # This leaves the original files on Google Drive.
   rclone copy gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
     --exclude "/Output/**" \
     --exclude "/Output/" \
@@ -16,20 +16,25 @@ while true; do
     --exclude "/Failed/**" \
     --exclude "/Failed/" \
     --quiet
-
-  # 2. COPY generated output PDFs from the VM back to Google Drive.
-  # We use copy (not move) so the PDFs remain on the VM's disk for the Web UI to serve.
-  rclone copy /root/SLT_GMF_Uploads/Output gdrive:SLT_GMF_Uploads/Output \
-    --quiet
-
-  # 3. COPY Processed & Failed archive folders from the VM back to Google Drive.
-  # This keeps archives on both the VM and Google Drive.
-  rclone copy /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
-    --quiet
-    
-  rclone copy /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed \
-    --quiet
-
-  # Check every 5 seconds
   sleep 5
+done &
+
+# LOOP 2: Output, Processed, & Failed Uploads (Runs in foreground, check every 60 seconds)
+while true; do
+  # Copy generated output PDFs from VM to Google Drive (if not already syncing)
+  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Output" > /dev/null; then
+    rclone copy /root/SLT_GMF_Uploads/Output gdrive:SLT_GMF_Uploads/Output --quiet &
+  fi
+
+  # Copy Processed folders from VM to Google Drive (if not already syncing)
+  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Processed" > /dev/null; then
+    rclone copy /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed --quiet &
+  fi
+
+  # Copy Failed folders from VM to Google Drive (if not already syncing)
+  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Failed" > /dev/null; then
+    rclone copy /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed --quiet &
+  fi
+
+  sleep 60
 done
