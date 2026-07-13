@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X } from 'lucide-react'
-import { getUploads, previewInvoice, approveUpload, rejectUpload } from '../../lib/api'
+import { getUploads, previewInvoice, updateTemplateStatus } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -34,22 +34,23 @@ export default function InvoicePreview() {
   })
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => approveUpload(id),
+    mutationFn: (templateId: string) => updateTemplateStatus(templateId, 'APPROVED'),
     onSuccess: (data) => {
-      toast.success(data.message)
+      toast.success(`Template ${data.status}`)
+      queryClient.invalidateQueries({ queryKey: ['billing-templates'] })
       queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
     },
-    onError: (err: any) => toast.error(err.detail || 'Failed to approve')
+    onError: (err: any) => toast.error(err.detail || 'Failed to approve template')
   })
 
   const rejectMutation = useMutation({
-    mutationFn: (id: number) => rejectUpload(id, "Rejected by admin via UI"),
+    mutationFn: (templateId: string) => updateTemplateStatus(templateId, 'REJECTED'),
     onSuccess: (data) => {
-      toast.success(data.message)
-      setPreviewPdfUrl(null)
+      toast.success(`Template ${data.status}`)
+      queryClient.invalidateQueries({ queryKey: ['billing-templates'] })
       queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
     },
-    onError: (err: any) => toast.error(err.detail || 'Failed to reject')
+    onError: (err: any) => toast.error(err.detail || 'Failed to reject template')
   })
 
   return (
@@ -108,6 +109,7 @@ export default function InvoicePreview() {
                         "text-xs font-medium px-2 py-0.5 rounded-full transition-colors",
                         gmf.status === 'PENDING_APPROVAL' ? "bg-cyan-100 text-cyan-700 border border-cyan-200/50" :
                         gmf.status === 'APPROVED' ? "bg-emerald-100 text-emerald-700 border border-emerald-200/50" :
+                        gmf.status === 'REJECTED' ? "bg-red-100 text-red-700 border border-red-200/50" :
                         "bg-slate-100 text-slate-700 border border-slate-200/50"
                       )}>
                         {gmf.status === 'PENDING_APPROVAL' ? 'Pending Review' : gmf.status}
@@ -159,22 +161,22 @@ export default function InvoicePreview() {
                     </span>
                   </div>
                   
-                  {selectedGmf.status === 'PENDING_APPROVAL' && previewPdfUrl && (
+                  {selectedGmf.status === 'PENDING_APPROVAL' && previewPdfUrl && selectedGmf.template_detected && (
                     <div className="flex gap-2">
                       <Button 
                         variant="outline"
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                        onClick={() => rejectMutation.mutate(selectedGmf.id)}
+                        onClick={() => rejectMutation.mutate(selectedGmf.template_detected!)}
                         disabled={rejectMutation.isPending}
                       >
-                        <XCircle size={16} className="mr-2" /> Reject
+                        <XCircle size={16} className="mr-2" /> Reject Template
                       </Button>
                       <Button 
                         className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                        onClick={() => approveMutation.mutate(selectedGmf.id)}
+                        onClick={() => approveMutation.mutate(selectedGmf.template_detected!)}
                         disabled={approveMutation.isPending}
                       >
-                        <CheckCircle2 size={16} className="mr-2" /> Approve for Batch
+                        <CheckCircle2 size={16} className="mr-2" /> Approve Template
                       </Button>
                     </div>
                   )}
@@ -183,6 +185,14 @@ export default function InvoicePreview() {
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 border border-emerald-200">
                         <CheckCircle2 size={16} className="text-emerald-600" />
                         Approved
+                      </span>
+                    </div>
+                  )}
+                  {selectedGmf.status === 'REJECTED' && (
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700 border border-red-200">
+                        <XCircle size={16} className="text-red-600" />
+                        Rejected
                       </span>
                     </div>
                   )}
@@ -201,6 +211,13 @@ export default function InvoicePreview() {
                       <p className="text-sm text-muted-foreground text-center max-w-[250px]">
                         The billing engine is parsing the GMF data and mapping it to the layout...
                       </p>
+                      <Button 
+                        type="button"
+                        className="mt-6 bg-[#991b1b] hover:bg-[#7f1d1d] text-white font-bold px-8 py-3 h-auto text-base rounded-lg shadow-lg border border-[#7f1d1d]" 
+                        onClick={() => previewMutation.reset()}
+                      >
+                        <XCircle size={20} className="mr-2" /> Cancel Generation
+                      </Button>
                     </motion.div>
                   ) : previewPdfUrl ? (
                     <motion.div 

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LayoutTemplate, Loader2, CheckCircle2, Maximize2, X, Download } from 'lucide-react'
-import { getTemplates } from '../../lib/api'
+import { getTemplates, fetchTemplatePreviewBlobUrl } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -12,15 +12,41 @@ export default function InvoiceTemplates() {
   })
 
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null)
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
 
-  // Map template names to the real backend PDF layout files
-  const getTemplatePdf = (name: string) => {
+  useEffect(() => {
+    if (!data?.templates) return
+
+    const urls: Record<string, string> = {}
+    
+    const fetchPreviews = async () => {
+      for (const template of data.templates) {
+        try {
+          const url = await fetchTemplatePreviewBlobUrl(template.id)
+          urls[template.id] = url
+          setPreviewUrls(prev => ({ ...prev, [template.id]: url }))
+        } catch (err) {
+          console.warn(`Failed to fetch preview for ${template.id}:`, err)
+        }
+      }
+    }
+
+    fetchPreviews()
+
+    return () => {
+      Object.values(urls).forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [data])
+
+  // Map template names/IDs to static fallback PDF files (if API preview fails or is not ready)
+  const getTemplateFallbackPdf = (name: string, id: string) => {
     const lowerName = name.toLowerCase()
-    if (lowerName.includes('enterprise')) return '/templates/nonvat_enterprise.pdf'
-    if (lowerName.includes('home')) return '/templates/nonvat_home.pdf'
-    if (lowerName.includes('summary')) return '/templates/summary_statement.pdf'
-    if (lowerName.includes('grouping')) return '/templates/product_label_grouping.pdf'
-    if (lowerName.includes('subscription')) return '/templates/subscription_ref_grouping.pdf'
+    const lowerId = id.toLowerCase()
+    if (lowerId.includes('enterprise') || lowerName.includes('enterprise')) return '/templates/nonvat_enterprise.pdf'
+    if (lowerId.includes('home') || lowerName.includes('home')) return '/templates/nonvat_home.pdf'
+    if (lowerId.includes('summary') || lowerName.includes('summary')) return '/templates/summary_statement.pdf'
+    if (lowerId.includes('grouping') || lowerName.includes('grouping')) return '/templates/product_label_grouping.pdf'
+    if (lowerId.includes('subscription') || lowerName.includes('subscription')) return '/templates/subscription_ref_grouping.pdf'
     return '/templates/invoice_of_summary.pdf'
   }
 
@@ -38,7 +64,7 @@ export default function InvoiceTemplates() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {data?.templates.map((template: any) => {
-            const pdfUrl = getTemplatePdf(template.name)
+            const pdfUrl = previewUrls[template.id] || getTemplateFallbackPdf(template.name, template.id)
             return (
               <motion.div 
                 whileHover={{ y: -4 }}
@@ -69,8 +95,12 @@ export default function InvoiceTemplates() {
                 <div className="p-5 flex flex-col gap-2 bg-white">
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold text-lg text-slate-800">{template.name}</h3>
-                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 shadow-sm">
-                      <CheckCircle2 size={12} className="mr-1 text-emerald-600" /> Active
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset shadow-sm ${
+                      template.ready 
+                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' 
+                        : 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                    }`}>
+                      <CheckCircle2 size={12} className={`mr-1 ${template.ready ? 'text-emerald-600' : 'text-amber-600'}`} /> {template.ready ? 'Active' : 'Draft'}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">Template ID: {template.id}</p>

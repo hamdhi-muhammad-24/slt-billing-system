@@ -8,7 +8,9 @@ import {
   CalendarClock, 
   Bell,
   Activity,
-  Eye
+  Eye,
+  Cloud,
+  HardDrive
 } from 'lucide-react'
 import { getStats, getNotifications } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
@@ -46,8 +48,8 @@ function CycleCard({ cycleName, data }: { cycleName: string, data: any }) {
     statusColor = "bg-amber-500 animate-pulse"
     statusText = "Generating"
   } else if (data?.status === 'approved') {
-    statusColor = "bg-blue-500"
-    statusText = "Approved / Waiting"
+    statusColor = "bg-emerald-500"
+    statusText = "Approved"
   } else if (data?.status === 'pending') {
     statusColor = "bg-cyan-500"
     statusText = "Pending Review"
@@ -86,13 +88,13 @@ export default function Dashboard() {
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['billing-stats'],
     queryFn: getStats,
-    refetchInterval: 5000,
+    refetchInterval: 1000,
   })
 
   const { data: events, isLoading: loadingEvents } = useQuery({
     queryKey: ['billing-events'],
     queryFn: () => getNotifications(false),
-    refetchInterval: 5000,
+    refetchInterval: 1000,
   })
 
   return (
@@ -145,6 +147,20 @@ export default function Dashboard() {
           icon={CalendarClock} 
           colorClass="bg-purple-500" 
           loading={loadingStats} 
+        />
+        <StatCard 
+          title="Files on Local Storage" 
+          value={(stats?.total_invoices_generated || 0).toLocaleString()} 
+          icon={HardDrive} 
+          colorClass="bg-blue-500" 
+          loading={loadingStats} 
+        />
+        <StatCard 
+          title="Google Drive Archive" 
+          value={"Pending Sync..."} 
+          icon={Cloud} 
+          colorClass="bg-emerald-500" 
+          loading={false} 
         />
       </div>
 

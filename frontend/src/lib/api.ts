@@ -290,6 +290,29 @@ export function getTemplates(): Promise<{ templates: any[] }> {
   return request('/billing/templates')
 }
 
+export function updateTemplateStatus(templateId: string, status: string): Promise<{ message: string; status: string }> {
+  return request(`/billing/templates/${templateId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  })
+}
+
+export async function fetchTemplatePreviewBlobUrl(templateId: string): Promise<string> {
+  const token = getToken()
+  const response = await fetch(`${BASE_URL}/billing/templates/${templateId}/preview`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch template preview')
+  }
+  
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
 export function getNotifications(unreadOnly = false): Promise<NotificationOut[]> {
   const q = unreadOnly ? '?unread_only=true' : ''
   return request(`/billing/notifications${q}`)

@@ -15,9 +15,9 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === 'APPROVED') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-        <CheckCircle2 size={12} className="text-blue-600" />
-        Approved / Waiting
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-700/10">
+        <CheckCircle2 size={12} className="text-emerald-600" />
+        Approved
       </span>
     )
   }
