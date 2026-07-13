@@ -6,6 +6,7 @@ from core.customer_type_mapper import get_badge, is_vat_registered
 TEMPLATE_NONVAT_HOME               = "nonvat_home"
 TEMPLATE_NONVAT_ENTERPRISE         = "nonvat_enterprise"
 TEMPLATE_VAT_ENTERPRISE            = "vat_enterprise"
+TEMPLATE_VAT_HOME                  = "vat_home"
 TEMPLATE_PRODUCT_LABEL_GROUPING    = "product_label_grouping"
 TEMPLATE_SUBSCRIPTION_REF_GROUPING = "subscription_ref_grouping"
 TEMPLATE_SUMMARY_STATEMENT         = "summary_statement"
@@ -65,7 +66,7 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
 
     # BILLSTYLE routing
     style = header.billstyle
-    is_vat = is_vat_registered(header.customer_vat_ref)
+    is_vat = is_vat_registered(header.customer_vat_ref or "")
 
     if style == 19:
         result.template_id = TEMPLATE_PRODUCT_LABEL_GROUPING
@@ -79,10 +80,15 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
 
     elif style == 1:
         if is_vat:
-            result.template_id = TEMPLATE_VAT_ENTERPRISE
-            result.reasons.append("BILLSTYLE=1, VAT → VAT Enterprise")
+            badge = get_badge(header.customer_type or "")
+            if badge == "HOME":
+                result.template_id = TEMPLATE_VAT_HOME
+                result.reasons.append("BILLSTYLE=1, VAT, Home → VAT Home")
+            else:
+                result.template_id = TEMPLATE_VAT_ENTERPRISE
+                result.reasons.append("BILLSTYLE=1, VAT → VAT Enterprise")
         else:
-            badge = get_badge(header.customer_type)
+            badge = get_badge(header.customer_type or "")
             if badge == "HOME":
                 result.template_id = TEMPLATE_NONVAT_HOME
                 result.reasons.append(
@@ -106,7 +112,7 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
         return result
 
     # Badge
-    result.badge = get_badge(header.customer_type)
+    result.badge = get_badge(header.customer_type or "")
     if result.badge == "UNKNOWN":
         result.warnings.append(f"CUSTOMERTYPE={header.customer_type} not mapped")
 
