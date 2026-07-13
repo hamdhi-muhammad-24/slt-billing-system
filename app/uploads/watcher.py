@@ -16,9 +16,10 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from sqlalchemy.orm import Session
+import shutil
 
 from app.db.base import SessionLocal
-from app.db.models import GmfUpload, GmfUploadStatus, NotificationEvent, NotificationEventType
+from app.db.models import GmfUpload, GmfUploadStatus, NotificationEvent, NotificationEventType, InvoiceTemplate, TemplateApprovalStatus
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -147,8 +148,34 @@ class GmfFolderHandler(FileSystemEventHandler):
                         GmfUpload.file_path == str(filepath)
                     ).first()
                     if existing:
-                        if existing.status in (GmfUploadStatus.COMPLETED, GmfUploadStatus.FAILED):
-                            existing.status = GmfUploadStatus.PENDING_APPROVAL
+                            if is_test:
+                                new_filepath = filepath
+                                final_status = GmfUploadStatus.PENDING_APPROVAL
+                            else:
+                                template_obj = None
+                                if template_detected:
+                                    template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
+                                is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+                                
+                                settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+                                settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+                                
+                                if is_approved:
+                                    new_filepath = settings.queue_incoming_dir / filename
+                                    final_status = GmfUploadStatus.APPROVED
+                                else:
+                                    new_filepath = settings.queue_pending_dir / filename
+                                    final_status = GmfUploadStatus.PENDING_APPROVAL
+                                
+                                try:
+                                    shutil.move(str(filepath), str(new_filepath))
+                                except Exception as move_err:
+                                    logger.error(f"Failed to move file {filename} during re-registration: {move_err}")
+                                    return
+                                    
+                                existing.file_path = str(new_filepath)
+
+                            existing.status = final_status
                             existing.error_message = None
                             existing.rejection_reason = None
                             existing.billing_run_id = None
@@ -165,31 +192,63 @@ class GmfFolderHandler(FileSystemEventHandler):
                                     upload_id=existing.id,
                                 )
                             else:
+                                if is_approved:
+                                    notif_title = f"GMF Auto-Approved — Cycle {cycle_number}"
+                                    notif_msg = f"Re-uploaded GMF file '{filename}' (Template: {template_detected}) was auto-approved and queued for generation."
+                                else:
+                                    notif_title = f"GMF Re-uploaded — Cycle {cycle_number}"
+                                    notif_msg = f"Re-uploaded GMF file '{filename}' (Template: {template_detected or 'Unknown'}) awaiting template approval."
+                                
                                 notif = NotificationEvent(
                                     event_type=NotificationEventType.GMF_DETECTED,
-                                    title=f"GMF Re-uploaded — Cycle {cycle_number}",
-                                    message=(
-                                        f"GMF file '{filename}' has been re-uploaded in Cycle {cycle_number}. "
-                                        f"Template: {template_detected or 'Unknown'}. "
-                                        f"Awaiting approval to generate invoices."
-                                    ),
+                                    title=notif_title,
+                                    message=notif_msg,
                                     upload_id=existing.id,
                                 )
                             db.add(notif)
                             db.commit()
-                            logger.info(f"Re-registered GMF (reset status to PENDING_APPROVAL): {filename}")
+                            logger.info(f"Re-registered GMF (reset status to {final_status.value}): {filename}")
                         else:
                             logger.info(f"Already registered (currently in status {existing.status.value}): {filename}")
                         return
 
+                    template_obj = None
+                    if template_detected:
+                        template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
+                        
+                    is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+
+                    if is_test:
+                        new_filepath = filepath
+                        final_status = GmfUploadStatus.PENDING_APPROVAL
+                    else:
+                        # Ensure directories exist
+                        settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+                        settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        if is_approved:
+                            new_filepath = settings.queue_incoming_dir / filename
+                            final_status = GmfUploadStatus.APPROVED
+                        else:
+                            new_filepath = settings.queue_pending_dir / filename
+                            final_status = GmfUploadStatus.PENDING_APPROVAL
+                            
+                        # Move the file from Google Drive to the VM local queue
+                        try:
+                            shutil.move(str(filepath), str(new_filepath))
+                            logger.info(f"Moved {filename} to {new_filepath}")
+                        except Exception as move_err:
+                            logger.error(f"Failed to move file {filename}: {move_err}")
+                            return
+
                     # Create GMF upload record
                     upload = GmfUpload(
                         filename=filename,
-                        file_path=str(filepath),
+                        file_path=str(new_filepath),
                         folder_type=folder_name,
                         cycle_number=cycle_number,
                         template_detected=template_detected,
-                        status=GmfUploadStatus.PENDING_APPROVAL,
+                        status=final_status,
                     )
                     db.add(upload)
                     db.flush()  # get upload.id
@@ -205,15 +264,18 @@ class GmfFolderHandler(FileSystemEventHandler):
                             ),
                             upload_id=upload.id,
                         )
-                    else:
+                        notif_event_type = NotificationEventType.GMF_DETECTED
+                        if is_approved:
+                            notif_title = f"GMF Auto-Approved — Cycle {cycle_number}"
+                            notif_msg = f"New GMF file '{filename}' (Template: {template_detected}) was auto-approved and queued for generation."
+                        else:
+                            notif_title = f"GMF Detected — Cycle {cycle_number}"
+                            notif_msg = f"New GMF file '{filename}' (Template: {template_detected or 'Unknown'}) awaiting template approval."
+                            
                         notif = NotificationEvent(
-                            event_type=NotificationEventType.GMF_DETECTED,
-                            title=f"GMF Detected — Cycle {cycle_number}",
-                            message=(
-                                f"New GMF file '{filename}' detected in Cycle {cycle_number}. "
-                                f"Template: {template_detected or 'Unknown'}. "
-                                f"Awaiting approval to generate invoices."
-                            ),
+                            event_type=notif_event_type,
+                            title=notif_title,
+                            message=notif_msg,
                             upload_id=upload.id,
                         )
                     db.add(notif)
