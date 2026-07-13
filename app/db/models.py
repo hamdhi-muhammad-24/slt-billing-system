@@ -30,6 +30,11 @@ class TemplateCategory(enum.Enum):
     MINIMAL = "MINIMAL"
     CUSTOM = "CUSTOM"
 
+class TemplateApprovalStatus(enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
 class RunStatus(enum.Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -112,6 +117,7 @@ class InvoiceTemplate(Base):
     promotion_message = Column(Text)
     theme_name        = Column(Text)
     theme_color       = Column(Text)
+    approval_status   = Column(Enum(TemplateApprovalStatus, name="template_approval_status"), nullable=False, default=TemplateApprovalStatus.PENDING)
     created_at        = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at        = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -212,6 +218,7 @@ class BillingRunFailure(Base):
 class GmfUploadStatus(enum.Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
     GENERATING = "GENERATING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"

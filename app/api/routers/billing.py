@@ -23,6 +23,7 @@ from app.db.models import (
     BillingRun, RunStatus, BillingRunFailure,
     BillingSchedule, BillingScheduleMode,
     NotificationEvent, NotificationEventType,
+    InvoiceTemplate, TemplateApprovalStatus,
 )
 from app.db.base import SessionLocal
 from app.core.config import settings
@@ -214,9 +215,13 @@ def get_pending_batches(
 ):
     """Group approved or pending GMF files into one batch per cycle (excluding Test GMFs)."""
     
-    pending_uploads = db.query(GmfUpload).filter(
+    pending_uploads = db.query(GmfUpload).join(
+        InvoiceTemplate,
+        GmfUpload.template_detected == InvoiceTemplate.template_code
+    ).filter(
         GmfUpload.status.in_([GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL]),
-        GmfUpload.folder_type != "Test_GMFs"
+        GmfUpload.folder_type != "Test_GMFs",
+        InvoiceTemplate.approval_status == TemplateApprovalStatus.APPROVED
     ).order_by(GmfUpload.detected_at.asc()).all()
 
     cycles = {}
@@ -372,179 +377,14 @@ def reject_upload(
 
 def _background_generate(upload_id: int, run_id: int):
     """Background task: calls friend's engine then organises output into folders."""
-    with SessionLocal() as db:
-        upload = db.query(GmfUpload).filter(GmfUpload.id == upload_id).first()
-        run = db.query(BillingRun).filter(BillingRun.id == run_id).first()
-        if not upload or not run:
-            return
 
-        temp_pdf_dir = tempfile.mkdtemp(prefix="slt_batch_")
-        try:
-            # Determine cycle label for output folder organisation
-            cycle_label = upload.folder_type  # e.g. 'Cycle_1' or 'Test_GMFs'
-
-            def update_progress(done, total):
-                with SessionLocal() as inner_db:
-                    inner_run = inner_db.query(BillingRun).filter(BillingRun.id == run_id).first()
-                    if inner_run:
-                        inner_run.succeeded = done
-                        inner_run.total_accounts = total
-                        inner_db.commit()
-
-            # Call friend's batch processor
-            results = process_batch([upload.file_path], temp_pdf_dir, progress_callback=update_progress)
-
-            success_count = sum(1 for r in results if r.success)
-            fail_count = len(results) - success_count
-
-            # Organise PDFs into Output/<date>/<cycle>/Batch_N/ folders
-            batch_folders = create_output_batches(
-                temp_pdf_dir,
-                cycle_label=cycle_label,
-            )
-
-            output_base = str(Path(batch_folders[0]).parent) if batch_folders else ""
-
-            run.status = RunStatus.SUCCESS if fail_count == 0 else RunStatus.PARTIAL
-            run.succeeded = success_count
-            run.failed = fail_count
-            run.total_accounts = len(results)
-            run.finished_at = datetime.now()
-            run.output_path = output_base
-
-            upload.status = GmfUploadStatus.COMPLETED
-            upload.processed_at = datetime.now()
-
-            # Notification
-            notif = NotificationEvent(
-                event_type=NotificationEventType.BATCH_COMPLETED,
-                title="Batch Generation Complete",
-                message=(
-                    f"Cycle {upload.cycle_number or 'Test'} — "
-                    f"{success_count} invoices generated "
-                    f"({fail_count} failed). "
-                    f"Output: {output_base}"
-                ),
-                upload_id=upload.id,
-                run_id=run.id,
-            )
-            db.add(notif)
-            db.commit()
-
-        except Exception as e:
-            run.status = RunStatus.FAILED
-            run.finished_at = datetime.now()
-            upload.status = GmfUploadStatus.FAILED
-            upload.error_message = str(e)
-
-            notif = NotificationEvent(
-                event_type=NotificationEventType.BATCH_FAILED,
-                title="Batch Generation Failed",
-                message=f"Error generating invoices for '{upload.filename}': {e}",
-                upload_id=upload.id,
-                run_id=run.id,
-            )
-            db.add(notif)
-            db.commit()
-        finally:
-            if os.path.exists(temp_pdf_dir):
-                shutil.rmtree(temp_pdf_dir, ignore_errors=True)
-
-def _background_generate_batch(upload_ids: List[int], run_id: int):
-    """Background task: processes a batch of GMF files together."""
-    with SessionLocal() as db:
-        uploads = db.query(GmfUpload).filter(GmfUpload.id.in_(upload_ids)).all()
-        run = db.query(BillingRun).filter(BillingRun.id == run_id).first()
-        if not uploads or not run:
-            return
-
-        temp_pdf_dir = tempfile.mkdtemp(prefix="slt_batch_group_")
-        try:
-            cycle_label = uploads[0].folder_type
-            file_paths = [u.file_path for u in uploads]
-
-            def update_progress(done, total):
-                with SessionLocal() as inner_db:
-                    inner_run = inner_db.query(BillingRun).filter(BillingRun.id == run_id).first()
-                    if inner_run:
-                        inner_run.succeeded = done
-                        inner_run.total_accounts = total
-                        inner_db.commit()
-
-            results = process_batch(file_paths, temp_pdf_dir, progress_callback=update_progress)
-
-            success_count = sum(1 for r in results if r.success)
-            fail_count = len(results) - success_count
-
-            batch_folders = create_output_batches(
-                temp_pdf_dir,
-                cycle_label=cycle_label,
-            )
-
-            output_base = str(Path(batch_folders[0]).parent) if batch_folders else ""
-
-            run.status = RunStatus.SUCCESS if fail_count == 0 else RunStatus.PARTIAL
-            run.succeeded = success_count
-            run.failed = fail_count
-            run.total_accounts = len(results)
-            run.finished_at = datetime.now()
-            run.output_path = output_base
-
-            for res in results:
-                if not res.success:
-                    filename = Path(res.source_file).name
-                    failure = BillingRunFailure(
-                        billing_run_id=run.id,
-                        account_number=filename,
-                        error_message=str(res.error) if res.error else "Unknown error"
-                    )
-                    db.add(failure)
-
-            for upload in uploads:
-                upload.status = GmfUploadStatus.COMPLETED
-                upload.processed_at = datetime.now()
-
-            notif = NotificationEvent(
-                event_type=NotificationEventType.BATCH_COMPLETED,
-                title="Batch Generation Complete",
-                message=(
-                    f"Cycle {run.cycle_number} Batch — "
-                    f"{success_count} invoices generated "
-                    f"({fail_count} failed). "
-                    f"Output: {output_base}"
-                ),
-                run_id=run.id,
-            )
-            db.add(notif)
-            db.commit()
-
-        except Exception as e:
-            run.status = RunStatus.FAILED
-            run.finished_at = datetime.now()
-            
-            for upload in uploads:
-                upload.status = GmfUploadStatus.FAILED
-                upload.error_message = str(e)
-
-            notif = NotificationEvent(
-                event_type=NotificationEventType.BATCH_FAILED,
-                title="Batch Generation Failed",
-                message=f"Error generating grouped batch: {e}",
-                run_id=run.id,
-            )
-            db.add(notif)
-            db.commit()
-        finally:
-            if os.path.exists(temp_pdf_dir):
-                shutil.rmtree(temp_pdf_dir, ignore_errors=True)
 @router.post("/generate/{upload_id}")
 def generate_batch(
     upload_id: int,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: UserOut = Depends(require_admin),
 ):
-    """Generate all invoices for an approved GMF file."""
+    """Queue a single GMF file for parallel generation."""
     upload = db.query(GmfUpload).filter(GmfUpload.id == upload_id).first()
     if not upload:
         raise HTTPException(status_code=404, detail="Upload not found")
@@ -552,50 +392,40 @@ def generate_batch(
     if upload.status not in (GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL):
         raise HTTPException(
             status_code=400,
-            detail=f"GMF must be approved before generation. Current status: {upload.status.value}"
-        )
-
-    if upload.folder_type == "Test_GMFs":
-        raise HTTPException(
-            status_code=400,
-            detail="Test GMF files cannot be generated as a batch. Use preview instead."
+            detail=f"GMF is already generating/completed. Current status: {upload.status.value}"
         )
 
     if not os.path.exists(upload.file_path):
-        raise HTTPException(
-            status_code=400,
-            detail=f"GMF file not found on disk: {upload.file_path}"
-        )
+        raise HTTPException(status_code=400, detail=f"GMF file not found on disk: {upload.file_path}")
 
-    upload.status = GmfUploadStatus.GENERATING
+    # Move to incoming queue
+    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+    filename = Path(upload.file_path).name
+    new_path = settings.queue_incoming_dir / filename
+    
+    try:
+        shutil.move(upload.file_path, str(new_path))
+        upload.file_path = str(new_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to move file to queue: {e}")
+
+    # Create BillingRun to track progress
     run = BillingRun(
-        batch_name=upload.filename,
-        cycle_number=upload.cycle_number,
-        period_start=date.today(),
-        period_end=date.today(),
+        batch_name=f"Single GMF {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         status=RunStatus.RUNNING,
+        total_accounts=1,
         succeeded=0,
         failed=0,
+        started_at=datetime.now()
     )
     db.add(run)
     db.flush()
 
+    upload.status = GmfUploadStatus.APPROVED
     upload.billing_run_id = run.id
-
-    notif = NotificationEvent(
-        event_type=NotificationEventType.BATCH_STARTED,
-        title="Batch Generation Started",
-        message=f"Invoice generation started for '{upload.filename}'.",
-        upload_id=upload.id,
-        run_id=run.id,
-    )
-    db.add(notif)
     db.commit()
-    db.refresh(run)
 
-    background_tasks.add_task(_background_generate, upload.id, run.id)
-
-    return {"message": "Generation started", "run_id": run.id}
+    return {"message": "File queued for generation"}
 
 
 class GenerateBatchRequest(BaseModel):
@@ -604,11 +434,10 @@ class GenerateBatchRequest(BaseModel):
 @router.post("/generate-batch")
 def generate_batch_endpoint(
     req: GenerateBatchRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: UserOut = Depends(require_admin),
 ):
-    """Generate invoices for a chunk of approved GMF files."""
+    """Queue multiple GMF files for parallel generation."""
     upload_ids = req.upload_ids
     if not upload_ids:
         raise HTTPException(status_code=400, detail="No uploads provided")
@@ -617,47 +446,42 @@ def generate_batch_endpoint(
     if not uploads:
         raise HTTPException(status_code=404, detail="Uploads not found")
 
-    for upload in uploads:
-        if upload.status not in (GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL):
-            raise HTTPException(status_code=400, detail=f"File {upload.filename} not approved")
-        if upload.folder_type == "Test_GMFs":
-            raise HTTPException(status_code=400, detail="Test GMFs cannot be batch generated")
-        if not os.path.exists(upload.file_path):
-            raise HTTPException(status_code=400, detail=f"File {upload.filename} missing on disk")
-
-    cycle_number = uploads[0].cycle_number
+    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
     
-    for upload in uploads:
-        upload.status = GmfUploadStatus.GENERATING
-
+    # Create BillingRun to track progress
     run = BillingRun(
-        batch_name=f"Cycle {cycle_number} Group ({len(uploads)} files)",
-        cycle_number=cycle_number,
-        period_start=date.today(),
-        period_end=date.today(),
+        batch_name=f"Batch {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         status=RunStatus.RUNNING,
+        total_accounts=len(upload_ids),
         succeeded=0,
         failed=0,
+        started_at=datetime.now()
     )
     db.add(run)
     db.flush()
-
+    
+    success_count = 0
     for upload in uploads:
-        upload.billing_run_id = run.id
+        if upload.status not in (GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL):
+            continue
+        if not os.path.exists(upload.file_path):
+            continue
 
-    notif = NotificationEvent(
-        event_type=NotificationEventType.BATCH_STARTED,
-        title="Group Batch Generation Started",
-        message=f"Invoice generation started for {len(uploads)} files in Cycle {cycle_number}.",
-        run_id=run.id,
-    )
-    db.add(notif)
+        try:
+            filename = Path(upload.file_path).name
+            new_path = settings.queue_incoming_dir / filename
+            if str(Path(upload.file_path)) != str(new_path):
+                shutil.move(upload.file_path, str(new_path))
+            upload.file_path = str(new_path)
+            upload.status = GmfUploadStatus.APPROVED
+            upload.billing_run_id = run.id
+            success_count += 1
+        except Exception:
+            pass
+
+    run.total_accounts = success_count
     db.commit()
-    db.refresh(run)
-
-    background_tasks.add_task(_background_generate_batch, upload_ids, run.id)
-
-    return {"message": "Group batch generation started", "run_id": run.id}
+    return {"message": f"{success_count} files queued for generation"}
 
 
 def _background_retry_failed_batch(run_id: int):
@@ -865,15 +689,28 @@ def serve_pdf(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.get("/templates")
-def get_templates(_: UserOut = Depends(require_admin)):
-    """List all invoice templates from the SmartAI_Bill registry."""
+def get_templates(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    """List all invoice templates, combining registry info with DB approval status."""
     templates = []
+    
+    # Pre-fetch all DB templates
+    db_templates = {t.template_code: t for t in db.query(InvoiceTemplate).all()}
+    
     for tid, info in TEMPLATE_REGISTRY.items():
-        # Find the layout PDF path for preview
         import importlib, pkgutil
         template_dir = os.path.join(_smartai_path, "templates", tid)
         layout_pdf = os.path.join(template_dir, "layout.pdf")
         has_layout = os.path.exists(layout_pdf)
+        
+        # Ensure DB record exists
+        if tid not in db_templates:
+            new_t = InvoiceTemplate(template_code=tid, name=info["name"], is_system_template=True)
+            db.add(new_t)
+            db.commit()
+            db.refresh(new_t)
+            db_templates[tid] = new_t
+            
+        db_record = db_templates[tid]
 
         templates.append({
             "id": tid,
@@ -881,8 +718,48 @@ def get_templates(_: UserOut = Depends(require_admin)):
             "description": info["description"],
             "ready": info.get("ready", False),
             "has_layout_preview": has_layout,
+            "approval_status": db_record.approval_status.value if hasattr(db_record, "approval_status") else "PENDING",
         })
     return {"templates": templates}
+
+class TemplateStatusUpdate(BaseModel):
+    status: str
+
+@router.patch("/templates/{template_id}/status")
+def update_template_status(
+    template_id: str,
+    body: TemplateStatusUpdate,
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin)
+):
+    """Approve or Reject an invoice template globally."""
+    t = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Template not found in DB")
+        
+    try:
+        from app.db.models import TemplateApprovalStatus
+        new_status = TemplateApprovalStatus[body.status]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid status")
+        
+    t.approval_status = new_status
+    
+    # Cascade status update to pending uploads
+    if new_status == TemplateApprovalStatus.APPROVED:
+        db.query(GmfUpload).filter(
+            GmfUpload.template_detected == template_id,
+            GmfUpload.status == GmfUploadStatus.PENDING_APPROVAL
+        ).update({"status": GmfUploadStatus.APPROVED})
+    elif new_status == TemplateApprovalStatus.REJECTED:
+        db.query(GmfUpload).filter(
+            GmfUpload.template_detected == template_id,
+            GmfUpload.status == GmfUploadStatus.PENDING_APPROVAL
+        ).update({"status": GmfUploadStatus.REJECTED})
+        
+    db.commit()
+    return {"message": "Status updated successfully", "status": new_status.value}
+
 
 
 @router.get("/templates/{template_id}/preview")
