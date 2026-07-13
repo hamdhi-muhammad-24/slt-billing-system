@@ -1,0 +1,160 @@
+"""VAT Home - Coordinates and Configuration.
+
+All y-values are TOP-ORIGIN (y=0 at the top of the page), matching fitz's native
+convention. No yt() conversion helper is needed anywhere in renderer.py - every
+coordinate in this file is already in the same convention fitz draws with.
+
+layout.pdf is a single full-page raster image (confirmed: only 2 real vector text
+words on it - a corner code and "Tax Invoice"). There is no golden VAT_HOME.pdf
+available in this repo to calibrate against (see CLAUDE.md mission). vat_home's
+header/summary/payment-slip zone is visually near-identical to vat_enterprise's
+(confirmed both ways: my own independent 300 DPI measurement of this template landed
+within a few points of vat_enterprise's golden-verified numbers everywhere checked),
+so those coordinates are taken directly from `templates/vat_enterprise/config.py`,
+converted from its bottom-origin convention via `842.25 - y_bottom`. Only the
+flow-column/content-band values are vat_home-specific (vat_enterprise has no
+two-column reflow of this kind).
+"""
+
+PAGE_W = 595.5
+PAGE_H = 842.25
+
+COORDS = {
+    # Header fields (left column boxes) - from vat_enterprise COORDS, converted
+    "telephone_number": (172.0, 115.25),
+    "account_number":   (160.0, 138.25),
+    "invoice_number":   (155.0, 165.25),
+    "billing_date":     (160.0, 195.25),
+    "billing_period":   (140.0, 225.25),
+
+    # VAT registration lines
+    "slt_vat_reg":      (273.60, 98.25),
+    "customer_vat_reg": (273.60, 107.25),
+
+    # Customer address block (green rounded box)
+    "customer_addr_x":      280.8,
+    "customer_addr_start":  122.25,
+    "customer_addr_line_h": 11.0,
+
+    # Badge x-position only (left edge of "HOME"/etc. text). The y is NOT
+    # stored here - it's computed from BADGE_BOX's vertical center in
+    # renderer.py, so it can never drift out of sync with the box (fix pass 6:
+    # a stray unconverted y=618 here previously put "HOME" nowhere near the
+    # cyan box at all).
+    "badge_text_x": 325.0,
+
+    # Summary bubbles - x-centers only. The y is computed from
+    # SUMMARY_VALUE_BOX's vertical center, same reasoning as the badge above
+    # (fix pass 6: a stray unconverted y=520 previously put every bubble value
+    # far from its actual bubble).
+    "balance_bf":        90.0,
+    "payments_received": 190.0,
+    "charges_period":    300.0,
+    "total_payable":     410.0,
+    "payment_due_date":  510.0,
+
+    # Generation id / footer line
+    "gen_id_line":  (273.60, 245.25),
+    "gen_id_line2": (273.60, 255.25),
+
+    # Page indicator ("N of M") on PAGE 1 ONLY - top-right, next to the badge/
+    # logo area. Continuation pages use CONT_PAGE_COORDS below instead (per
+    # section 9.1's golden evidence, they have their own minimal layout).
+    # y=95 (fix pass 6): the banner's actual bottom edge measures at y~=80.64
+    # (detected directly from the raster template - a blue-to-white pixel
+    # scan at several x positions all agreed on this value); the previous
+    # y=83.25 put the indicator's own text bbox (73.6-85.9) straddling that
+    # edge, overlapping the banner. 95 clears it with a real margin.
+    "page_indicator": (536.0, 95.0),
+
+    # Barcodes / QR (address section)
+    "barcode":       (387.0, 177.85),
+    "barcode_width": 80.16,
+    "barcode_height": 14.40,
+    "payonline_qr":  (497, 105),
+    "payonline_qr_size": 48.0,
+    "qr_code": (511.20, 707),
+    "qr_size": 48.0,
+
+    # Payment slip (bottom of page)
+    "slip_barcode":        (309.0, 707.25),
+    "slip_barcode_width":  138.0,
+    "slip_barcode_height": 25.0,
+    "slip_telephone": (157.68, 725.61),
+    "slip_invoice":   (157.68, 748.41),
+    "slip_customer":  (157.68, 771.21),
+    "slip_account":   (157.68, 794.01),
+}
+
+# Cyan badge box and summary-bubble value area, measured directly off the
+# raster template (fix pass 6) via a pixel color-transition scan - not
+# estimated. Text in both is vertically centered using CAP_HEIGHT_RATIO
+# (renderer.py), never a separately-stored, driftable y.
+BADGE_BOX = {"x0": 266.2, "y0": 213.6, "x1": 478.8, "y1": 237.2}
+
+# The value half of each summary bubble (below the trilingual label / divider
+# line, above the bubble's own bottom border) - same y-band for all 5
+# bubbles, only x differs (see COORDS above).
+SUMMARY_VALUE_BOX = {"y0": 314.9, "y1": 339.15}
+
+# Measured inner width of one summary bubble (border-to-border). Used to
+# auto-shrink large values (e.g. multi-million-rupee corporate accounts)
+# instead of letting them overflow - general fix, not a one-off font size.
+SUMMARY_BUBBLE_WIDTH = 84.5
+SUMMARY_BUBBLE_SAFE_WIDTH = 76.0  # inner width minus a small margin each side
+SUMMARY_BUBBLE_MIN_SIZE = 7.0
+
+# Helvetica-Bold's standard CapHeight-to-em ratio (AFM metrics: 718/1000).
+# Digits align to cap height in this font, so this also centers numeric
+# bubble values correctly, not just all-caps badge text.
+CAP_HEIGHT_RATIO = 0.718
+
+FONTS = {
+    "header":         {"size": 8,     "bold": False},
+    "customer_addr":  {"size": 9,     "bold": True},
+    "badge":          {"size": 18,    "bold": True},
+    "summary_box":    {"size": 11.04, "bold": False},
+    "summary_total":  {"size": 11.04, "bold": True},
+    "gen_id":         {"size": 7,     "bold": False},
+    "page_indicator": {"size": 9,     "bold": False},
+    "slip":           {"size": 9.60,  "bold": False},
+}
+
+# Charge groups, adjustments/discounts, and Taxes & Levies (everything BEFORE
+# "Total Charges for the Period") are single full-width content, matching
+# vat_enterprise's pattern for this same section - section 9.2's fix. Only the
+# content AFTER Total Charges uses the narrow two-column reflow below.
+FULL_WIDTH = {"x_start": 43.0, "x_end": 553.0, "amount_x": 553.0}
+
+# Two-column continuous reflow (section 4) - vat_home-specific, vat_enterprise
+# has no equivalent (its post-total-charges flow is a different, simpler shape).
+# Only used from "Total Charges for the Period" onward (section 9.2).
+FLOW_COLUMNS = {
+    "left":  {"x_start": 43.0,  "x_end": 290.0, "amount_x": 285.0},
+    "right": {"x_start": 313.0, "x_end": 555.0, "amount_x": 550.0},
+    "vert_line_x": 300.0,
+}
+
+# Content-area y bounds. PAGE1_CONTENT_TOP matches the measured bottom edge of
+# "DETAILS OF CHARGES FOR THE PERIOD" on this template (~y=358-368, independently
+# confirmed against the doc's own golden-derived estimate of y=370).
+# CONTENT_FLOOR is the y just above the legal disclaimer on page 1 ("This
+# electric form...", measured at y~=691.7).
+PAGE1_CONTENT_TOP = 370.0
+CONTENT_FLOOR = 685.0
+
+# Continuation pages (section 9.1, golden evidence from VAT_HOME.pdf page 197):
+# a PLAIN WHITE PAGE - do NOT repaint layout.pdf's background at all. Only
+# "Invoice No.<x>" (top-left) and "<n> of <m>" (top-right, right-aligned to the
+# page margin) are stamped; content starts below that. These coordinates are
+# decoupled from layout.pdf entirely, per the golden page 197 extraction:
+#   x=43.2,  y=47.7  -> "Invoice No.<invoice_number>"
+#   x=511.2, y=45.4  -> "<n>" ... "of" ... "<m>" (right-aligned to x=553)
+#   first content line on golden page 197 sits at y~=98.1
+CONT_PAGE_INVOICE_NO = (43.2, 47.7)
+CONT_PAGE_PAGE_INDICATOR_X = 553.0
+CONT_PAGE_PAGE_INDICATOR_Y = 45.4
+CONT_PAGE_CONTENT_TOP = 70.0
+CONT_PAGE_CONTENT_FLOOR = 800.0
+
+LINE_HEIGHT = 10.0
