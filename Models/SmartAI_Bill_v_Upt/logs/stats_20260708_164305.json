@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-08T16:43:05.402242",
+  "summary": {
+    "total_files": 1,
+    "successful": 0,
+    "failed": 1,
+    "success_rate": 0.0,
+    "total_duration_seconds": 1.02,
+    "rate_per_second": 0.98,
+    "rate_per_hour": 3537.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "vat_enterprise": {
+        "total": 1,
+        "success": 0,
+        "failed": 1,
+        "avg_duration_ms": 4.15
+      }
+    }
+  },
+  "failed_files": [
+    {
+      "source": "C:\\Users\\vishm\\Downloads\\SmartAI_Bill (3)\\SmartAI_Bill\\data\\inbound\\520326_1-1-02-1-LKR-101-1-BILL-NONRED_1.7",
+      "error": "ValueError: could not convert string to float: ''"
+    }
+  ]
+}

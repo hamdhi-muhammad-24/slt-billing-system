@@ -172,6 +172,7 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
         y     = COORDS["summary_y_start"]
         lh    = COORDS["summary_line_h"]
         f     = FONTS["taxes"]
+        fc    = 7
 
         c.setFont("Helvetica", f["size"])
 
@@ -192,7 +193,7 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
             c.setFont("Helvetica-Bold", f["size"])
             c.drawString(x, y, "Discounts")
             y -= lh
-            c.setFont("Helvetica", f["size"])
+            c.setFont("Helvetica", fc)
             for d in data['discounts']:
                 c.drawString(x, y, d["description"])
                 c.drawRightString(amt_x, y, f"{d['amount']:,.2f}")
@@ -213,7 +214,7 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
             c.setFont("Helvetica-Bold", f["size"])
             c.drawString(x, y, "Taxes & Levies")
             y -= lh
-            c.setFont("Helvetica", f["size"])
+            c.setFont("Helvetica", fc)
             for t in data["taxes"]:
                 if t['amount']:
                     c.drawString(x, y, t["name"])

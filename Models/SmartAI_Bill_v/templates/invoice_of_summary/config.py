@@ -29,8 +29,8 @@ COORDS = {
 
     "summary_x":              45,
     "summary_amount_x":       553,
-    "summary_y_start":        450,
-    "summary_line_h":         11,
+    "summary_y_start":        459,
+    "summary_line_h":         9,
 
     "total_charges_label_x":  45,
     "total_charges_label_y":  332,
@@ -109,7 +109,7 @@ FONTS = {
     "group_ref":     {"size": 10,  "bold": True},
     "product_label": {"size": 9,   "bold": True},
     "charge_line":   {"size": 9,   "bold": False},
-    "taxes":         {"size": 9,   "bold": False},
+    "taxes":         {"size": 8,   "bold": False},
     "total":         {"size": 10,  "bold": True},
     "payments":      {"size": 8,   "bold": False},
     "slip":          {"size": 8,   "bold": False},

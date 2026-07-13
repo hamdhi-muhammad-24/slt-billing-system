@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-10T09:22:21.553041",
+  "summary": {
+    "total_files": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_duration_seconds": 0.43,
+    "rate_per_second": 2.33,
+    "rate_per_hour": 8391.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "vat_enterprise": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 82.99
+      }
+    }
+  },
+  "failed_files": []
+}

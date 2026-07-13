@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-10T12:48:27.307509",
+  "summary": {
+    "total_files": 1,
+    "successful": 0,
+    "failed": 1,
+    "success_rate": 0.0,
+    "total_duration_seconds": 1.0,
+    "rate_per_second": 1.0,
+    "rate_per_hour": 3618.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "vat_enterprise": {
+        "total": 1,
+        "success": 0,
+        "failed": 1,
+        "avg_duration_ms": 43.38
+      }
+    }
+  },
+  "failed_files": [
+    {
+      "source": "C:\\Users\\vishm\\Downloads\\SmartAI_Bill\\SmartAI_Bill\\data\\inbound\\520326_1-1-02-1-LKR-101-1-BILL-NONRED_1.7",
+      "error": "NameError: name 'y_min_other' is not defined"
+    }
+  ]
+}

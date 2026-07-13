@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-07-08T21:54:53.329561",
+  "summary": {
+    "total_files": 10,
+    "successful": 10,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_duration_seconds": 2.74,
+    "rate_per_second": 3.65,
+    "rate_per_hour": 13130.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "nonvat_creditnote": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 76.03
+      },
+      "vat_creditnote": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 80.23
+      },
+      "product_label_grouping": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 133.64
+      },
+      "subscription_ref_grouping": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 165.48
+      },
+      "usd_open_item": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 106.28
+      },
+      "vat_enterprise": {
+        "total": 3,
+        "success": 3,
+        "failed": 0,
+        "avg_duration_ms": 211.16
+      },
+      "invoice_of_summary": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 722.63
+      },
+      "summary_statement": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 1733.46
+      }
+    }
+  },
+  "failed_files": []
+}

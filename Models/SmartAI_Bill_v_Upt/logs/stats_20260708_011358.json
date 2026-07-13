@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-08T01:13:58.085289",
+  "summary": {
+    "total_files": 1,
+    "successful": 0,
+    "failed": 1,
+    "success_rate": 0.0,
+    "total_duration_seconds": 0.98,
+    "rate_per_second": 1.02,
+    "rate_per_hour": 3668.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "usd_open_item": {
+        "total": 1,
+        "success": 0,
+        "failed": 1,
+        "avg_duration_ms": 13.88
+      }
+    }
+  },
+  "failed_files": [
+    {
+      "source": "C:\\Users\\vishm\\Downloads\\SmartAI_Bill (3)\\SmartAI_Bill\\data\\inbound\\521662_4-21-02-1-USD-103-00-BILL-NONRED_1.1",
+      "error": "AttributeError: 'USDOpenItemRenderer' object has no attribute 'save'"
+    }
+  ]
+}

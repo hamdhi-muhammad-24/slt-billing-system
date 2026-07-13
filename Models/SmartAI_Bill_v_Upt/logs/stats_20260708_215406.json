@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-07-08T21:54:06.976400",
+  "summary": {
+    "total_files": 10,
+    "successful": 7,
+    "failed": 3,
+    "success_rate": 70.0,
+    "total_duration_seconds": 4.42,
+    "rate_per_second": 2.26,
+    "rate_per_hour": 8149.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "vat_enterprise": {
+        "total": 3,
+        "success": 0,
+        "failed": 3,
+        "avg_duration_ms": 6.59
+      },
+      "nonvat_creditnote": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 97.76
+      },
+      "vat_creditnote": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 101.97
+      },
+      "product_label_grouping": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 178.22
+      },
+      "usd_open_item": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 158.07
+      },
+      "subscription_ref_grouping": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 195.88
+      },
+      "invoice_of_summary": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 763.02
+      },
+      "summary_statement": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 1801.54
+      }
+    }
+  },
+  "failed_files": [
+    {
+      "source": "C:\\Users\\Taruni\\Desktop\\SmartAI_Bill\\data\\inbound\\520205_1-1-01-1-LKR-101-1-BILL-NONRED_1.4",
+      "error": "KeyError: 'billing_period_start'"
+    },
+    {
+      "source": "C:\\Users\\Taruni\\Desktop\\SmartAI_Bill\\data\\inbound\\520326_1-1-02-1-LKR-101-1-BILL-NONRED_1.7",
+      "error": "KeyError: 'billing_period_start'"
+    },
+    {
+      "source": "C:\\Users\\Taruni\\Desktop\\SmartAI_Bill\\data\\inbound\\520772_1-1-02-1-LKR-101-00-BILL-NONRED_1.10",
+      "error": "KeyError: 'billing_period_start'"
+    }
+  ]
+}

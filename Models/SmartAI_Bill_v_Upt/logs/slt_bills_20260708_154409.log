@@ -1,0 +1,54 @@
+2026-07-08 15:44:09,556 [INFO]                                                                       
+2026-07-08 15:44:09,557 [INFO]   SLT BILL GENERATOR
+2026-07-08 15:44:09,557 [INFO]                                                                       
+2026-07-08 15:44:09,557 [INFO]   Inbound folder:  C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\data\inbound
+2026-07-08 15:44:09,557 [INFO]   Files found:     2
+2026-07-08 15:44:09,557 [INFO]   Workers:         7
+2026-07-08 15:44:09,557 [INFO]   ZIP batch size:  1500
+2026-07-08 15:44:09,557 [INFO]   Log file:        C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\slt_bills_20260708_154409.log
+2026-07-08 15:44:09,559 [INFO]                                                                       
+2026-07-08 15:44:10,826 [INFO] Filtering files for template: vat_enterprise
+2026-07-08 15:44:10,838 [INFO]   Matched: 1 | Skipped: 1 | Errors: 0
+2026-07-08 15:44:10,838 [INFO] 
+  Generating 1 'vat_enterprise' bills
+
+2026-07-08 15:44:10,840 [INFO]   Temp PDF dir: C:\Users\vishm\AppData\Local\Temp\slt_bills_g5t01x55
+
+2026-07-08 15:44:10,840 [INFO] Starting: 1 files, 7 workers
+2026-07-08 15:44:11,159 [INFO]     Progress: 1/1 (100%)
+2026-07-08 15:44:11,188 [INFO]   Round 1: 1 success, 0 failed in 0.3s (10369/hr)
+2026-07-08 15:44:11,190 [INFO] 
+Batch complete: 1 success, 0 failed in 0.3s (10286/hr)
+2026-07-08 15:44:11,191 [INFO] 
+======================================================================
+2026-07-08 15:44:11,191 [INFO] PROCESSING SUMMARY
+2026-07-08 15:44:11,191 [INFO] ======================================================================
+2026-07-08 15:44:11,191 [INFO] Total files:      1
+2026-07-08 15:44:11,191 [INFO] Successful:       1
+2026-07-08 15:44:11,191 [INFO] Failed:           0
+2026-07-08 15:44:11,191 [INFO] Success rate:     100.0%
+2026-07-08 15:44:11,191 [INFO] Total duration:   0.35s
+2026-07-08 15:44:11,191 [INFO] Rate:             2.85 files/sec
+2026-07-08 15:44:11,192 [INFO]                   10,274 files/hour
+2026-07-08 15:44:11,192 [INFO] Target:           40,000 files/hour
+2026-07-08 15:44:11,192 [INFO] Target met:       NO
+2026-07-08 15:44:11,192 [INFO] 
+By template:
+2026-07-08 15:44:11,192 [INFO]   vat_enterprise: 1/1 (avg 39.22ms)
+2026-07-08 15:44:11,192 [INFO] ======================================================================
+
+2026-07-08 15:44:11,193 [INFO]   Detailed report: C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\stats_20260708_154411.json
+2026-07-08 15:44:11,193 [INFO] 
+
+2026-07-08 15:44:11,193 [INFO]   CREATING OUTPUT ZIP
+2026-07-08 15:44:11,194 [INFO]                                                                       
+2026-07-08 15:44:11,194 [INFO] 
+Zipping 1 PDFs in batches of 1500
+2026-07-08 15:44:11,222 [INFO]   OK: SLT_BILLS_vat_enterprise_0001_20260708_154411.zip (1 PDFs, 0.3 MB)
+2026-07-08 15:44:11,223 [INFO] Created 1 ZIP file(s)
+2026-07-08 15:44:11,223 [INFO] 
+  Total ZIPs created: 1
+2026-07-08 15:44:11,223 [INFO]   ZIP output folder: C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\output\zips
+2026-07-08 15:44:11,223 [INFO] 
+  Processing complete
+

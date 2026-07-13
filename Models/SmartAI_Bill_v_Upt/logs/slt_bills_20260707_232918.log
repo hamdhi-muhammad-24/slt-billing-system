@@ -1,0 +1,14 @@
+2026-07-07 23:29:18,237 [INFO]                                                                       
+2026-07-07 23:29:18,238 [INFO]   SLT BILL GENERATOR
+2026-07-07 23:29:18,238 [INFO]                                                                       
+2026-07-07 23:29:18,238 [INFO]   Inbound folder:  C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\data\inbound
+2026-07-07 23:29:18,238 [INFO]   Files found:     2
+2026-07-07 23:29:18,238 [INFO]   Workers:         7
+2026-07-07 23:29:18,238 [INFO]   ZIP batch size:  1500
+2026-07-07 23:29:18,238 [INFO]   Log file:        C:\Users\vishm\Downloads\SmartAI_Bill (3)\SmartAI_Bill\logs\slt_bills_20260707_232918.log
+2026-07-07 23:29:18,240 [INFO]                                                                       
+2026-07-07 23:29:20,531 [INFO] Filtering files for template: vat_creditnote
+2026-07-07 23:29:20,532 [INFO]   Matched: 0 | Skipped: 2 | Errors: 0
+2026-07-07 23:29:20,533 [INFO] 
+  No files matching 'vat_creditnote' found.
+

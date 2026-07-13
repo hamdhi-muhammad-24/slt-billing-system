@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-11T11:12:44.003522",
+  "summary": {
+    "total_files": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_duration_seconds": 0.41,
+    "rate_per_second": 2.44,
+    "rate_per_hour": 8794.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "nonvat_creditnote": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 33.06
+      }
+    }
+  },
+  "failed_files": []
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-07T23:28:21.896270",
+  "summary": {
+    "total_files": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_duration_seconds": 0.44,
+    "rate_per_second": 2.28,
+    "rate_per_hour": 8226.0,
+    "target_per_hour": 40000,
+    "target_met": false,
+    "by_template": {
+      "subscription_ref_grouping": {
+        "total": 1,
+        "success": 1,
+        "failed": 0,
+        "avg_duration_ms": 75.14
+      }
+    }
+  },
+  "failed_files": []
+}
