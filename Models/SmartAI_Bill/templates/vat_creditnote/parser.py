@@ -21,6 +21,7 @@ def parse_vat_creditnote(file_path: str) -> dict:
         "invoice_number": "",
         "billing_date": "",
         "bill_period": "",
+        "acc_currency_code": "",
 
         "address_line1": "",
         "address_line2": "",
@@ -50,6 +51,7 @@ def parse_vat_creditnote(file_path: str) -> dict:
         "charge_for_period": "0.00",
 
         "adjustments": [],
+        "taxes_levies": [],
 
         "source_filename": os.path.basename(file_path)
     }
@@ -73,6 +75,11 @@ def parse_vat_creditnote(file_path: str) -> dict:
 
     data["billing_date"] = extract_field(
         r"INVOICEACTUALDATE\s+([^|]+)",
+        content
+    )
+
+    data["acc_currency_code"] = extract_field(
+        r"ACCCURRENCYCODE\s+([^|]+)",
         content
     )
 
@@ -225,7 +232,7 @@ def parse_vat_creditnote(file_path: str) -> dict:
 
             if len(parts) >= 15:
 
-                data["adjustments"].append({
+                data["taxes_levies"].append({
                     "description": parts[1].strip(),
                     "amount": parts[14].strip(),
                     "level": 2

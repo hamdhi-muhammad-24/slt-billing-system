@@ -124,7 +124,7 @@ ADJUSTMENT_TBL = {
 
     "y_start": 450,
 
-    "y_min": 385,
+    "y_min": 100,
 
 
     "line_h": 11,

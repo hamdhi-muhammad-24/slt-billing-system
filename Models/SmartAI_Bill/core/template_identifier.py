@@ -6,6 +6,7 @@ from core.customer_type_mapper import get_badge, is_vat_registered
 TEMPLATE_NONVAT_HOME               = "nonvat_home"
 TEMPLATE_NONVAT_ENTERPRISE         = "nonvat_enterprise"
 TEMPLATE_VAT_ENTERPRISE            = "vat_enterprise"
+TEMPLATE_VAT_HOME                  = "vat_home"
 TEMPLATE_VAT_CREDITNOTE            = "vat_creditnote"
 TEMPLATE_NONVAT_CREDITNOTE         = "nonvat_creditnote"
 TEMPLATE_PRODUCT_LABEL_GROUPING    = "product_label_grouping"
@@ -42,7 +43,7 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
 
     # Exclusion checks
     if header.billtype == 5:
-        is_vat = is_vat_registered(header.customer_vat_ref)
+        is_vat = is_vat_registered(header.customer_vat_ref or "")
         if is_vat:
             result.template_id = TEMPLATE_VAT_CREDITNOTE
             result.reasons.append("BILLTYPE=5 → VAT Credit Note")
@@ -76,7 +77,7 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
 
     # BILLSTYLE routing
     style = header.billstyle
-    is_vat = is_vat_registered(header.customer_vat_ref)
+    is_vat = is_vat_registered(header.customer_vat_ref or "")
 
     if style == 19:
         result.template_id = TEMPLATE_PRODUCT_LABEL_GROUPING
@@ -94,11 +95,17 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
         result.is_supported = True
 
     elif style == 1:
-        if is_vat:
-            result.template_id = TEMPLATE_VAT_ENTERPRISE
-            result.reasons.append("BILLSTYLE=1, VAT → VAT Enterprise")
+        # Check explicitly for BILLTYPE=1 or if the customer has a VAT registration
+        if header.billtype == 1 or is_vat:
+            badge = get_badge(header.customer_type or "")
+            if badge == "HOME":
+                result.template_id = TEMPLATE_VAT_HOME
+                result.reasons.append("BILLSTYLE=1, BILLTYPE=1 (VAT), Home → VAT Home")
+            else:
+                result.template_id = TEMPLATE_VAT_ENTERPRISE
+                result.reasons.append("BILLSTYLE=1, BILLTYPE=1 (VAT) → VAT Enterprise")
         else:
-            badge = get_badge(header.customer_type)
+            badge = get_badge(header.customer_type or "")
             if badge == "HOME":
                 result.template_id = TEMPLATE_NONVAT_HOME
                 result.reasons.append(
@@ -122,7 +129,7 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
         return result
 
     # Badge
-    result.badge = get_badge(header.customer_type)
+    result.badge = get_badge(header.customer_type or "")
     if result.badge == "UNKNOWN":
         result.warnings.append(f"CUSTOMERTYPE={header.customer_type} not mapped")
 

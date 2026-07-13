@@ -504,7 +504,7 @@ class SubscriptionRefGroupingRenderer(BaseRenderer):
             c = self.canvases[idx][1]
             c.setFont("Helvetica", 9)
             if idx == 0:
-                c.drawRightString(555, 749,
+                c.drawRightString(555, 750,
                                   f"1 of {total_pages}")
             else:
                 c.setFont("Helvetica-Bold", 10)

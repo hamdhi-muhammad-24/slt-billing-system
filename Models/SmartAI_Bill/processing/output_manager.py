@@ -85,11 +85,7 @@ def create_output_batches(temp_pdf_dir, cycle_label="Cycle_1", log_callback=None
             
         current_batch_num += 1
 
-    # Clean up temp dir
-    try:
-        shutil.rmtree(temp_pdf_dir)
-    except OSError:
-        pass
+    # Removed temp dir cleanup to allow concurrent worker writing
 
     if log_callback:
         log_callback(f"Created {len(batch_folders)} batch folder(s) in {base}")

@@ -27,6 +27,7 @@ def parse_nonvat_creditnote(file_path):
         "invoice_number": "",
         "billing_date": "",
         "bill_period": "",
+        "acc_currency_code": "",
 
 
         # Barcode
@@ -117,6 +118,12 @@ def parse_nonvat_creditnote(file_path):
 
     data["billing_date"] = extract_field(
         r"INVOICEACTUALDATE\s+([^|]+)",
+        content
+    )
+
+
+    data["acc_currency_code"] = extract_field(
+        r"ACCCURRENCYCODE\s+([^|]+)",
         content
     )
 

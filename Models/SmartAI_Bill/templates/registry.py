@@ -25,6 +25,14 @@ from templates.nonvat_creditnote.parser import parse_nonvat_creditnote
 from templates.usd_open_item.renderer import USDOpenItemRenderer
 from templates.usd_open_item.parser import parse_usd_open_item
 
+# New imports for VAT Enterprise
+from templates.vat_enterprise.renderer import VATEnterpriseRenderer
+from templates.vat_enterprise.parser import parse_vat_enterprise
+
+# New imports for VAT Home
+from templates.vat_home.renderer import VATHomeRenderer
+from templates.vat_home.parser import parse_vat_home
+
 TEMPLATE_REGISTRY = {
     "nonvat_home": {
         "name": "NonVAT Home Invoice",
@@ -38,6 +46,20 @@ TEMPLATE_REGISTRY = {
         "description": "Sheet 19 - Non-VAT, Enterprise customer",
         "renderer": NonVATEnterpriseRenderer,
         "parser": parse_nonvat_enterprise,
+        "ready": True,
+    },
+    "vat_enterprise": {
+        "name": "VAT Enterprise Invoice",
+        "description": "Sheet 18 - BILLSTYLE=1, BILLTYPE=1",
+        "renderer": VATEnterpriseRenderer,
+        "parser": parse_vat_enterprise,
+        "ready": True,
+    },
+    "vat_home": {
+        "name": "VAT Home Invoice",
+        "description": "Sheet 18 - BILLSTYLE=1, BILLTYPE=1, Home customer",
+        "renderer": VATHomeRenderer,
+        "parser": parse_vat_home,
         "ready": True,
     },
     "product_label_grouping": {

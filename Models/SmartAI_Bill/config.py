@@ -32,6 +32,8 @@ DEFAULT_WORKERS = max(1, multiprocessing.cpu_count() - 1)
 OUTPUT_PDF_NAMES = {
     "nonvat_home":               "{account_number}_NONVAT_HOME.pdf",
     "nonvat_enterprise":         "{account_number}_NONVAT_ENTERPRISE.pdf",
+    "vat_enterprise":            "{account_number}_VAT_ENTERPRISE.pdf",
+    "vat_home":                  "{account_number}_VAT_HOME.pdf",
     "product_label_grouping":    "{account_number}_ProductLevel.pdf",
     "subscription_ref_grouping": "{account_number}_SubscriptionLevel.pdf",
     "summary_statement":         "SUMMARY.pdf",

@@ -32,8 +32,8 @@ class NonVATCreditNoteRenderer(BaseRenderer):
         self._draw_address(data)
         self._draw_extra_lines(data)
         self._draw_summary(data)
-        self._draw_adjustments(data)
-        self._draw_charge_period(data)
+        y = self._draw_adjustments(data)
+        self._draw_charge_period(data, y)
 
     # --------------------------------------------------
     # Header
@@ -222,24 +222,40 @@ class NonVATCreditNoteRenderer(BaseRenderer):
             ):
                 structured.append(item)
 
+        current_heading = "ADJUSTMENTS"
         for item in structured:
 
             desc = item.get("description", "")
             amount = item.get("amount")
             level = item.get("level", 2)
 
+            if level == 1:
+                current_heading = desc
+
             if desc == "TAXES & LEVIES":
                 y -= 5
 
-            x = tbl["desc_x"] if level == 1 else tbl["desc_x"] + tbl["indent"]
+            # Page break logic
+            if y <= tbl["y_min"]:
+                self.new_page()
+                y = tbl["y_start"]
+                self.text(tbl["desc_x"], y, current_heading, bold=True)
+                if current_heading == "ADJUSTMENTS":
+                    currency = data.get("acc_currency_code", "Rs").strip()
+                    currency_str = "(Rs.)" if currency.upper() == "RS" else f"({currency})"
+                    self.text(tbl["amount_x"], y + 15, currency_str, size=tbl["font_size"], bold=True, align="right")
+                y -= tbl["line_h"]
 
-            self.text(
-                x,
-                y,
-                desc,
-                size=tbl["font_size"],
-                bold=(level == 1)
-            )
+            # Draw the heading/item description
+            if level == 1:
+                self.text(tbl["desc_x"], y, desc, bold=True)
+                if desc == "ADJUSTMENTS":
+                    currency = data.get("acc_currency_code", "Rs").strip()
+                    currency_str = "(Rs.)" if currency.upper() == "RS" else f"({currency})"
+                    self.text(tbl["amount_x"], y + 15, currency_str, size=tbl["font_size"], bold=True, align="right")
+            else:
+                x = tbl["desc_x"] + tbl["indent"]
+                self.text(x, y, desc, size=tbl["font_size"])
 
             if amount is not None:
 
@@ -254,17 +270,29 @@ class NonVATCreditNoteRenderer(BaseRenderer):
 
             y -= tbl["line_h"]
 
+        return y
+
     # --------------------------------------------------
     # Charge for Period Amount Only
     # --------------------------------------------------
 
-    def _draw_charge_period(self, data):
+    def _draw_charge_period(self, data, y):
+        # Position it dynamically below the last line
+        y -= ADJUSTMENT_TBL["line_h"] * 1.5
 
-        self.number(
-            CHARGE_PERIOD_X,
-            CHARGE_PERIOD_Y,
-            data.get("charge_for_period", 0),
-            size=9,
-            bold=True,
-            align="right"
-        )
+        # Check for page break if it exceeds page limits
+        if y <= ADJUSTMENT_TBL["y_min"]:
+            self.new_page()
+            y = ADJUSTMENT_TBL["y_start"]
+
+        desc_x = ADJUSTMENT_TBL["desc_x"]
+        amount_x = CHARGE_PERIOD_X
+
+        self.canvas.setLineWidth(0.5)
+        self.canvas.setStrokeColorRGB(0, 0, 0)
+        self.canvas.line(desc_x, y + 11, amount_x, y + 11)
+
+        self.text(desc_x, y, "Charge of the period", size=9, bold=True)
+        self.number(amount_x, y, data.get("charge_for_period", 0), size=9, bold=True, align="right")
+
+        self.canvas.line(desc_x, y - 5, amount_x, y - 5)
