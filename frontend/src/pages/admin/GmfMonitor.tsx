@@ -31,8 +31,8 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === 'COMPLETED') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-        <CheckCircle2 size={12} className="text-emerald-600" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/20">
+        <CheckCircle2 size={12} className="text-blue-600" />
         Completed
       </span>
     )
