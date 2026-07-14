@@ -58,3 +58,6 @@ deploy.tar.gz
 deploy.zip
 rclone.zip
 rclone_bin/
+
+# Temporary GMF billing queues
+queue/
