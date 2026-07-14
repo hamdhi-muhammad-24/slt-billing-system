@@ -23,7 +23,7 @@ function EventIcon({ type }: { type: string }) {
 
 export default function ActivityLog() {
   const queryClient = useQueryClient()
-  
+
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['billing-notifications-all'],
     queryFn: () => getNotifications(false), // get all
@@ -56,22 +56,22 @@ export default function ActivityLog() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-end">
-        <PageHeader 
-          title="Activity Log" 
-          description="System events, notifications, and alerts" 
+        <PageHeader
+          title="Activity Log"
+          description="System events, notifications, and alerts"
         />
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => readAllMutation.mutate()}
             disabled={unreadCount === 0 || readAllMutation.isPending}
           >
             <Check size={14} className="mr-1.5" /> Mark All Read
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => clearMutation.mutate()}
             disabled={clearMutation.isPending}
             className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
@@ -84,7 +84,7 @@ export default function ActivityLog() {
       <div className="glass-card shadow-lg overflow-hidden">
         {isLoading ? (
           <div className="p-8 space-y-4">
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="flex gap-4">
                 <div className="size-10 animate-pulse rounded-full bg-muted" />
                 <div className="flex-1 space-y-2 py-1">
@@ -102,12 +102,12 @@ export default function ActivityLog() {
         ) : (
           <div className="flex flex-col divide-y divide-border/40">
             {notifications?.map((notif) => (
-              <div 
-                key={notif.id} 
+              <div
+                key={notif.id}
                 className={cn(
-                  "flex gap-4 p-4 transition-all duration-150 border-l-4 relative pl-5", 
-                  !notif.is_read 
-                    ? "border-l-primary bg-primary/5" 
+                  "flex gap-4 p-4 transition-all duration-150 border-l-4 relative pl-5",
+                  !notif.is_read
+                    ? "border-l-primary bg-primary/5"
                     : "border-l-transparent hover:bg-muted/40"
                 )}
               >
@@ -124,12 +124,12 @@ export default function ActivityLog() {
                   <span className={cn("text-sm mt-1 leading-relaxed", !notif.is_read ? "text-foreground" : "text-muted-foreground")}>
                     {notif.message}
                   </span>
-                  
+
                   {!notif.is_read && (
                     <div className="mt-3">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-7 text-xs px-2.5 text-primary hover:text-primary hover:bg-primary/10 rounded-full font-semibold border border-primary/20"
                         onClick={() => readMutation.mutate(notif.id)}
                       >
