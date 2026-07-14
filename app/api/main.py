@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.errors import register_exception_handlers
-from app.api.routers import billing
+from app.api.routers import billing, health
 from app.auth.router import router as auth_router
 from app.billing_scheduler import start_scheduler
 
@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
 
     application.include_router(auth_router)
     application.include_router(billing.router)
+    application.include_router(health.router)
 
     register_exception_handlers(application)
     

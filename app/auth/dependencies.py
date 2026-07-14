@@ -10,7 +10,6 @@ from app.auth.schemas import UserOut
 from app.auth.security import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-_oauth2_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 _401 = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
