@@ -5,22 +5,22 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Bot,
   Building2,
-  CheckCircle2,
-  Download,
   Eye,
   EyeOff,
-  Headphones,
-  LockKeyhole,
-  ShieldCheck,
   UserRound,
+  ShieldCheck,
+  Zap,
+  Mail,
+  Lock,
+  Moon,
+  Sun
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useAuth } from '../auth/AuthProvider'
 import { authLogin, authMe, setToken, clearToken } from '../lib/api'
 import Brand from '../components/Brand'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -33,37 +33,18 @@ const roleTabs = [
   {
     id: 'customer' as const,
     icon: UserRound,
-    label: 'Customer',
+    label: 'Customer Portal',
   },
   {
     id: 'staff' as const,
     icon: Building2,
-    label: 'Staff/Admin',
+    label: 'Staff Console',
   },
 ]
-
-const trustItems = [
-  {
-    icon: ShieldCheck,
-    label: 'Role-Based Authentication',
-  },
-  {
-    icon: Bot,
-    label: 'AI-Generated Invoices',
-  },
-  {
-    icon: Download,
-    label: 'Secure PDF Statements',
-  },
-]
-
-function modeSubtitle(mode: GatewayMode): string {
-  if (mode === 'staff') return 'Use authorized staff credentials to manage billing generation and GMF operations securely.'
-  return 'Use registered customer credentials to view your AI-generated billing statements.'
-}
 
 export default function Login() {
   const { session, isChecking, login } = useAuth()
+  const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const [activeMode, setActiveMode] = useState<GatewayMode>('customer')
   const [email, setEmail] = useState('')
@@ -100,238 +81,243 @@ export default function Login() {
         role === 'customer' && me.customer_id != null
           ? { role: 'customer' as const, customerId: me.customer_id }
           : role === 'admin1'
-          ? { role: 'admin1' as const }
-          : { role: 'admin' as const }
+            ? { role: 'admin1' as const }
+            : { role: 'admin' as const }
       login(nextSession)
       navigate(role === 'admin1' ? '/admin1' : role === 'admin' ? '/admin' : '/app', { replace: true })
     } catch (err: any) {
       console.error("Login error:", err)
-      setError(err?.detail || err?.message || 'Login failed. Please try again.')
+      setError(err?.detail || err?.message || 'Login failed. Please verify your credentials and try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main className="min-h-svh overflow-hidden bg-background text-foreground relative selection:bg-primary/20 selection:text-primary">
-      {/* Global Background Ambient Effects */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -left-[10%] -top-[10%] size-[500px] rounded-full bg-blue-500/10 blur-[120px] dark:bg-blue-600/15" />
-        <div className="absolute -right-[10%] top-[20%] size-[600px] rounded-full bg-indigo-500/10 blur-[120px] dark:bg-indigo-600/15" />
-        <div className="absolute bottom-[-20%] left-[20%] size-[800px] rounded-full bg-emerald-500/10 blur-[150px] dark:bg-emerald-600/10" />
-      </div>
+    <main className="min-h-svh w-full flex bg-background selection:bg-[#0066b3]/20 selection:text-[#0066b3]">
 
-      <header className="relative z-20 border-b border-border/50 bg-background/75 shadow-sm backdrop-blur-xl">
-        <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Brand size="md" />
-          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 border-border bg-background px-4 text-foreground shadow-sm hover:border-primary/40 hover:bg-muted transition-all">
-            <Link to="/">
-              <ArrowLeft size={14} className="mr-2" />
-              <span className="hidden sm:inline">Back to Portal</span>
-              <span className="sm:hidden">Portal</span>
-            </Link>
-          </Button>
+      {/* Left Panel: SLT-MOBITEL Premium Branding */}
+      <div className="relative hidden lg:flex flex-1 flex-col overflow-hidden bg-slate-950">
+        {/* Elegant Animated Gradient Orbs */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute -left-[10%] top-[10%] h-[700px] w-[700px] rounded-full bg-[#0066b3]/30 blur-[140px] animate-pulse [animation-duration:15s]" />
+          <div className="absolute right-[0%] top-[30%] h-[600px] w-[600px] rounded-full bg-[#00a651]/20 blur-[130px] animate-pulse [animation-duration:12s] [animation-delay:2s]" />
+          <div className="absolute -bottom-[20%] left-[30%] h-[800px] w-[800px] rounded-full bg-[#00b2e3]/20 blur-[150px] animate-pulse [animation-duration:18s] [animation-delay:4s]" />
         </div>
-      </header>
 
-      <section className="relative z-10">
-        <div className="absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-primary/10 via-background to-background dark:from-primary/5" />
-        
-        <div className="relative mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-stretch lg:px-8 lg:py-16">
-          <section className="glass-card relative overflow-hidden rounded-[2rem] p-6 shadow-2xl sm:p-10 lg:min-h-[660px]">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5" />
-            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] [background-image:radial-gradient(var(--foreground)_1px,transparent_1px)] [background-size:24px_24px]" />
-            <div className="relative flex h-full flex-col">
-              <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-sm font-medium text-primary shadow-sm backdrop-blur-md">
-                <ShieldCheck size={16} />
-                <span className="min-w-0">Secure SLT-MOBITEL Smart Gateway</span>
-              </p>
+        {/* Fixed Brand Logo exactly matching Admin Sidebar Top-Left alignment */}
+        <div className="absolute top-0 left-0 w-full h-16 flex items-center px-8 z-20">
+          <Brand size="md" tone="dark" className="text-white drop-shadow-md" />
+        </div>
 
-              <div className="mt-10 max-w-xl sm:mt-12 lg:mt-20">
-                <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] sm:text-5xl lg:text-6xl bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Sign in to your AI Billing Workspace
-                </h1>
-                <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-                  Access your intelligent billing dashboard. Customers can view generated invoices, while authorized staff can securely manage massive GMF cycle runs.
-                </p>
+        {/* Value Proposition Content (Perfectly Centered) */}
+        <div className="relative z-10 flex h-full w-full flex-col justify-center px-10 xl:px-16 pt-10">
+          <div className="max-w-xl xl:max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-bold tracking-wide text-white shadow-sm backdrop-blur-md mb-8">
+              <ShieldCheck size={16} className="text-[#00b2e3]" />
+              SLT-MOBITEL SECURE GATEWAY
+            </div>
+
+            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl xl:text-6xl leading-[1.15]">
+              AI-Powered <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00b2e3] to-[#00a651]">
+                Invoice Generation
+              </span>
+            </h1>
+            <p className="mt-8 text-lg font-medium leading-relaxed text-slate-300">
+              Access the centralized SLT-MOBITEL billing environment. Manage massive GMF batch cycles securely, verify generated statements, and monitor the automated pipeline in real-time.
+            </p>
+
+            <div className="mt-12 flex items-center gap-8">
+              <div className="flex items-center gap-4">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm border border-white/10 shadow-lg">
+                  <Zap size={26} className="text-[#00b2e3]" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-white">High-Speed Pipeline</p>
+                  <p className="text-[13px] font-medium text-slate-400">Process millions of records</p>
+                </div>
               </div>
 
-              <div className="mt-10 grid gap-3 sm:max-w-md">
-                {trustItems.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={item.label} className="flex items-center gap-4 rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 text-sm shadow-sm backdrop-blur transition-colors hover:border-primary/30 hover:bg-muted/50">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                        <Icon size={18} />
-                      </span>
-                      <span className="font-semibold text-foreground">{item.label}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="mt-auto hidden pt-12 lg:block">
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 shadow-sm backdrop-blur">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 size={18} className="text-emerald-500" />
-                        Secure Billing Session Active
-                      </div>
-                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        Customer self-care and staff cycle generation share one protected, encrypted gateway.
-                      </p>
-                    </div>
-                    <div className="hidden rounded-xl border border-border bg-background p-3 text-right shadow-sm sm:block">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connection</p>
-                      <p className="mt-1 text-sm font-bold text-emerald-500">Encrypted</p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm border border-white/10 shadow-lg">
+                  <ShieldCheck size={26} className="text-[#00a651]" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-white">Bank-Grade Security</p>
+                  <p className="text-[13px] font-medium text-slate-400">AES-256 Encrypted Storage</p>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </div>
+      </div>
 
-          <Card className="glass-card rounded-[2rem] py-0 shadow-2xl relative overflow-hidden border-border/50">
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
-            <CardContent className="p-6 sm:p-8 flex flex-col h-full">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Smart Billing Login</p>
-                  <h2 className="mt-2 text-3xl font-extrabold text-foreground">Welcome Back</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{modeSubtitle(activeMode)}</p>
+      {/* Right Panel: Clean, High-Contrast Form */}
+      <div className="relative flex w-full flex-col bg-background lg:w-[500px] xl:w-[650px] lg:shrink-0">
+
+        {/* Navigation Header - Matches Admin Top Nav Bar Height & Padding */}
+        <div className="absolute top-0 left-0 w-full h-16 px-6 sm:px-8 flex justify-between items-center z-20">
+          <div className="lg:hidden">
+            <Brand size="md" />
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full bg-background hover:bg-muted border-border transition-all"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title="Toggle theme"
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-foreground" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-foreground" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <Button asChild variant="outline" className="gap-2 text-foreground font-semibold shadow-sm rounded-full bg-background hover:bg-muted border-border transition-all">
+              <Link to="/">
+                <ArrowLeft size={16} />
+                Return to Portal
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Subtle background glow for mobile */}
+        <div className="absolute inset-0 z-0 lg:hidden overflow-hidden">
+          <div className="absolute -top-[10%] right-[0%] h-[500px] w-[500px] rounded-full bg-[#0066b3]/5 blur-[100px]" />
+          <div className="absolute bottom-[0%] left-[0%] h-[500px] w-[500px] rounded-full bg-[#00a651]/5 blur-[100px]" />
+        </div>
+
+        {/* Form Container */}
+        <div className="relative z-10 flex h-full w-full flex-col justify-center px-6 sm:px-12 xl:px-20 pt-28 lg:pt-0">
+
+          <div className="flex flex-col space-y-2 mb-8">
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Welcome Back</h2>
+            <p className="text-[15px] font-medium text-muted-foreground">
+              Sign in to access the SLT-MOBITEL {activeMode === 'staff' ? 'staff console' : 'customer billing portal'}.
+            </p>
+          </div>
+
+          <div className="mb-10">
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1.5 ring-1 ring-inset ring-border/80 shadow-inner">
+              {roleTabs.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeMode === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveMode(tab.id)
+                      setError(null)
+                    }}
+                    className={cn(
+                      'flex h-12 items-center justify-center gap-2.5 rounded-lg text-[14px] font-bold transition-all duration-300',
+                      isActive
+                        ? 'bg-background text-foreground shadow-md ring-1 ring-border/50'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
+                    )}
+                  >
+                    <Icon size={18} />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid gap-7">
+            <div className="grid gap-2.5">
+              <Label htmlFor="email" className="text-[14px] font-bold text-foreground">
+                Email address
+              </Label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-muted-foreground pointer-events-none">
+                  <Mail size={18} />
                 </div>
-                <div className="hidden size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg sm:flex">
-                  <LockKeyhole size={22} />
-                </div>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  placeholder={activeMode === 'staff' ? 'admin@slt.lk' : 'customer@example.com'}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-14 pl-12 pr-4 text-[15px] bg-background border-border shadow-sm focus-visible:ring-2 focus-visible:border-[#0066b3] focus-visible:ring-[#0066b3]/20 rounded-xl transition-all placeholder:text-muted-foreground/60 font-medium"
+                />
               </div>
+            </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-1.5 shadow-inner">
-                {roleTabs.map((tab) => {
-                  const Icon = tab.icon
-                  const isActive = activeMode === tab.id
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveMode(tab.id)
-                        setError(null)
-                      }}
-                      className={cn(
-                        'inline-flex h-11 min-w-0 items-center justify-center gap-2.5 rounded-lg px-2 text-sm font-bold transition-all sm:px-3',
-                        isActive
-                          ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
-                          : 'text-muted-foreground hover:bg-background/50 hover:text-foreground',
-                      )}
-                    >
-                      <Icon size={18} />
-                      {tab.label}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <form onSubmit={handleSubmit} className="mt-8 grid gap-5 flex-1">
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-sm font-semibold text-foreground">
-                    Email address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="username"
-                    required
-                    placeholder={activeMode === 'staff' ? 'name@slt.lk' : 'name@example.com'}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 border-border bg-background text-foreground shadow-sm focus-visible:border-primary focus-visible:ring-primary/25 rounded-xl transition-all"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="password" className="text-sm font-semibold text-foreground">
-                      Password
-                    </Label>
-                    <a
-                      href="mailto:support@slt.lk?subject=Billing%20portal%20password%20help"
-                      className="text-xs font-semibold text-primary hover:underline"
-                    >
-                      Need help signing in?
-                    </a>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      required
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 border-border bg-background text-foreground shadow-sm focus-visible:border-primary focus-visible:ring-primary/25 rounded-xl transition-all"
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="flex gap-3 rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3">
-                    <AlertCircle size={18} className="mt-0.5 shrink-0 text-destructive" />
-                    <p className="text-sm leading-relaxed text-destructive font-medium" role="alert">
-                      {error}
-                    </p>
-                  </div>
-                )}
-
-                <Button type="submit" className="mt-2 h-12 w-full justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-5 font-bold text-white shadow-md hover:shadow-lg active:translate-y-px border-none transition-all rounded-xl" disabled={loading}>
-                  {loading ? (
-                    <span className="flex items-center gap-2.5">
-                      <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Authenticating...
-                    </span>
-                  ) : (
-                    <>
-                      Enter Workspace
-                      <ArrowRight size={18} />
-                    </>
-                  )}
-                </Button>
-              </form>
-
-              <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm">
-                <div className="flex gap-3.5">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background text-emerald-500 shadow-sm ring-1 ring-border">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Protected access</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Your AI-generated billing information and network access is protected by enterprise-grade encryption.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between border-t border-border pt-6">
-                <span>Access denied?</span>
-                <a href="mailto:support@slt.lk" className="inline-flex items-center gap-2 font-bold text-primary hover:text-primary/80 transition-colors">
-                  Contact Support
-                  <Headphones size={16} />
+            <div className="grid gap-2.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-[14px] font-bold text-foreground">
+                  Password
+                </Label>
+                <a
+                  href="mailto:support@slt.lk?subject=Billing%20portal%20password%20help"
+                  className="text-[13px] font-bold text-[#0066b3] dark:text-[#66c2ff] hover:underline"
+                >
+                  Forgot password?
                 </a>
               </div>
-            </CardContent>
-          </Card>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-muted-foreground pointer-events-none">
+                  <Lock size={18} />
+                </div>
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 pl-12 pr-12 text-[15px] bg-background border-border shadow-sm focus-visible:ring-2 focus-visible:border-[#0066b3] focus-visible:ring-[#0066b3]/20 rounded-xl transition-all placeholder:text-muted-foreground/60 font-medium"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex gap-3 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-4 mt-2">
+                <AlertCircle size={20} className="mt-0.5 shrink-0 text-destructive" />
+                <p className="text-[14px] leading-relaxed text-destructive font-bold" role="alert">
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="mt-4 h-14 w-full bg-gradient-to-r from-[#0066b3] to-[#00b2e3] hover:opacity-90 font-extrabold text-[16px] text-white shadow-lg shadow-[#0066b3]/25 active:scale-[0.98] border-none transition-all duration-300 rounded-xl group"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-3">
+                  <span className="size-5 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
+                  Authenticating...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-3 w-full px-2 tracking-wide">
+                  Secure Login
+                  <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+                </span>
+              )}
+            </Button>
+          </form>
+
+          <p className="mt-12 text-center text-[13px] font-medium text-muted-foreground leading-relaxed">
+            Secured by SLT-MOBITEL Enterprise Gateway. <br className="hidden sm:block" /> By signing in, you agree to our <a href="#" className="text-foreground font-bold hover:text-[#0066b3] transition-colors">Terms of Service</a> & <a href="#" className="text-foreground font-bold hover:text-[#0066b3] transition-colors">Privacy Policy</a>.
+          </p>
         </div>
-      </section>
+      </div>
     </main>
   )
 }
