@@ -73,7 +73,7 @@ export interface LoginResponse {
 export interface MeResponse {
   id: number
   email: string
-  role: 'ADMIN' | 'CUSTOMER'
+  role: 'ADMIN' | 'ADMIN1' | 'CUSTOMER'
   customer_id: number | null
 }
 
@@ -290,10 +290,10 @@ export function getTemplates(): Promise<{ templates: any[] }> {
   return request('/billing/templates')
 }
 
-export function updateTemplateStatus(templateId: string, status: string): Promise<{ message: string; status: string }> {
+export function updateTemplateStatus(templateId: string, status: string, reason?: string): Promise<{ message: string; status: string }> {
   return request(`/billing/templates/${templateId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status, reason })
   })
 }
 
@@ -348,4 +348,57 @@ export function toggleSchedule(id: number): Promise<{ id: number; is_active: boo
 
 export function deleteSchedule(id: number): Promise<{ ok: boolean }> {
   return request(`/billing/schedules/${id}`, { method: 'DELETE' })
+}
+
+export function getSettings(): Promise<{ billing_mode: string }> {
+  return request('/billing/settings')
+}
+
+export function updateSettings(data: { billing_mode: string }): Promise<{ billing_mode: string }> {
+  return request('/billing/settings', { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+export function getTemplateHistory(): Promise<any[]> {
+  return request('/billing/template-history')
+}
+
+export function deleteRun(runId: number): Promise<{ message: string }> {
+  return request(`/billing/runs/${runId}`, { method: 'DELETE' })
+}
+
+export function deleteAllRuns(): Promise<{ message: string }> {
+  return request('/billing/runs', { method: 'DELETE' })
+}
+
+export function scanDrive(): Promise<{ message: string }> {
+  return request('/billing/scan-drive', { method: 'POST' })
+}
+
+export async function uploadGmf(files: File[], folderType: string): Promise<{ message: string }> {
+  const token = getToken()
+  const formData = new FormData()
+  formData.append('folder_type', folderType)
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+  
+  const res = await fetch(`${BASE_URL}/billing/upload-gmf`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formData
+  })
+  
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const json = await res.json() as { detail: string }
+      if (json.detail) detail = json.detail
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, detail)
+  }
+  return res.json() as Promise<{ message: string }>
 }

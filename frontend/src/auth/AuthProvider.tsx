@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { clearToken, getToken, authMe } from '../lib/api'
 
 export interface Session {
-  role: 'admin' | 'customer'
+  role: 'admin' | 'admin1' | 'customer'
   customerId?: number
 }
 
@@ -30,10 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     authMe()
       .then((me) => {
-        const role = me.role === 'ADMIN' ? 'admin' : 'customer'
+        const role = me.role === 'ADMIN' ? 'admin' : me.role === 'ADMIN1' ? 'admin1' : 'customer'
         const verified: Session =
           role === 'customer' && me.customer_id != null
             ? { role: 'customer', customerId: me.customer_id }
+            : role === 'admin1'
+            ? { role: 'admin1' }
             : { role: 'admin' }
         setSession(verified)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(verified))

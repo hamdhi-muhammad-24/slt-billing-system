@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
-const ROLE_HOME = { admin: '/admin', customer: '/app' } as const
+const ROLE_HOME = { admin: '/admin', admin1: '/admin1', customer: '/app' } as const
 
 type GatewayMode = 'customer' | 'staff'
 
@@ -82,9 +82,9 @@ export default function Login() {
       const { access_token } = await authLogin(email, password)
       setToken(access_token)
       const me = await authMe()
-      const role = me.role === 'ADMIN' ? 'admin' : 'customer'
+      const role = me.role === 'ADMIN' ? 'admin' : me.role === 'ADMIN1' ? 'admin1' : 'customer'
 
-      if (activeMode === 'staff' && role !== 'admin') {
+      if (activeMode === 'staff' && role !== 'admin' && role !== 'admin1') {
         clearToken()
         setError('These credentials are not authorised for staff access. Please use the Customer portal.')
         return
@@ -98,9 +98,11 @@ export default function Login() {
       const nextSession =
         role === 'customer' && me.customer_id != null
           ? { role: 'customer' as const, customerId: me.customer_id }
+          : role === 'admin1'
+          ? { role: 'admin1' as const }
           : { role: 'admin' as const }
       login(nextSession)
-      navigate(role === 'admin' ? '/admin' : '/app', { replace: true })
+      navigate(role === 'admin1' ? '/admin1' : role === 'admin' ? '/admin' : '/app', { replace: true })
     } catch (err: any) {
       console.error("Login error:", err)
       setError(err?.detail || err?.message || 'Login failed. Please try again.')
@@ -186,20 +188,20 @@ export default function Login() {
             </div>
           </section>
 
-          <Card className="rounded-lg border border-[#D8E6F2] bg-white/95 py-0 shadow-[0_28px_80px_rgba(6,43,85,0.16)] backdrop-blur">
+          <Card className="rounded-2xl border border-border bg-card py-0 shadow-2xl backdrop-blur-md">
             <CardContent className="p-5 sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold uppercase text-[#0066B3]">Billing portal login</p>
-                  <h2 className="mt-2 text-3xl font-semibold text-[#0B1F33]">Welcome back</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#52677A]">{modeSubtitle(activeMode)}</p>
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-primary">Billing portal login</p>
+                  <h2 className="mt-2 text-3xl font-extrabold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-700 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 bg-clip-text text-transparent">Welcome back</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{modeSubtitle(activeMode)}</p>
                 </div>
-                <div className="hidden size-12 shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,#EAF4FF,#EAF8EE)] text-[#0066B3] ring-1 ring-[#0066B3]/10 sm:flex">
+                <div className="hidden size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 sm:flex">
                   <LockKeyhole size={21} />
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg border border-[#DDE8F1] bg-[linear-gradient(135deg,#F3F8FD,#FFFFFF)] p-1 shadow-inner">
+              <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted/40 p-1 shadow-inner">
                 {roleTabs.map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeMode === tab.id
@@ -212,10 +214,10 @@ export default function Login() {
                         setError(null)
                       }}
                       className={cn(
-                        'inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-semibold transition sm:px-3',
+                        'inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-bold transition sm:px-3',
                         isActive
-                          ? 'bg-white text-[#05264A] shadow-[0_10px_24px_rgba(6,43,85,0.10)] ring-1 ring-[#CADAEA]'
-                          : 'text-[#52677A] hover:bg-white/75 hover:text-[#05264A]',
+                          ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                          : 'text-muted-foreground hover:bg-background/45 hover:text-foreground',
                       )}
                     >
                       <Icon size={16} />
@@ -227,7 +229,7 @@ export default function Login() {
 
               <form onSubmit={handleSubmit} className="mt-7 grid gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-[#0B1F33]">
+                  <Label htmlFor="email" className="text-sm font-semibold text-foreground">
                     Email address
                   </Label>
                   <Input
@@ -238,18 +240,18 @@ export default function Login() {
                     placeholder={activeMode === 'staff' ? 'name@slt.lk' : 'name@example.com'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 border-[#CADAEA] bg-white text-[#0B1F33] shadow-sm placeholder:text-[#8CA1B4] focus-visible:border-[#0066B3] focus-visible:ring-[#0EA5E9]/25"
+                    className="h-11 border-border bg-background text-foreground shadow-sm placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:ring-primary/25"
                   />
                 </div>
 
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="password" className="text-sm font-medium text-[#0B1F33]">
+                    <Label htmlFor="password" className="text-sm font-semibold text-foreground">
                       Password
                     </Label>
                     <a
                       href="mailto:support@slt.lk?subject=Billing%20portal%20password%20help"
-                      className="text-xs font-semibold text-[#0066B3] hover:text-[#05264A]"
+                      className="text-xs font-semibold text-primary hover:underline"
                     >
                       Need help signing in?
                     </a>
@@ -263,13 +265,13 @@ export default function Login() {
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 border-[#CADAEA] bg-white pr-11 text-[#0B1F33] shadow-sm placeholder:text-[#8CA1B4] focus-visible:border-[#0066B3] focus-visible:ring-[#0EA5E9]/25"
+                      className="h-11 border-border bg-background text-foreground shadow-sm placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:ring-primary/25"
                     />
                     <button
                       type="button"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-[#536B7D] transition hover:bg-[#F4F8FB] hover:text-[#062B55]"
+                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
                     >
                       {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
@@ -285,7 +287,7 @@ export default function Login() {
                   </div>
                 )}
 
-                <Button type="submit" className="h-11 w-full justify-between bg-[linear-gradient(135deg,#05264A,#0066B3)] px-3 font-semibold text-white shadow-sm hover:shadow-[0_14px_30px_rgba(0,102,179,0.24)] active:translate-y-px" disabled={loading}>
+                <Button type="submit" className="h-11 w-full justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3 font-semibold text-white shadow-sm hover:shadow-[0_14px_30px_rgba(59,130,246,0.25)] active:translate-y-px border-transparent transition-all" disabled={loading}>
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

@@ -31,7 +31,7 @@ export function PageHeader({ title, description, breadcrumbs, actions }: Props) 
             ))}
           </nav>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.8rem]">{title}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-blue-900 to-blue-600 dark:from-slate-100 dark:via-blue-100 dark:to-blue-400 bg-clip-text text-transparent sm:text-[1.85rem]">{title}</h1>
         {description && <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

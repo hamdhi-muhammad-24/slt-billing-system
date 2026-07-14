@@ -92,22 +92,22 @@ export default function InvoiceTemplates() {
                   </div>
                 </div>
                 
-                <div className="p-5 flex flex-col gap-2 bg-white">
+                <div className="p-5 flex flex-col gap-2 bg-card border-t border-border/40">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-semibold text-lg text-slate-800">{template.name}</h3>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset shadow-sm ${
+                    <h3 className="font-semibold text-lg text-foreground">{template.name}</h3>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset shadow-xs ${
                       template.ready 
-                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' 
-                        : 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/20 dark:text-emerald-400' 
+                        : 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/20 dark:text-amber-400'
                     }`}>
-                      <CheckCircle2 size={12} className={`mr-1 ${template.ready ? 'text-emerald-600' : 'text-amber-600'}`} /> {template.ready ? 'Active' : 'Draft'}
+                      <CheckCircle2 size={12} className={`mr-1 ${template.ready ? 'text-emerald-500' : 'text-amber-500'}`} /> {template.ready ? 'Active' : 'Draft'}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Template ID: {template.id}</p>
+                  <p className="text-xs font-mono text-muted-foreground">Template ID: {template.id}</p>
                   
                   <div className="mt-4 flex flex-wrap gap-2 items-center justify-end w-full">
                     <button 
-                      className="text-xs flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
+                      className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 font-bold transition-all hover:translate-x-0.5"
                       onClick={(e) => {
                         e.stopPropagation();
                         const a = document.createElement('a');

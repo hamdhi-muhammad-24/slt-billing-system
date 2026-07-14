@@ -81,7 +81,7 @@ export default function ActivityLog() {
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="glass-card shadow-lg overflow-hidden">
         {isLoading ? (
           <div className="p-8 space-y-4">
             {[1,2,3,4,5].map(i => (
@@ -100,26 +100,28 @@ export default function ActivityLog() {
             <p>No activity recorded yet.</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y">
+          <div className="flex flex-col divide-y divide-border/40">
             {notifications?.map((notif) => (
               <div 
                 key={notif.id} 
                 className={cn(
-                  "flex gap-4 p-4 transition-colors", 
-                  !notif.is_read ? "bg-primary/5" : "hover:bg-muted/50"
+                  "flex gap-4 p-4 transition-all duration-150 border-l-4 relative pl-5", 
+                  !notif.is_read 
+                    ? "border-l-primary bg-primary/5" 
+                    : "border-l-transparent hover:bg-muted/40"
                 )}
               >
                 <EventIcon type={notif.event_type} />
                 <div className="flex-1 flex flex-col">
                   <div className="flex justify-between items-start">
-                    <span className={cn("font-semibold", !notif.is_read ? "text-primary" : "text-foreground")}>
+                    <span className={cn("font-semibold text-[15px]", !notif.is_read ? "text-primary" : "text-foreground")}>
                       {notif.title}
                     </span>
                     <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
                       {new Date(notif.created_at).toLocaleString()}
                     </span>
                   </div>
-                  <span className={cn("text-sm mt-1", !notif.is_read ? "text-foreground" : "text-muted-foreground")}>
+                  <span className={cn("text-sm mt-1 leading-relaxed", !notif.is_read ? "text-foreground" : "text-muted-foreground")}>
                     {notif.message}
                   </span>
                   
@@ -128,7 +130,7 @@ export default function ActivityLog() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-7 text-xs px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        className="h-7 text-xs px-2.5 text-primary hover:text-primary hover:bg-primary/10 rounded-full font-semibold border border-primary/20"
                         onClick={() => readMutation.mutate(notif.id)}
                       >
                         <Check size={12} className="mr-1" /> Mark as read

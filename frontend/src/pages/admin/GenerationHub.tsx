@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileText, Play, CheckCircle2, Zap, Loader2, XCircle, AlertTriangle, Download, Eye } from 'lucide-react'
-import { getPendingBatches, getRuns, generateGroupBatch, retryFailedRun, getRunResults, fetchPdfBlobUrl, type BillingRunOut } from '../../lib/api'
+import { FileText, Play, CheckCircle2, Zap, Loader2, XCircle, AlertTriangle, Download, Eye, Trash2 } from 'lucide-react'
+import { 
+  getPendingBatches, 
+  getRuns, 
+  generateGroupBatch, 
+  retryFailedRun, 
+  getRunResults, 
+  fetchPdfBlobUrl, 
+  deleteRun, 
+  deleteAllRuns,
+  type BillingRunOut 
+} from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -9,7 +19,17 @@ import { Progress } from '@/components/ui/progress'
 import { useState } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 
-function RunCard({ run, onRetry, onClick }: { run: BillingRunOut, onRetry?: (id: number) => void, onClick?: (id: number) => void }) {
+function RunCard({ 
+  run, 
+  onRetry, 
+  onClick, 
+  onDelete 
+}: { 
+  run: BillingRunOut, 
+  onRetry?: (id: number) => void, 
+  onClick?: (id: number) => void,
+  onDelete?: (id: number) => void 
+}) {
   const isRunning = run.status === 'RUNNING' || run.status === 'QUEUED' || run.status === 'PENDING'
   const isComplete = run.status === 'COMPLETED' || run.status === 'SUCCESS'
   const isFailed = run.status === 'FAILED'
@@ -21,22 +41,44 @@ function RunCard({ run, onRetry, onClick }: { run: BillingRunOut, onRetry?: (id:
 
   return (
     <div 
-      className={cn("flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm", onClick && "cursor-pointer hover:border-primary/50 transition-colors")}
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm relative overflow-hidden pl-5 transition-all duration-200 hover:shadow-md hover:scale-[1.005]", 
+        isComplete && "border-l-4 border-l-emerald-500 bg-gradient-to-br from-card to-emerald-50/5 dark:to-emerald-950/2",
+        isFailed && "border-l-4 border-l-red-500 bg-gradient-to-br from-card to-red-50/5 dark:to-red-950/2",
+        isPartial && "border-l-4 border-l-amber-500 bg-gradient-to-br from-card to-amber-50/5 dark:to-amber-950/2",
+        isRunning && "border-l-4 border-l-blue-500 bg-gradient-to-br from-card to-blue-50/5 dark:to-blue-950/2",
+        onClick && "cursor-pointer"
+      )}
       onClick={() => onClick && onClick(run.id)}
     >
       <div className="flex items-center justify-between border-b pb-3">
         <div className="flex items-center gap-2">
           <Zap className={cn("size-5", isRunning ? "text-amber-500 fill-amber-500 animate-pulse" : isComplete ? "text-emerald-500" : isFailed ? "text-red-500" : "text-blue-500")} />
           <span className="font-semibold">{run.batch_name}</span>
-          <span className="text-xs text-muted-foreground ml-2 px-2 py-0.5 bg-slate-100 rounded-full">
+          <span className="text-xs text-muted-foreground ml-2 px-2 py-0.5 bg-slate-100 rounded-full font-bold">
             Cycle {run.cycle_number}
           </span>
         </div>
-        <div className="text-sm font-medium">
+        <div className="flex items-center gap-2 text-sm font-medium">
           {isRunning && <span className="text-amber-600 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> {run.status}</span>}
           {isComplete && <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 size={12} /> {run.status}</span>}
           {isFailed && <span className="text-red-600 flex items-center gap-1"><XCircle size={12} /> {run.status}</span>}
           {isPartial && <span className="text-orange-600 flex items-center gap-1"><AlertTriangle size={12} /> {run.status}</span>}
+          
+          {onDelete && !isRunning && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-full"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(run.id)
+              }}
+              title="Delete run record"
+            >
+              <Trash2 size={14} />
+            </Button>
+          )}
         </div>
       </div>
       
@@ -51,38 +93,25 @@ function RunCard({ run, onRetry, onClick }: { run: BillingRunOut, onRetry?: (id:
           {run.failed > 0 && <span className="text-red-600 font-medium">{run.failed} Failed</span>}
         </div>
         
-        {(run as any).failures && (run as any).failures.length > 0 && (
-          <div className="mt-2 bg-red-50 rounded-md border border-red-100 p-2 text-xs">
-            <p className="font-semibold text-red-700 mb-1 flex items-center gap-1">
-              <AlertTriangle size={12} /> Failure Details:
-            </p>
-            <ul className="list-disc pl-4 text-red-600 space-y-1 mb-2">
-              {(run as any).failures.map((f: any, i: number) => (
-                <li key={i}>
-                  <strong>{f.account_number}:</strong> {f.error_message}
-                </li>
-              ))}
-            </ul>
-            {onRetry && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1 h-7 text-xs bg-white text-red-700 hover:bg-red-50 hover:text-red-800"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRetry(run.id)
-                }}
-                disabled={isRunning}
-              >
-                {isRunning ? <Loader2 size={12} className="animate-spin mr-1" /> : <Play size={12} className="mr-1" />}
-                Retry Failed
-              </Button>
-            )}
-          </div>
+        {onRetry && run.failed > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full h-8 text-xs bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-200"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRetry(run.id)
+            }}
+            disabled={isRunning}
+          >
+            {isRunning ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <Play size={12} className="mr-1.5" />}
+            Retry Failed Invoices
+          </Button>
         )}
         
         <div className="flex justify-end gap-2 mt-3 pt-2 border-t border-slate-100">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="h-7 text-xs font-semibold"
@@ -160,8 +189,27 @@ export default function GenerationHub() {
     onSuccess: (data) => {
       toast.success(data.message)
       queryClient.invalidateQueries({ queryKey: ['billing-runs'] })
+      queryClient.invalidateQueries({ queryKey: ['run-results', selectedRunId] })
     },
     onError: (err: any) => toast.error(err.detail || 'Failed to retry run')
+  })
+
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: number) => deleteRun(runId),
+    onSuccess: () => {
+      toast.success("Billing run deleted successfully.")
+      queryClient.invalidateQueries({ queryKey: ['billing-runs'] })
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to delete run.")
+  })
+
+  const deleteAllRunsMutation = useMutation({
+    mutationFn: () => deleteAllRuns(),
+    onSuccess: () => {
+      toast.success("All completed run history deleted.")
+      queryClient.invalidateQueries({ queryKey: ['billing-runs'] })
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to clear runs.")
   })
 
   const handleGenerateAll = async () => {
@@ -177,9 +225,11 @@ export default function GenerationHub() {
   }
 
   const activeRuns = runs?.filter(r => r.status === 'RUNNING' || r.status === 'QUEUED' || r.status === 'PENDING') || []
-  const recentRuns = runs?.filter(r => r.status !== 'RUNNING' && r.status !== 'QUEUED' && r.status !== 'PENDING').slice(0, 10) || []
+  const recentRuns = runs?.filter(r => r.status !== 'RUNNING' && r.status !== 'QUEUED' && r.status !== 'PENDING') || []
   const batchesList = pendingBatches || []
   const hasBatches = batchesList.length > 0
+
+  const activeCyclesStr = batchesList.map(b => b.cycle_number).join(', ')
 
   return (
     <div className="flex flex-col gap-6">
@@ -189,9 +239,13 @@ export default function GenerationHub() {
           description="Monitor active batch jobs and trigger grouped invoice generation for real GMF cycles." 
         />
         {hasBatches && (
-          <Button onClick={handleGenerateAll} disabled={batchMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700 font-semibold shadow-sm">
+          <Button 
+            onClick={handleGenerateAll} 
+            disabled={batchMutation.isPending} 
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-extrabold shadow-[0_4px_12px_rgba(16,185,129,0.25)] text-white border-transparent transition-all"
+          >
             <Play size={16} className="mr-2 fill-current" />
-            Generate All Batches ({batchesList.length})
+            Generate All Cycles ({activeCyclesStr})
           </Button>
         )}
       </div>
@@ -218,12 +272,12 @@ export default function GenerationHub() {
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-blue-500" />
-                        <span className="font-medium text-[15px]">Cycle {batch.cycle_number}</span>
+                        <span className="font-semibold text-[15px]">Cycle {batch.cycle_number}</span>
                         <span className="text-muted-foreground text-sm mx-2">|</span>
-                        <span className="text-muted-foreground text-sm">{batch.date}</span>
+                        <span className="text-muted-foreground text-sm font-medium">{batch.date}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
                           {batch.file_count} Invoices
                         </span>
                       </div>
@@ -231,14 +285,14 @@ export default function GenerationHub() {
                     <Button 
                       onClick={() => batchMutation.mutate(batch.upload_ids)}
                       disabled={batchMutation.isPending}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-extrabold shadow-[0_4px_12px_rgba(59,130,246,0.2)] text-white hover:scale-[1.01] border-transparent transition-all"
                     >
                       {batchMutation.isPending && batchMutation.variables === batch.upload_ids ? (
                         <Loader2 size={16} className="mr-2 animate-spin" />
                       ) : (
                         <Play size={16} className="mr-2" />
                       )}
-                      Generate Cycle
+                      Generate Cycle {batch.cycle_number}
                     </Button>
                   </div>
                 ))}
@@ -247,19 +301,59 @@ export default function GenerationHub() {
           </div>
         </div>
 
-        {/* Right Column: Live Runs and History */}
+        {/* Right Column: Live Runs and History (Swapped Order) */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-lg flex items-center gap-2">
+              Recent Completed Runs
+            </h3>
+            {recentRuns.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to clear all completed history?")) {
+                    deleteAllRunsMutation.mutate()
+                  }
+                }}
+                disabled={deleteAllRunsMutation.isPending}
+                className="text-muted-foreground hover:text-destructive flex items-center gap-1.5 h-8 font-semibold border-muted-foreground/25"
+              >
+                <Trash2 size={13} />
+                Delete All Runs
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1">
+            {loadingRuns ? (
+              <div className="h-32 animate-pulse rounded-lg bg-muted" />
+            ) : recentRuns.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-transparent p-6 text-center text-sm text-muted-foreground">
+                No recent run history.
+              </div>
+            ) : (
+              recentRuns.map(run => (
+                <RunCard 
+                  key={run.id} 
+                  run={run} 
+                  onRetry={(id) => retryMutation.mutate(id)} 
+                  onClick={(id) => setSelectedRunId(id)}
+                  onDelete={(id) => deleteRunMutation.mutate(id)}
+                />
+              ))
+            )}
+          </div>
+
+          <div className="flex items-center justify-between mt-6">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
               Live Runs
               {activeRuns.length > 0 && (
-                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full animate-pulse">
+                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full animate-pulse font-bold">
                   {activeRuns.length} Active
                 </span>
               )}
             </h3>
           </div>
-          
           <div className="flex flex-col gap-3">
             {loadingRuns ? (
               <div className="h-32 animate-pulse rounded-lg bg-muted" />
@@ -268,20 +362,13 @@ export default function GenerationHub() {
                 No active billing runs at the moment.
               </div>
             ) : (
-              activeRuns.map(run => <RunCard key={run.id} run={run} onRetry={(id) => retryMutation.mutate(id)} onClick={(id) => setSelectedRunId(id)} />)
-            )}
-          </div>
-
-          <h3 className="font-semibold text-lg mt-6">Recent Completed Runs</h3>
-          <div className="flex flex-col gap-3">
-            {loadingRuns ? (
-              <div className="h-32 animate-pulse rounded-lg bg-muted" />
-            ) : recentRuns.length === 0 ? (
-              <div className="rounded-xl border border-dashed bg-transparent p-6 text-center text-sm text-muted-foreground">
-                No recent run history.
-              </div>
-            ) : (
-              recentRuns.map(run => <RunCard key={run.id} run={run} onRetry={(id) => retryMutation.mutate(id)} onClick={(id) => setSelectedRunId(id)} />)
+              activeRuns.map(run => (
+                <RunCard 
+                  key={run.id} 
+                  run={run} 
+                  onClick={(id) => setSelectedRunId(id)} 
+                />
+              ))
             )}
           </div>
         </div>
@@ -302,7 +389,7 @@ export default function GenerationHub() {
             ) : runResults ? (
               <>
                 <div className="flex flex-col gap-3">
-                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <h4 className="font-bold text-sm flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-emerald-500" />
                     Generated Invoices ({runResults.successes.length})
                   </h4>
@@ -314,7 +401,7 @@ export default function GenerationHub() {
                         <div key={idx} className="flex items-center justify-between p-3 rounded border bg-slate-50 text-sm">
                           <div className="flex items-center gap-2">
                             <FileText size={16} className="text-blue-500" />
-                            <span className="font-medium">{s.account_number}</span>
+                            <span className="font-semibold">{s.account_number}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon-sm" onClick={() => handleViewPdf(s)} title="View PDF">
@@ -332,15 +419,27 @@ export default function GenerationHub() {
 
                 {runResults.failures.length > 0 && (
                   <div className="flex flex-col gap-3">
-                    <h4 className="font-semibold text-sm flex items-center gap-2 text-red-600">
-                      <XCircle size={16} />
-                      Failures ({runResults.failures.length})
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm flex items-center gap-2 text-red-600">
+                        <XCircle size={16} />
+                        Failures ({runResults.failures.length})
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                        onClick={() => retryMutation.mutate(runResults.run_id)}
+                        disabled={retryMutation.isPending}
+                      >
+                        <Play size={12} className="mr-1.5" />
+                        Retry Failed
+                      </Button>
+                    </div>
                     <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
                       {runResults.failures.map((f: any, idx: number) => (
                         <div key={idx} className="flex flex-col p-3 rounded border border-red-100 bg-red-50 text-sm">
-                          <span className="font-medium text-red-700">{f.account_number}</span>
-                          <span className="text-red-600/80 text-xs mt-1">{f.error_message}</span>
+                          <span className="font-semibold text-red-700">{f.account_number}</span>
+                          <span className="text-red-600/80 text-xs mt-1 font-medium">{f.error_message}</span>
                         </div>
                       ))}
                     </div>

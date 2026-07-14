@@ -57,7 +57,7 @@ export default function OutputArchive() {
 
       <div className="flex flex-1 min-h-0 gap-4">
         {/* Left Panel: File Browser */}
-        <div className="w-1/3 flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="w-1/3 flex flex-col glass-card shadow-lg overflow-hidden">
           <div className="bg-muted/30 border-b p-3 flex flex-wrap gap-1 items-center text-sm">
             <span className="font-semibold text-foreground/80 cursor-pointer hover:text-foreground" onClick={() => setSelectedDate(null)}>
               Output
@@ -135,7 +135,7 @@ export default function OutputArchive() {
         </div>
 
         {/* Right Panel: PDF Viewer */}
-        <div className="w-2/3 flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="w-2/3 flex flex-col glass-card shadow-lg overflow-hidden">
           {loadingPdfBlob ? (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50">
               <Loader2 size={48} className="mb-4 opacity-20 animate-spin" />

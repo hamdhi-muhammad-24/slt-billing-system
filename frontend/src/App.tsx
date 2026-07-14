@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import RequireRole from './auth/RequireRole'
 import AdminLayout from './components/AdminLayout'
+import Admin1Layout from './components/Admin1Layout'
 import BillAccess from './pages/BillAccess'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
@@ -15,6 +16,8 @@ import OutputArchive from './pages/admin/OutputArchive'
 import ActivityLog from './pages/admin/ActivityLog'
 import InvoiceTemplates from './pages/admin/InvoiceTemplates'
 import ScheduleManager from './pages/admin/ScheduleManager'
+import Admin1Dashboard from './pages/admin/Admin1Dashboard'
+import UploadCenter from './pages/admin/UploadCenter'
 
 export default function App() {
   return (
@@ -35,6 +38,14 @@ export default function App() {
             <Route path="activity-log" element={<ActivityLog />} />
             <Route path="invoice-templates" element={<InvoiceTemplates />} />
             <Route path="schedule-manager" element={<ScheduleManager />} />
+          </Route>
+        </Route>
+
+        <Route element={<RequireRole role="admin1" />}>
+          <Route path="/admin1" element={<Admin1Layout />}>
+            <Route index element={<Admin1Dashboard />} />
+            <Route path="gmf-monitor" element={<GmfMonitor />} />
+            <Route path="upload-center" element={<UploadCenter />} />
           </Route>
         </Route>
 

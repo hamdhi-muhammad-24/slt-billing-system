@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Menu, LogOut, Moon, Sun, FileSearch, Eye, Zap, Archive, Bell, LayoutTemplate, CalendarClock } from 'lucide-react'
+import { LayoutDashboard, Menu, LogOut, Moon, Sun, FileSearch, Upload } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
@@ -20,14 +20,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/admin',                   label: 'Overview',          icon: LayoutDashboard, end: true,  pill: 'bg-indigo-400/15 text-indigo-200' },
-  { to: '/admin/gmf-monitor',       label: 'GMF Monitor',       icon: FileSearch,      end: false, pill: 'bg-cyan-400/15 text-cyan-200' },
-  { to: '/admin/invoice-preview',   label: 'Invoice Preview',   icon: Eye,             end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
-  { to: '/admin/generation-hub',    label: 'Generation Hub',    icon: Zap,             end: false, pill: 'bg-amber-400/15 text-amber-200' },
-  { to: '/admin/output-archive',    label: 'Output Archive',    icon: Archive,         end: false, pill: 'bg-purple-400/15 text-purple-200' },
-  { to: '/admin/activity-log',      label: 'Activity Log',      icon: Bell,            end: false, pill: 'bg-rose-400/15 text-rose-200' },
-  { to: '/admin/invoice-templates', label: 'Invoice Templates', icon: LayoutTemplate,  end: false, pill: 'bg-blue-400/15 text-blue-200' },
-  { to: '/admin/schedule-manager',  label: 'Schedule Manager',  icon: CalendarClock,   end: false, pill: 'bg-orange-400/15 text-orange-200' },
+  { to: '/admin1',                   label: 'Overview',          icon: LayoutDashboard, end: true,  pill: 'bg-indigo-400/15 text-indigo-200' },
+  { to: '/admin1/gmf-monitor',       label: 'GMF Monitor',       icon: FileSearch,      end: false, pill: 'bg-cyan-400/15 text-cyan-200' },
+  { to: '/admin1/upload-center',     label: 'Upload Center',     icon: Upload,          end: false, pill: 'bg-emerald-400/15 text-emerald-200' },
 ]
 
 function SidebarNav({ onNav }: { onNav?: () => void }) {
@@ -63,7 +58,7 @@ function SidebarNav({ onNav }: { onNav?: () => void }) {
 }
 
 function SidebarFrame({ email, onNav }: { email?: string; onNav?: () => void }) {
-  const initials = email ? email.slice(0, 2).toUpperCase() : 'AD'
+  const initials = email ? email.slice(0, 2).toUpperCase() : 'A1'
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
@@ -81,10 +76,10 @@ function SidebarFrame({ email, onNav }: { email?: string; onNav?: () => void }) 
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-medium text-sidebar-foreground truncate">
-              {email ?? 'Administrator'}
+              {email ?? 'Admin 1'}
             </span>
-            <span className="mt-1 inline-flex w-fit items-center rounded-full bg-emerald-400/15 px-2 py-px text-[10px] font-medium text-emerald-200">
-              Admin
+            <span className="mt-1 inline-flex w-fit items-center rounded-full bg-indigo-400/15 px-2 py-px text-[10px] font-medium text-indigo-200">
+              Admin 1
             </span>
           </div>
         </div>
@@ -93,7 +88,7 @@ function SidebarFrame({ email, onNav }: { email?: string; onNav?: () => void }) 
   )
 }
 
-export default function AdminLayout() {
+export default function Admin1Layout() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -144,8 +139,8 @@ export default function AdminLayout() {
           </Button>
 
           <div className="hidden flex-col leading-tight sm:flex">
-            <span className="text-sm font-semibold">SLT-MOBITEL Billing Console</span>
-            <span className="text-xs text-muted-foreground">Operational billing and invoice management</span>
+            <span className="text-sm font-semibold">SLT-MOBITEL Billing Upload Console</span>
+            <span className="text-xs text-muted-foreground">Admin 1 portal for file uploads and monitoring</span>
           </div>
 
           <span className="flex-1" />
@@ -153,32 +148,28 @@ export default function AdminLayout() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title="Toggle theme"
+            className="rounded-full hover:bg-muted"
           >
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          {me?.email && (
-            <span className="hidden rounded-full border border-border bg-muted/45 px-3 py-1 text-xs font-medium text-muted-foreground sm:block">{me.email}</span>
-          )}
-
           <Button
             variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            size="icon"
             onClick={handleLogout}
+            className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            title="Log out"
           >
-            <LogOut size={14} />
-            Logout
+            <LogOut size={18} />
           </Button>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto px-5 py-6 sm:px-6 lg:px-8">
+        {/* Content container */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
           <Outlet />
         </main>
       </div>
