@@ -12,6 +12,8 @@ from app.db.models import (
     Invoice,
     GmfUpload,
     BillingRun,
+    InvoiceTemplate,
+    TemplateApprovalStatus,
 )
 
 def reset_test_data():
@@ -46,6 +48,10 @@ def reset_test_data():
             # Now we can delete BillingRuns
             deleted_runs = db.query(BillingRun).delete()
             print(f"Deleted {deleted_runs} BillingRuns.")
+            
+            # Reset all template approval statuses to PENDING
+            updated_templates = db.query(InvoiceTemplate).update({"approval_status": TemplateApprovalStatus.PENDING})
+            print(f"Reset {updated_templates} templates to PENDING status.")
             
             db.commit()
             print("\nSUCCESS! The database has been wiped clean of transaction history.")

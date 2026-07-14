@@ -148,6 +148,7 @@ class GmfFolderHandler(FileSystemEventHandler):
                         GmfUpload.file_path == str(filepath)
                     ).first()
                     if existing:
+                        if existing.status in [GmfUploadStatus.FAILED, GmfUploadStatus.COMPLETED]:
                             if is_test:
                                 new_filepath = filepath
                                 final_status = GmfUploadStatus.PENDING_APPROVAL
@@ -264,6 +265,7 @@ class GmfFolderHandler(FileSystemEventHandler):
                             ),
                             upload_id=upload.id,
                         )
+                    else:
                         notif_event_type = NotificationEventType.GMF_DETECTED
                         if is_approved:
                             notif_title = f"GMF Auto-Approved — Cycle {cycle_number}"

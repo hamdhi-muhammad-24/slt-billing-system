@@ -15,7 +15,12 @@ while true; do
     --exclude "/Processed/" \
     --exclude "/Failed/**" \
     --exclude "/Failed/" \
+    --exclude "/Test_GMFs/**" \
+    --exclude "/Test_GMFs/" \
     --quiet
+
+  # Copy test GMF files (retains them on Google Drive)
+  rclone copy gdrive:SLT_GMF_Uploads/Test_GMFs /root/SLT_GMF_Uploads/Test_GMFs --quiet
   sleep 30
 done &
 

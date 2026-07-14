@@ -29,11 +29,11 @@ if ($setup) {
 }
 
 # ── Step 2: FastAPI backend (new window) ──────────────────────────────────────
-Write-Host "[1/3] Starting FastAPI backend on http://localhost:8000 ..." -ForegroundColor Yellow
+Write-Host "[1/3] Starting FastAPI backend on http://localhost:8090 ..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location '$ProjectRoot'; uv run uvicorn app.api.main:app --reload --port 8000"
+    "Set-Location '$ProjectRoot'; uv run uvicorn app.api.main:app --reload --port 8090"
 ) -WindowStyle Normal
 Write-Host "      FastAPI window opened." -ForegroundColor Green
 Write-Host ""
@@ -55,7 +55,7 @@ Write-Host "      React window opened." -ForegroundColor Green
 Write-Host ""
 
 # ── Step 4: GMF Watcher (new window) ──────────────────────────────────────────
-Write-Host "[3/3] Starting Google Drive Watcher ..." -ForegroundColor Yellow
+Write-Host "[3/4] Starting Google Drive Watcher ..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
@@ -64,12 +64,22 @@ Start-Process powershell -ArgumentList @(
 Write-Host "      Watcher window opened." -ForegroundColor Green
 Write-Host ""
 
+# ── Step 5: Background Worker Queue (new window) ──────────────────────────────
+Write-Host "[4/4] Starting Async Background Worker Queue ..." -ForegroundColor Yellow
+Start-Process powershell -ArgumentList @(
+    "-NoExit",
+    "-Command",
+    "Set-Location '$ProjectRoot'; uv run python -m app.billing.worker_queue"
+) -WindowStyle Normal
+Write-Host "      Worker queue window opened." -ForegroundColor Green
+Write-Host ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 Write-Host "=== All services starting ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Frontend   ->  http://localhost:5173" -ForegroundColor White
-Write-Host "  API        ->  http://localhost:8000" -ForegroundColor White
-Write-Host "  API Docs   ->  http://localhost:8000/docs" -ForegroundColor White
+Write-Host "  API        ->  http://localhost:8090" -ForegroundColor White
+Write-Host "  API Docs   ->  http://localhost:8090/docs" -ForegroundColor White
 Write-Host ""
 Write-Host "Wait ~5 seconds for the frontend to compile, then open your browser." -ForegroundColor DarkGray
 Write-Host ""
