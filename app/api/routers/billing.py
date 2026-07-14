@@ -9,14 +9,14 @@ import tempfile
 from typing import List, Optional
 from pathlib import Path
 from datetime import datetime, date
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.auth.dependencies import require_admin
+from app.auth.dependencies import require_admin, require_admin1_or_admin
 from app.auth.schemas import UserOut
 from app.db.models import (
     GmfUpload, GmfUploadStatus,
@@ -24,6 +24,7 @@ from app.db.models import (
     BillingSchedule, BillingScheduleMode,
     NotificationEvent, NotificationEventType,
     InvoiceTemplate, TemplateApprovalStatus,
+    SystemSetting, TemplateHistory,
 )
 from app.db.base import SessionLocal
 from app.core.config import settings
@@ -132,12 +133,66 @@ class RejectBody(BaseModel):
     reason: str = "Rejected by admin"
 
 
+class SettingsOut(BaseModel):
+    billing_mode: str
+
+
+class SettingsUpdate(BaseModel):
+    billing_mode: str
+
+
+class TemplateHistoryOut(BaseModel):
+    id: int
+    template_name: str
+    action: str
+    filename: Optional[str]
+    reason: Optional[str]
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Settings and Logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/settings", response_model=SettingsOut)
+def get_settings(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "billing_mode").first()
+    if not setting:
+        setting = SystemSetting(key="billing_mode", value="auto")
+        db.add(setting)
+        db.commit()
+        db.refresh(setting)
+    return {"billing_mode": setting.value}
+
+
+@router.patch("/settings", response_model=SettingsOut)
+def update_settings(body: SettingsUpdate, db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    if body.billing_mode not in ("auto", "manual"):
+        raise HTTPException(status_code=400, detail="Invalid billing_mode. Must be 'auto' or 'manual'.")
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "billing_mode").first()
+    if not setting:
+        setting = SystemSetting(key="billing_mode", value=body.billing_mode)
+        db.add(setting)
+    else:
+        setting.value = body.billing_mode
+    db.commit()
+    return {"billing_mode": setting.value}
+
+
+@router.get("/template-history", response_model=List[TemplateHistoryOut])
+def get_template_history(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    return db.query(TemplateHistory).order_by(TemplateHistory.timestamp.desc()).all()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Dashboard stats
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+def get_stats(db: Session = Depends(get_db), _: UserOut = Depends(require_admin1_or_admin)):
     """Aggregate stats for the Overview dashboard."""
     today = date.today()
 
@@ -164,10 +219,9 @@ def get_stats(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)
         BillingSchedule.is_active == True
     ).scalar() or 0
 
-    # Per-cycle summary
+    # Per-cycle summary (including Test_GMFs)
     cycles = {}
-    for i in range(1, 5):
-        folder = f"Cycle_{i}"
+    for folder in ("Cycle_1", "Cycle_2", "Cycle_3", "Cycle_4", "Test_GMFs"):
         uploads = db.query(GmfUpload).filter(GmfUpload.folder_type == folder).all()
         if uploads:
             statuses = [u.status.value for u in uploads]
@@ -250,7 +304,7 @@ def get_uploads(
     status: Optional[str] = None,
     cycle: Optional[int] = None,
     db: Session = Depends(get_db),
-    _: UserOut = Depends(require_admin),
+    _: UserOut = Depends(require_admin1_or_admin),
 ):
     """List all detected GMF files with optional filters."""
     q = db.query(GmfUpload)
@@ -626,6 +680,31 @@ def get_run_results(run_id: int, db: Session = Depends(get_db), _: UserOut = Dep
     }
 
 
+@router.delete("/runs/{run_id}")
+def delete_run(run_id: int, db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    run = db.query(BillingRun).filter(BillingRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    # Check if run is active
+    if run.status in (RunStatus.RUNNING, RunStatus.PENDING):
+        raise HTTPException(status_code=400, detail="Cannot delete an active run.")
+    
+    db.delete(run)
+    db.commit()
+    return {"message": "Run deleted successfully"}
+
+
+@router.delete("/runs")
+def delete_all_runs(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    # Delete all runs that are not active
+    db.query(BillingRun).filter(
+        BillingRun.status.notin_([RunStatus.RUNNING, RunStatus.PENDING])
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"message": "All completed/failed runs deleted successfully"}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Output Browser
 # ─────────────────────────────────────────────────────────────────────────────
@@ -724,6 +803,7 @@ def get_templates(db: Session = Depends(get_db), _: UserOut = Depends(require_ad
 
 class TemplateStatusUpdate(BaseModel):
     status: str
+    reason: Optional[str] = None
 
 @router.patch("/templates/{template_id}/status")
 def update_template_status(
@@ -749,11 +829,33 @@ def update_template_status(
     import logging
     logger = logging.getLogger(__name__)
     
+    # Get active billing mode setting
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "billing_mode").first()
+    billing_mode = setting.value if setting else "auto"
+    
+    # Get the test GMF used to preview this template
+    test_gmf = db.query(GmfUpload).filter(
+        GmfUpload.template_detected == template_id,
+        GmfUpload.folder_type == "Test_GMFs"
+    ).order_by(GmfUpload.detected_at.desc()).first()
+    test_filename = test_gmf.filename if test_gmf else None
+
+    # Write log to TemplateHistory
+    hist = TemplateHistory(
+        template_name=template_id,
+        action=body.status,
+        filename=test_filename,
+        reason=body.reason
+    )
+    db.add(hist)
+    
     if new_status == TemplateApprovalStatus.APPROVED:
         uploads = db.query(GmfUpload).filter(
             GmfUpload.template_detected == template_id,
             GmfUpload.status.in_([GmfUploadStatus.PENDING_APPROVAL, GmfUploadStatus.REJECTED])
         ).all()
+        
+        non_test_uploads = []
         for upload in uploads:
             if upload.folder_type != "Test_GMFs":
                 old_path = Path(upload.file_path)
@@ -763,9 +865,39 @@ def update_template_status(
                     if old_path.exists() and old_path != new_path:
                         shutil.move(str(old_path), str(new_path))
                         upload.file_path = str(new_path)
+                    non_test_uploads.append(upload)
                 except Exception as e:
                     logger.error(f"Failed to move file {upload.filename} to incoming queue: {e}")
             upload.status = GmfUploadStatus.APPROVED
+            upload.rejection_reason = None
+            
+        # In Auto Mode, automatically generate invoices immediately
+        if billing_mode == "auto" and non_test_uploads:
+            run = BillingRun(
+                batch_name=f"Auto Gen {template_id} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                cycle_number=non_test_uploads[0].cycle_number if hasattr(non_test_uploads[0], "cycle_number") else None,
+                period_start=date.today(),
+                period_end=date.today(),
+                status=RunStatus.RUNNING,
+                total_accounts=len(non_test_uploads),
+                succeeded=0,
+                failed=0,
+                started_at=datetime.now()
+            )
+            db.add(run)
+            db.flush()
+            
+            for upload in non_test_uploads:
+                upload.billing_run_id = run.id
+            
+            # Add notification event
+            notif = NotificationEvent(
+                event_type=NotificationEventType.BATCH_STARTED,
+                title="Auto Batch Generation Started",
+                message=f"Auto billing run started for template '{template_id}' with {len(non_test_uploads)} files.",
+                run_id=run.id,
+            )
+            db.add(notif)
             
     elif new_status == TemplateApprovalStatus.REJECTED:
         uploads = db.query(GmfUpload).filter(
@@ -784,6 +916,7 @@ def update_template_status(
                 except Exception as e:
                     logger.error(f"Failed to move file {upload.filename} to pending queue: {e}")
             upload.status = GmfUploadStatus.REJECTED
+            upload.rejection_reason = body.reason
         
     db.commit()
     return {"message": "Status updated successfully", "status": new_status.value}
@@ -807,7 +940,7 @@ def preview_template_layout(template_id: str, _: UserOut = Depends(require_admin
 def get_notifications(
     unread_only: bool = False,
     db: Session = Depends(get_db),
-    _: UserOut = Depends(require_admin),
+    _: UserOut = Depends(require_admin1_or_admin),
 ):
     """Get all system notification events."""
     q = db.query(NotificationEvent)
@@ -820,7 +953,7 @@ def get_notifications(
 def mark_read(
     notif_id: int,
     db: Session = Depends(get_db),
-    _: UserOut = Depends(require_admin),
+    _: UserOut = Depends(require_admin1_or_admin),
 ):
     notif = db.query(NotificationEvent).filter(NotificationEvent.id == notif_id).first()
     if notif:
@@ -830,7 +963,7 @@ def mark_read(
 
 
 @router.patch("/notifications/mark-all-read")
-def mark_all_read(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+def mark_all_read(db: Session = Depends(get_db), _: UserOut = Depends(require_admin1_or_admin)):
     db.query(NotificationEvent).filter(
         NotificationEvent.is_read == False
     ).update({"is_read": True})
@@ -839,7 +972,7 @@ def mark_all_read(db: Session = Depends(get_db), _: UserOut = Depends(require_ad
 
 
 @router.delete("/notifications/clear-read")
-def clear_read(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+def clear_read(db: Session = Depends(get_db), _: UserOut = Depends(require_admin1_or_admin)):
     db.query(NotificationEvent).filter(NotificationEvent.is_read == True).delete()
     db.commit()
     return {"ok": True}
@@ -937,3 +1070,211 @@ def delete_schedule(
     db.commit()
     reload_schedules()
     return {"ok": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GMF Uploads and Drive Syncing
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
+    """Processes uploaded ZIP containing GMF files in the background."""
+    import zipfile
+    import tempfile
+    import shutil
+    import logging
+    from app.db.base import SessionLocal
+    from app.db.models import GmfUpload, GmfUploadStatus, NotificationEvent, NotificationEventType, InvoiceTemplate, TemplateApprovalStatus
+    from app.uploads.watcher import _detect_template, _get_cycle, _should_skip
+    
+    logger = logging.getLogger("gmf_upload")
+    logger.setLevel(logging.INFO)
+    
+    cycle_number = _get_cycle(folder_type)
+    is_test = folder_type == "Test_GMFs"
+    
+    temp_extract_dir = tempfile.mkdtemp(prefix="slt_zip_extract_")
+    try:
+        with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_extract_dir)
+            
+        extracted_files = []
+        for root, dirs, files in os.walk(temp_extract_dir):
+            for file in files:
+                if not _should_skip(file):
+                    extracted_files.append(Path(root) / file)
+                    
+        logger.info(f"Unzipped {len(extracted_files)} files.")
+        
+        batch_size = 100
+        db = SessionLocal()
+        try:
+            settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+            settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+            
+            templates_cache = {t.template_code: t.approval_status for t in db.query(InvoiceTemplate).all()}
+            
+            for idx, file_path in enumerate(extracted_files):
+                filename = file_path.name
+                
+                template_detected = _detect_template(str(file_path))
+                is_approved = templates_cache.get(template_detected) == TemplateApprovalStatus.APPROVED if template_detected else False
+                
+                if is_test:
+                    final_path = settings.gmf_drive_path / folder_type / filename
+                    final_status = GmfUploadStatus.PENDING_APPROVAL
+                    final_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(str(file_path), str(final_path))
+                else:
+                    if is_approved:
+                        final_path = settings.queue_incoming_dir / filename
+                        final_status = GmfUploadStatus.APPROVED
+                    else:
+                        final_path = settings.queue_pending_dir / filename
+                        final_status = GmfUploadStatus.PENDING_APPROVAL
+                    
+                    shutil.copy2(str(file_path), str(final_path))
+                
+                existing = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                if existing:
+                    existing.file_path = str(final_path)
+                    existing.status = final_status
+                    existing.error_message = None
+                    existing.rejection_reason = None
+                    existing.billing_run_id = None
+                else:
+                    upload = GmfUpload(
+                        filename=filename,
+                        file_path=str(final_path),
+                        folder_type=folder_type,
+                        cycle_number=cycle_number,
+                        template_detected=template_detected,
+                        status=final_status,
+                    )
+                    db.add(upload)
+                
+                if (idx + 1) % batch_size == 0 or (idx + 1) == len(extracted_files):
+                    db.commit()
+            
+            # Create a single summary notification
+            notif = NotificationEvent(
+                event_type=NotificationEventType.GMF_DETECTED if not is_test else NotificationEventType.TEST_GMF_RECEIVED,
+                title=f"ZIP Upload Batch Completed — {folder_type}",
+                message=f"Processed and registered {len(extracted_files)} files into {folder_type}."
+            )
+            db.add(notif)
+            db.commit()
+            
+        finally:
+            db.close()
+            
+    except Exception as err:
+        logger.error(f"Error in background ZIP processing: {err}")
+    finally:
+        if os.path.exists(temp_zip_path):
+            os.remove(temp_zip_path)
+        if os.path.exists(temp_extract_dir):
+            shutil.rmtree(temp_extract_dir, ignore_errors=True)
+
+
+@router.post("/upload-gmf")
+def upload_gmf(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    folder_type: str = Form(...),
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_admin1_or_admin)
+):
+    """Accept direct GMF file or ZIP uploads."""
+    if folder_type not in ("Cycle_1", "Cycle_2", "Cycle_3", "Cycle_4", "Test_GMFs"):
+        raise HTTPException(status_code=400, detail="Invalid folder_type.")
+        
+    for file in files:
+        filename = file.filename
+        if not filename:
+            continue
+            
+        if filename.lower().endswith(".zip"):
+            temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+            try:
+                shutil.copyfileobj(file.file, temp_zip)
+                temp_zip.close()
+                background_tasks.add_task(_background_process_gmf_zip, temp_zip.name, folder_type)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to process uploaded ZIP: {e}")
+        else:
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            try:
+                shutil.copyfileobj(file.file, temp_file)
+                temp_file.close()
+                
+                from app.uploads.watcher import _detect_template, _get_cycle
+                cycle_number = _get_cycle(folder_type)
+                is_test = folder_type == "Test_GMFs"
+                
+                template_detected = _detect_template(temp_file.name)
+                template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
+                is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+                
+                if is_test:
+                    final_path = settings.gmf_drive_path / folder_type / filename
+                    final_status = GmfUploadStatus.PENDING_APPROVAL
+                    final_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(temp_file.name, str(final_path))
+                else:
+                    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+                    settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    if is_approved:
+                        final_path = settings.queue_incoming_dir / filename
+                        final_status = GmfUploadStatus.APPROVED
+                    else:
+                        final_path = settings.queue_pending_dir / filename
+                        final_status = GmfUploadStatus.PENDING_APPROVAL
+                        
+                    shutil.copy2(temp_file.name, str(final_path))
+                
+                existing = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                if existing:
+                    existing.file_path = str(final_path)
+                    existing.status = final_status
+                    existing.error_message = None
+                    existing.rejection_reason = None
+                    existing.billing_run_id = None
+                    upload_id = existing.id
+                else:
+                    upload = GmfUpload(
+                        filename=filename,
+                        file_path=str(final_path),
+                        folder_type=folder_type,
+                        cycle_number=cycle_number,
+                        template_detected=template_detected,
+                        status=final_status,
+                    )
+                    db.add(upload)
+                    db.flush()
+                    upload_id = upload.id
+                
+                notif = NotificationEvent(
+                    event_type=NotificationEventType.GMF_DETECTED if not is_test else NotificationEventType.TEST_GMF_RECEIVED,
+                    title=f"GMF Uploaded — {folder_type}",
+                    message=f"New GMF file '{filename}' (Template: {template_detected or 'Unknown'}) uploaded.",
+                    upload_id=upload_id
+                )
+                db.add(notif)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail=f"Failed to process uploaded file {filename}: {e}")
+            finally:
+                if os.path.exists(temp_file.name):
+                    os.remove(temp_file.name)
+                    
+    return {"message": "Files uploaded successfully."}
+
+
+@router.post("/scan-drive")
+def scan_drive(background_tasks: BackgroundTasks, _: UserOut = Depends(require_admin1_or_admin)):
+    """Manually trigger watch folder scans."""
+    from app.uploads.watcher import _scan_existing_files, WATCH_DIR
+    background_tasks.add_task(_scan_existing_files, WATCH_DIR)
+    return {"message": "Drive scan triggered in background."}

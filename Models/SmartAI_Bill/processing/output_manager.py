@@ -70,6 +70,16 @@ def create_output_batches(temp_pdf_dir, cycle_label="Cycle_1", log_callback=None
         while moved_in_this_batch < space_left and pdf_index < len(pdfs):
             pdf_path = pdfs[pdf_index]
             dest = os.path.join(batch_dir, os.path.basename(pdf_path))
+            
+            # Copy to VM local output directory duplicate
+            try:
+                local_vm_batch_dir = os.path.join("./output", today, cycle_label, f"Batch_{current_batch_num}")
+                os.makedirs(local_vm_batch_dir, exist_ok=True)
+                shutil.copy2(pdf_path, os.path.join(local_vm_batch_dir, os.path.basename(pdf_path)))
+            except Exception as copy_err:
+                if log_callback:
+                    log_callback(f"  Warning: failed to duplicate copy to VM local folder: {copy_err}")
+                    
             shutil.move(pdf_path, dest)
             moved_in_this_batch += 1
             pdf_index += 1

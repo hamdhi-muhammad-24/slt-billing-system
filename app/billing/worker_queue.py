@@ -163,6 +163,39 @@ def _worker_process(worker_id):
                 
         except Exception as e:
             logger.error(f"Worker {worker_id} error: {e}", exc_info=True)
+            if 'filename' in locals() and 'working_path' in locals() and working_path.exists():
+                try:
+                    failed_dest = Path("./queue/failed")
+                    failed_dest.mkdir(parents=True, exist_ok=True)
+                    clean_filename = filename.replace(".processing", "")
+                    dest_file_path = failed_dest / clean_filename
+                    
+                    # Atomic rename/move to failed queue
+                    shutil.move(str(working_path), str(dest_file_path))
+                    
+                    with SessionLocal() as db:
+                        upload = db.query(GmfUpload).filter(GmfUpload.filename == clean_filename).first()
+                        if upload:
+                            upload.status = GmfUploadStatus.FAILED
+                            upload.error_message = str(e)
+                            upload.file_path = str(dest_file_path)
+                            
+                            if upload.billing_run_id:
+                                from app.db.models import BillingRun, BillingRunFailure, RunStatus
+                                run = db.query(BillingRun).filter(BillingRun.id == upload.billing_run_id).first()
+                                if run:
+                                    run.failed += 1
+                                    db.add(BillingRunFailure(
+                                        billing_run_id=run.id,
+                                        account_number=clean_filename,
+                                        error_message=str(e)
+                                    ))
+                                    if run.succeeded + run.failed >= run.total_accounts:
+                                        run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
+                                        run.finished_at = datetime.now()
+                        db.commit()
+                except Exception as inner_err:
+                    logger.error(f"Failed to record failure details: {inner_err}")
             time.sleep(1)
 
 

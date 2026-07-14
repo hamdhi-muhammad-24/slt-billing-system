@@ -52,3 +52,14 @@ def require_admin(
             detail="Admin access required",
         )
     return current_user
+
+
+def require_admin1_or_admin(
+    current_user: UserOut = Depends(get_current_user),
+) -> UserOut:
+    if current_user.role not in ("ADMIN", "ADMIN1"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or Admin1 access required",
+        )
+    return current_user
