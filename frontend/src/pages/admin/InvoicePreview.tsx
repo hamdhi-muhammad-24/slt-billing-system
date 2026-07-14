@@ -108,31 +108,23 @@ export default function InvoicePreview() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between shrink-0">
         <PageHeader 
           title="Invoice Preview" 
           description="Review test GMFs, generate preview invoices, and approve them for batch generation." 
         />
-        <Button 
-          variant="outline" 
-          onClick={() => setShowHistory(true)}
-          className="flex items-center gap-2 font-bold shadow-sm"
-        >
-          <History size={16} />
-          Validation Logs
-        </Button>
       </div>
 
       {/* Mode Selector */}
       <div className="flex flex-col gap-3 p-4 rounded-xl border bg-card shadow-sm shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">Template Validation Mode</span>
+            <span className="text-sm font-bold">Template Validation Mode</span>
             <span className="text-xs text-muted-foreground">Select a mode before executing preview or approval actions.</span>
           </div>
           {selectedMode === null && (
-            <span className="text-xs font-bold text-red-500 flex items-center gap-1 animate-pulse">
+            <span className="text-xs font-bold text-red-500 flex items-center gap-1 animate-pulse bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded-md border border-red-200">
               <AlertCircle size={14} /> Mode selection required!
             </span>
           )}
@@ -169,26 +161,30 @@ export default function InvoicePreview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Workspace (Responsive Height) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[400px]">
+        
         {/* Left Panel: List of Test GMFs */}
-        <div className="lg:col-span-1 rounded-xl border bg-card shadow-sm p-4 flex flex-col h-[620px]">
-          <h3 className="font-semibold text-lg flex items-center gap-2 border-b pb-2 shrink-0">
-            <FileText size={18} className="text-primary" />
-            Test GMF Files
-          </h3>
+        <div className="lg:col-span-1 rounded-xl border bg-card shadow-sm p-4 flex flex-col h-full max-h-[calc(100vh-270px)]">
+          <div className="flex items-center justify-between border-b pb-3 shrink-0 mb-3">
+            <h3 className="font-bold text-lg flex items-center gap-2 text-foreground">
+              <FileText size={18} className="text-primary" />
+              Test GMF Files
+            </h3>
+          </div>
           
-          <div className="flex-1 overflow-y-auto pr-1 mt-2">
+          <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
             {isLoading ? (
               <div className="h-32 flex items-center justify-center">
                 <Loader2 className="animate-spin text-muted-foreground" />
               </div>
             ) : testGmfs.length === 0 ? (
-              <div className="text-sm text-muted-foreground p-6 text-center flex flex-col items-center justify-center border border-dashed rounded-lg bg-slate-50/50 dark:bg-slate-900/10 h-full">
+              <div className="text-sm text-muted-foreground p-6 text-center flex flex-col items-center justify-center border border-dashed rounded-lg bg-muted/20 h-full">
                 <FileSearch size={28} className="mb-2 opacity-20" />
                 No Test GMFs found.
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col">
                 {testGmfs.map(gmf => {
                   const isSelected = gmf.id === selectedId
                   return (
@@ -201,40 +197,45 @@ export default function InvoicePreview() {
                         setPreviewPdfUrl(null)
                       }}
                       className={cn(
-                        "flex flex-col gap-2 p-3 rounded-lg cursor-pointer border transition-all duration-150 relative pl-4 overflow-hidden",
+                        "flex flex-col p-3 rounded-lg cursor-pointer border transition-all duration-200 relative pl-4 mb-2 overflow-hidden",
                         isSelected 
-                          ? "border-primary bg-primary/5 shadow-sm" 
-                          : "border-border/30 hover:bg-muted/70 hover:border-border/60"
+                          ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                          : "border-border/60 hover:bg-muted/60 hover:border-border"
                       )}
                     >
                       <div className={cn("absolute left-0 top-0 bottom-0 w-1 transition-all", isSelected ? "bg-primary" : "bg-transparent")} />
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className={cn("shrink-0", isSelected ? "text-primary animate-pulse" : "text-slate-400")} />
-                        <span className={cn("font-semibold text-sm leading-none text-foreground truncate flex-1", isSelected ? "text-primary font-bold animate-fade-in" : "")} title={gmf.filename}>
-                          {gmf.filename}
-                        </span>
-                      </div>
                       
-                      <div className="flex items-center justify-between mt-1 text-[11px] text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "text-[10px] font-extrabold px-2 py-0.5 rounded-full transition-colors uppercase border",
-                            gmf.status === 'PENDING_APPROVAL' ? "bg-cyan-50 text-cyan-600 border-cyan-200/50 dark:bg-cyan-950/20" :
-                            gmf.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20" :
-                            gmf.status === 'REJECTED' ? "bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20" :
-                            "bg-slate-100 text-slate-600 border-slate-200/50 dark:bg-slate-800"
-                          )}>
-                            {gmf.status === 'PENDING_APPROVAL' ? 'Pending Review' : gmf.status}
-                          </span>
-                          {gmf.rejection_reason && (
-                            <span className="text-[10px] text-red-500 font-semibold truncate max-w-[100px]" title={gmf.rejection_reason}>
-                              Reason: {gmf.rejection_reason}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <FileText size={16} className={cn("shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
+                            <span className={cn("font-medium text-[14px] truncate leading-tight", isSelected ? "text-primary font-bold" : "text-foreground")} title={gmf.filename}>
+                              {gmf.filename}
                             </span>
-                          )}
+                          </div>
                         </div>
-                        <span className="font-bold bg-muted/80 px-1.5 py-0.5 rounded text-xs text-slate-600 dark:text-slate-300">
-                          {gmf.template_detected || 'Unknown'}
-                        </span>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors uppercase border tracking-wider",
+                            gmf.status === 'PENDING_APPROVAL' ? "bg-cyan-50 text-cyan-600 border-cyan-200/50 dark:bg-cyan-950/30" :
+                            gmf.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/30" :
+                            gmf.status === 'REJECTED' ? "bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/30" :
+                            "bg-muted text-muted-foreground border-border"
+                          )}>
+                            {gmf.status === 'PENDING_APPROVAL' ? 'Pending' : gmf.status}
+                          </span>
+                          
+                          <span className="font-bold bg-background border px-2 py-0.5 rounded-md text-[11px] text-foreground shadow-sm shrink-0">
+                            {gmf.template_detected || 'Unknown'}
+                          </span>
+                        </div>
+                        
+                        {gmf.rejection_reason && (
+                          <div className="text-[11px] text-red-500 font-semibold truncate bg-red-50/50 dark:bg-red-950/10 px-2 py-1 rounded" title={gmf.rejection_reason}>
+                            <span className="font-bold">Reason:</span> {gmf.rejection_reason}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )
@@ -242,10 +243,21 @@ export default function InvoicePreview() {
               </div>
             )}
           </div>
+          
+          <div className="pt-3 mt-1 border-t shrink-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHistory(true)}
+              className="w-full flex items-center justify-center gap-2 font-bold shadow-sm h-10 border-border hover:bg-muted"
+            >
+              <History size={16} className="text-muted-foreground" />
+              View Validation Logs
+            </Button>
+          </div>
         </div>
 
         {/* Right Panel: PDF Viewer and Action Area */}
-        <div className="lg:col-span-2 rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col h-[620px] relative bg-slate-50/50 dark:bg-slate-900/10">
+        <div className="lg:col-span-2 rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col h-full max-h-[calc(100vh-270px)] relative bg-slate-50/50 dark:bg-slate-900/10">
           <AnimatePresence mode="wait">
             {!selectedGmf ? (
               <motion.div 
@@ -255,11 +267,11 @@ export default function InvoicePreview() {
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8"
               >
-                <div className="bg-card p-6 rounded-full shadow-sm border mb-4">
+                <div className="bg-background p-6 rounded-full shadow-sm border mb-4">
                   <Eye size={32} className="text-slate-300 dark:text-slate-600" />
                 </div>
-                <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-1">No Invoice Selected</h3>
-                <p className="text-sm">Select a Test GMF from the sidebar to begin review.</p>
+                <h3 className="text-xl font-bold text-foreground mb-2">No Template Selected</h3>
+                <p className="text-sm text-center max-w-md">Select a Test GMF from the sidebar to begin review, render a preview invoice, and validate the template layout.</p>
               </motion.div>
             ) : (
               <motion.div 
@@ -270,13 +282,13 @@ export default function InvoicePreview() {
                 className="flex-1 flex flex-col h-full min-h-0"
               >
                 {/* Header Actions */}
-                <div className="p-4 border-b bg-card flex justify-between items-center shadow-sm z-10 shrink-0">
+                <div className="p-4 border-b bg-background flex justify-between items-center shadow-sm z-10 shrink-0">
                   <div className="flex flex-col">
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[280px]" title={selectedGmf.filename}>
+                    <span className="font-bold text-lg text-foreground truncate max-w-[280px]" title={selectedGmf.filename}>
                       {selectedGmf.filename}
                     </span>
-                    <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                      Template Match: <span className="text-primary font-bold">{selectedGmf.template_detected || 'Unrecognized'}</span>
+                    <span className="text-sm text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
+                      Detected Template: <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{selectedGmf.template_detected || 'Unrecognized'}</span>
                     </span>
                   </div>
                   
@@ -284,14 +296,14 @@ export default function InvoicePreview() {
                     <div className="flex gap-2">
                       <Button 
                         variant="outline"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 font-bold"
                         onClick={() => checkMode(() => setRejectTemplateId(selectedGmf.template_detected!))}
                         disabled={rejectMutation.isPending}
                       >
                         <XCircle size={16} className="mr-2" /> Reject Template
                       </Button>
                       <Button 
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-bold"
+                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md font-bold border-none"
                         onClick={() => checkMode(() => approveMutation.mutate(selectedGmf.template_detected!))}
                         disabled={approveMutation.isPending}
                       >
@@ -301,53 +313,53 @@ export default function InvoicePreview() {
                   )}
                   {selectedGmf.status === 'APPROVED' && (
                     <div className="flex gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 size={16} className="text-emerald-600" />
-                        Approved
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200">
+                        <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-500" />
+                        Template Approved
                       </span>
                     </div>
                   )}
                   {selectedGmf.status === 'REJECTED' && (
                     <div className="flex gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700 border border-red-200">
-                        <XCircle size={16} className="text-red-600" />
-                        Rejected
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-950/30 px-3 py-1.5 text-sm font-bold text-red-700 dark:text-red-400 border border-red-200">
+                        <XCircle size={18} className="text-red-600 dark:text-red-500" />
+                        Template Rejected
                       </span>
                     </div>
                   )}
                 </div>
                 
                 {/* Preview Content Area */}
-                <div className="flex-1 flex items-center justify-center p-6 bg-slate-100/10 dark:bg-slate-900/20 min-h-0">
+                <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-slate-100/30 dark:bg-slate-900/40 min-h-0 overflow-hidden relative">
                   {previewMutation.isPending ? (
                     <motion.div 
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="flex flex-col items-center p-8 bg-card rounded-2xl shadow-sm border"
+                      className="flex flex-col items-center p-8 bg-background rounded-2xl shadow-lg border"
                     >
                       <Loader2 size={40} className="animate-spin text-primary mb-4" />
-                      <h3 className="text-lg font-medium mb-1">Rendering Preview...</h3>
-                      <p className="text-sm text-muted-foreground text-center max-w-[250px]">
-                        The billing engine is parsing the GMF data and mapping it to the layout...
+                      <h3 className="text-lg font-bold mb-2">Rendering Preview...</h3>
+                      <p className="text-sm text-muted-foreground text-center max-w-[280px]">
+                        The AI billing engine is parsing the GMF data and mapping it to the layout. This may take a moment.
                       </p>
                     </motion.div>
                   ) : previewPdfUrl ? (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full h-full relative"
+                      className="w-full h-full relative flex flex-col"
                     >
                       <div className="absolute top-2 right-4 flex gap-2 z-10">
-                        <Button variant="secondary" size="sm" className="h-8 shadow-sm opacity-80 hover:opacity-100" onClick={() => setIsFullscreen(true)}>
+                        <Button variant="secondary" size="sm" className="h-8 shadow-md font-bold bg-white/90 hover:bg-white text-slate-700 border-none backdrop-blur-sm" onClick={() => setIsFullscreen(true)}>
                           <Maximize2 size={14} className="mr-1.5" /> Maximize
                         </Button>
-                        <Button variant="secondary" size="sm" className="h-8 shadow-sm opacity-80 hover:opacity-100" onClick={() => window.open(previewPdfUrl, '_blank')}>
+                        <Button variant="secondary" size="sm" className="h-8 shadow-md font-bold bg-white/90 hover:bg-white text-slate-700 border-none backdrop-blur-sm" onClick={() => window.open(previewPdfUrl, '_blank')}>
                           <Download size={14} className="mr-1.5" /> Download
                         </Button>
                       </div>
                       <iframe 
                         src={`${previewPdfUrl}#toolbar=0`} 
-                        className="w-full h-full rounded-lg shadow-md border border-slate-200 bg-white"
+                        className="w-full h-full rounded-xl shadow-xl border border-border bg-white"
                         title="Invoice Preview"
                       />
                     </motion.div>
@@ -355,22 +367,23 @@ export default function InvoicePreview() {
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col items-center justify-center text-center p-10 max-w-md bg-card border rounded-2xl shadow-sm"
+                      className="flex flex-col items-center justify-center text-center p-10 max-w-md bg-background border rounded-2xl shadow-lg relative overflow-hidden"
                     >
-                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+                      <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 shadow-inner ring-1 ring-primary/20">
                         <Sparkles size={28} className="text-primary" />
                       </div>
-                      <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Ready to Render</h3>
-                      <p className="text-muted-foreground mb-8">
+                      <h3 className="text-2xl font-extrabold text-foreground mb-3">Ready to Render</h3>
+                      <p className="text-muted-foreground mb-8 leading-relaxed">
                         Generate a high-fidelity PDF preview to verify the layout, calculations, and visual aesthetics before approving this batch for production.
                       </p>
                       <Button 
                         size="lg"
-                        className="w-full shadow-md text-base font-bold"
+                        className="w-full h-12 shadow-lg text-base font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none transition-all"
                         onClick={() => checkMode(() => previewMutation.mutate(selectedGmf.id))}
                         disabled={previewMutation.isPending}
                       >
-                        <Eye size={18} className="mr-2" />
+                        <Eye size={20} className="mr-2" />
                         Generate PDF Preview
                       </Button>
                     </motion.div>
@@ -402,7 +415,7 @@ export default function InvoicePreview() {
             >
               <div className="absolute top-4 right-4 z-10 flex gap-2">
                 <button 
-                  className="text-slate-600 hover:text-slate-900 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm transition-colors backdrop-blur-sm"
+                  className="text-slate-600 hover:text-slate-900 bg-white/90 hover:bg-white rounded-full p-2.5 shadow-md transition-colors backdrop-blur-sm border"
                   onClick={() => setIsFullscreen(false)}
                 >
                   <X size={20} />
@@ -426,41 +439,42 @@ export default function InvoicePreview() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={() => setRejectTemplateId(null)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-white dark:bg-card border rounded-xl overflow-hidden shadow-xl p-6"
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative w-full max-w-md bg-background border rounded-2xl overflow-hidden shadow-2xl p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-slate-800 dark:text-foreground mb-2 flex items-center gap-2">
-                <XCircle className="text-red-500" size={20} /> Reject Template
+              <h3 className="text-xl font-extrabold text-foreground mb-3 flex items-center gap-2">
+                <XCircle className="text-red-500" size={24} /> Reject Template
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please provide the reason for rejecting template <span className="font-semibold text-slate-700 dark:text-foreground">{rejectTemplateId}</span>:
+              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                Please provide the reason for rejecting template <span className="font-bold text-foreground bg-muted px-1.5 py-0.5 rounded">{rejectTemplateId}</span>:
               </p>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Describe layout issues, mismatch, or errors..."
                 rows={4}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mb-4"
+                className="w-full rounded-xl border border-input bg-muted/50 px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary mb-6 transition-all"
               />
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-3">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setRejectTemplateId(null)
                     setRejectReason('')
                   }}
+                  className="font-bold"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md"
                   onClick={() => rejectMutation.mutate({ templateId: rejectTemplateId, reason: rejectReason || 'No reason specified' })}
                   disabled={rejectMutation.isPending}
                 >
@@ -474,34 +488,37 @@ export default function InvoicePreview() {
 
       {/* Validation Logs Drawer */}
       <Sheet open={showHistory} onOpenChange={setShowHistory}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="border-b pb-4">
-            <SheetTitle className="flex items-center gap-2">
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto border-l shadow-2xl">
+          <SheetHeader className="border-b pb-5">
+            <SheetTitle className="flex items-center gap-2 text-xl font-extrabold">
               <History className="text-primary" />
               Template History Logs
             </SheetTitle>
-            <SheetDescription>
+            <SheetDescription className="text-sm">
               View approval and rejection log history for test GMF templates.
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-6 flex flex-col gap-4">
             {!historyData || historyData.length === 0 ? (
-              <span className="text-sm text-muted-foreground block text-center py-8">No validation history logged.</span>
+              <div className="flex flex-col items-center justify-center p-8 border border-dashed rounded-xl bg-muted/20">
+                <History size={32} className="text-muted-foreground/30 mb-3" />
+                <span className="text-sm font-medium text-muted-foreground block text-center">No validation history logged yet.</span>
+              </div>
             ) : (
               historyData.map(log => (
-                <div key={log.id} className="p-3 border rounded-lg bg-muted/45 text-xs flex flex-col gap-1.5">
+                <div key={log.id} className="p-4 border rounded-xl bg-card shadow-sm text-sm flex flex-col gap-2 transition-all hover:shadow-md hover:border-border">
                   <div className="flex items-center justify-between font-bold">
-                    <span className="text-foreground dark:text-slate-200 text-[13px]">{log.template_name}</span>
+                    <span className="text-foreground text-[15px] tracking-tight">{log.template_name}</span>
                     <span className={cn(
-                      "px-2 py-0.5 rounded text-[10px] uppercase font-bold",
-                      log.action === 'APPROVED' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                      "px-2.5 py-1 rounded-md text-[11px] uppercase tracking-wider font-extrabold shadow-sm",
+                      log.action === 'APPROVED' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
                     )}>
                       {log.action}
                     </span>
                   </div>
-                  {log.filename && <div className="text-muted-foreground text-xs mt-1">File: {log.filename}</div>}
-                  {log.reason && <div className="text-red-500 font-semibold text-xs mt-1">Reason: {log.reason}</div>}
-                  <div className="text-[10px] text-muted-foreground mt-1.5 font-mono">
+                  {log.filename && <div className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5"><FileText size={12}/> {log.filename}</div>}
+                  {log.reason && <div className="text-red-600 dark:text-red-400 font-semibold text-xs mt-1.5 bg-red-50 dark:bg-red-950/20 px-2.5 py-1.5 rounded flex gap-1.5 items-start"><AlertCircle size={14} className="shrink-0 mt-0.5" /> {log.reason}</div>}
+                  <div className="text-[11px] text-muted-foreground mt-2 font-mono bg-muted/50 px-2 py-1 rounded w-fit">
                     {new Date(log.timestamp).toLocaleString()}
                   </div>
                 </div>

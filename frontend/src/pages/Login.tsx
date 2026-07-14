@@ -5,6 +5,7 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  Bot,
   Building2,
   CheckCircle2,
   Download,
@@ -44,21 +45,21 @@ const roleTabs = [
 const trustItems = [
   {
     icon: ShieldCheck,
-    label: 'Role-based access',
+    label: 'Role-Based Authentication',
   },
   {
-    icon: LockKeyhole,
-    label: 'Protected billing data',
+    icon: Bot,
+    label: 'AI-Generated Invoices',
   },
   {
     icon: Download,
-    label: 'Secure PDF bill downloads',
+    label: 'Secure PDF Statements',
   },
 ]
 
 function modeSubtitle(mode: GatewayMode): string {
-  if (mode === 'staff') return 'Use authorized staff credentials to manage billing operations securely.'
-  return 'Use registered customer credentials to open your billing workspace.'
+  if (mode === 'staff') return 'Use authorized staff credentials to manage billing generation and GMF operations securely.'
+  return 'Use registered customer credentials to view your AI-generated billing statements.'
 }
 
 export default function Login() {
@@ -112,13 +113,20 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-svh overflow-hidden bg-[#F3F8FD] text-[#0B1F33]">
-      <header className="relative z-20 border-b border-[#DCE8F2] bg-white/90 shadow-[0_4px_24px_rgba(6,43,85,0.05)] backdrop-blur-xl">
+    <main className="min-h-svh overflow-hidden bg-background text-foreground relative selection:bg-primary/20 selection:text-primary">
+      {/* Global Background Ambient Effects */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="absolute -left-[10%] -top-[10%] size-[500px] rounded-full bg-blue-500/10 blur-[120px] dark:bg-blue-600/15" />
+        <div className="absolute -right-[10%] top-[20%] size-[600px] rounded-full bg-indigo-500/10 blur-[120px] dark:bg-indigo-600/15" />
+        <div className="absolute bottom-[-20%] left-[20%] size-[800px] rounded-full bg-emerald-500/10 blur-[150px] dark:bg-emerald-600/10" />
+      </div>
+
+      <header className="relative z-20 border-b border-border/50 bg-background/75 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Brand tone="light" size="md" />
-          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 border-[#CADAEA] bg-white px-3 text-[#05264A] shadow-sm hover:border-[#0066B3]/35 hover:bg-[#F4F8FB] hover:text-[#0066B3]">
+          <Brand size="md" />
+          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 border-border bg-background px-4 text-foreground shadow-sm hover:border-primary/40 hover:bg-muted transition-all">
             <Link to="/">
-              <ArrowLeft size={14} />
+              <ArrowLeft size={14} className="mr-2" />
               <span className="hidden sm:inline">Back to Portal</span>
               <span className="sm:hidden">Portal</span>
             </Link>
@@ -126,61 +134,57 @@ export default function Login() {
         </div>
       </header>
 
-      <section className="relative">
-        <div className="absolute inset-x-0 top-0 h-80 bg-[linear-gradient(135deg,#05264A_0%,#063B73_52%,#0066B3_100%)]" />
-        <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_16%_18%,rgba(14,165,233,0.30),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(57,181,74,0.18),transparent_28%)]" />
-        <div className="absolute inset-x-0 top-0 h-80 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:42px_42px]" />
-        <div className="absolute inset-x-0 top-80 h-56 bg-[linear-gradient(180deg,rgba(243,248,253,0),#F3F8FD_72%)]" />
-
-        <div className="relative mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-stretch lg:px-8 lg:py-14">
-          <section className="relative overflow-hidden rounded-lg border border-white/16 bg-[linear-gradient(145deg,rgba(5,38,74,0.98),rgba(6,59,115,0.96)_48%,rgba(0,102,179,0.90))] p-5 text-white shadow-[0_28px_80px_rgba(6,43,85,0.26)] sm:p-8 lg:min-h-[620px]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_12%,rgba(14,165,233,0.25),transparent_34%),radial-gradient(circle_at_92%_88%,rgba(57,181,74,0.16),transparent_32%)]" />
-            <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:38px_38px]" />
+      <section className="relative z-10">
+        <div className="absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-primary/10 via-background to-background dark:from-primary/5" />
+        
+        <div className="relative mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-stretch lg:px-8 lg:py-16">
+          <section className="glass-card relative overflow-hidden rounded-[2rem] p-6 shadow-2xl sm:p-10 lg:min-h-[660px]">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5" />
+            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] [background-image:radial-gradient(var(--foreground)_1px,transparent_1px)] [background-size:24px_24px]" />
             <div className="relative flex h-full flex-col">
-              <p className="inline-flex max-w-full items-center gap-2 rounded-md border border-white/18 bg-white/12 px-3 py-1.5 text-sm font-medium text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur-md">
-                <ShieldCheck size={15} />
-                <span className="min-w-0">Secure SLT-MOBITEL portal gateway</span>
+              <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-sm font-medium text-primary shadow-sm backdrop-blur-md">
+                <ShieldCheck size={16} />
+                <span className="min-w-0">Secure SLT-MOBITEL Smart Gateway</span>
               </p>
 
-              <div className="mt-8 max-w-xl sm:mt-10 lg:mt-16">
-                <h1 className="text-3xl font-semibold leading-[1.08] sm:text-5xl">
-                  Sign in to your billing workspace
+              <div className="mt-10 max-w-xl sm:mt-12 lg:mt-20">
+                <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] sm:text-5xl lg:text-6xl bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Sign in to your AI Billing Workspace
                 </h1>
-                <p className="mt-5 text-base leading-7 text-white/76">
-                  Customers can view invoices and payment history, while authorized staff can manage
-                  billing operations securely.
+                <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+                  Access your intelligent billing dashboard. Customers can view generated invoices, while authorized staff can securely manage massive GMF cycle runs.
                 </p>
               </div>
 
-              <div className="mt-8 grid gap-3 sm:max-w-lg">
+              <div className="mt-10 grid gap-3 sm:max-w-md">
                 {trustItems.map((item) => {
                   const Icon = item.icon
                   return (
-                    <div key={item.label} className="flex items-center gap-3 rounded-md border border-white/14 bg-white/10 px-3.5 py-3 text-sm text-white/88 shadow-sm backdrop-blur">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-[#0066B3] shadow-[0_10px_24px_rgba(255,255,255,0.14)]">
-                        <Icon size={17} />
+                    <div key={item.label} className="flex items-center gap-4 rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 text-sm shadow-sm backdrop-blur transition-colors hover:border-primary/30 hover:bg-muted/50">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                        <Icon size={18} />
                       </span>
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-semibold text-foreground">{item.label}</span>
                     </div>
                   )
                 })}
               </div>
 
-              <div className="mt-auto hidden pt-10 lg:block">
-                <div className="rounded-lg border border-white/14 bg-white/10 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.14)] backdrop-blur">
+              <div className="mt-auto hidden pt-12 lg:block">
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 shadow-sm backdrop-blur">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                        <CheckCircle2 size={16} className="text-[#6FE17D]" />
-                        Secure billing summary
+                      <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 size={18} className="text-emerald-500" />
+                        Secure Billing Session Active
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-white/68">
-                        Customer self-care and staff billing operations share one protected gateway.
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        Customer self-care and staff cycle generation share one protected, encrypted gateway.
                       </p>
                     </div>
-                    <div className="hidden rounded-md border border-white/10 bg-white/10 p-3 text-right sm:block">
-                      <p className="text-xs text-white/55">Session</p>
-                      <p className="mt-1 text-sm font-semibold text-[#8CF09B]">Encrypted</p>
+                    <div className="hidden rounded-xl border border-border bg-background p-3 text-right shadow-sm sm:block">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connection</p>
+                      <p className="mt-1 text-sm font-bold text-emerald-500">Encrypted</p>
                     </div>
                   </div>
                 </div>
@@ -188,20 +192,21 @@ export default function Login() {
             </div>
           </section>
 
-          <Card className="rounded-2xl border border-border bg-card py-0 shadow-2xl backdrop-blur-md">
-            <CardContent className="p-5 sm:p-7">
+          <Card className="glass-card rounded-[2rem] py-0 shadow-2xl relative overflow-hidden border-border/50">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
+            <CardContent className="p-6 sm:p-8 flex flex-col h-full">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-extrabold uppercase tracking-wider text-primary">Billing portal login</p>
-                  <h2 className="mt-2 text-3xl font-extrabold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-700 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 bg-clip-text text-transparent">Welcome back</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{modeSubtitle(activeMode)}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Smart Billing Login</p>
+                  <h2 className="mt-2 text-3xl font-extrabold text-foreground">Welcome Back</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{modeSubtitle(activeMode)}</p>
                 </div>
-                <div className="hidden size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 sm:flex">
-                  <LockKeyhole size={21} />
+                <div className="hidden size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg sm:flex">
+                  <LockKeyhole size={22} />
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted/40 p-1 shadow-inner">
+              <div className="mt-8 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-1.5 shadow-inner">
                 {roleTabs.map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeMode === tab.id
@@ -214,20 +219,20 @@ export default function Login() {
                         setError(null)
                       }}
                       className={cn(
-                        'inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-bold transition sm:px-3',
+                        'inline-flex h-11 min-w-0 items-center justify-center gap-2.5 rounded-lg px-2 text-sm font-bold transition-all sm:px-3',
                         isActive
                           ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
-                          : 'text-muted-foreground hover:bg-background/45 hover:text-foreground',
+                          : 'text-muted-foreground hover:bg-background/50 hover:text-foreground',
                       )}
                     >
-                      <Icon size={16} />
+                      <Icon size={18} />
                       {tab.label}
                     </button>
                   )
                 })}
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-7 grid gap-5">
+              <form onSubmit={handleSubmit} className="mt-8 grid gap-5 flex-1">
                 <div className="grid gap-2">
                   <Label htmlFor="email" className="text-sm font-semibold text-foreground">
                     Email address
@@ -240,7 +245,7 @@ export default function Login() {
                     placeholder={activeMode === 'staff' ? 'name@slt.lk' : 'name@example.com'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 border-border bg-background text-foreground shadow-sm placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:ring-primary/25"
+                    className="h-12 border-border bg-background text-foreground shadow-sm focus-visible:border-primary focus-visible:ring-primary/25 rounded-xl transition-all"
                   />
                 </div>
 
@@ -265,62 +270,62 @@ export default function Login() {
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 border-border bg-background text-foreground shadow-sm placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:ring-primary/25"
+                      className="h-12 border-border bg-background text-foreground shadow-sm focus-visible:border-primary focus-visible:ring-primary/25 rounded-xl transition-all"
                     />
                     <button
                       type="button"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
                     >
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
                 {error && (
-                  <div className="flex gap-3 rounded-md border border-destructive/25 bg-destructive/5 px-3.5 py-3">
-                    <AlertCircle size={17} className="mt-0.5 shrink-0 text-destructive" />
-                    <p className="text-sm leading-6 text-destructive" role="alert">
+                  <div className="flex gap-3 rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3">
+                    <AlertCircle size={18} className="mt-0.5 shrink-0 text-destructive" />
+                    <p className="text-sm leading-relaxed text-destructive font-medium" role="alert">
                       {error}
                     </p>
                   </div>
                 )}
 
-                <Button type="submit" className="h-11 w-full justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3 font-semibold text-white shadow-sm hover:shadow-[0_14px_30px_rgba(59,130,246,0.25)] active:translate-y-px border-transparent transition-all" disabled={loading}>
+                <Button type="submit" className="mt-2 h-12 w-full justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-5 font-bold text-white shadow-md hover:shadow-lg active:translate-y-px border-none transition-all rounded-xl" disabled={loading}>
                   {loading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Signing in...
+                    <span className="flex items-center gap-2.5">
+                      <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Authenticating...
                     </span>
                   ) : (
                     <>
-                      Continue securely
-                      <ArrowRight size={15} />
+                      Enter Workspace
+                      <ArrowRight size={18} />
                     </>
                   )}
                 </Button>
               </form>
 
-              <div className="mt-6 rounded-lg border border-[#DDE8F1] bg-[linear-gradient(135deg,#F3F8FD,#EAF8EE)] p-4 shadow-sm">
-                <div className="flex gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-[#248D36] shadow-sm ring-1 ring-[#39B54A]/15">
-                    <CheckCircle2 size={18} />
+              <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm">
+                <div className="flex gap-3.5">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background text-emerald-500 shadow-sm ring-1 ring-border">
+                    <CheckCircle2 size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#0B1F33]">Protected billing access</p>
-                    <p className="mt-1 text-sm leading-6 text-[#52677A]">
-                      Your billing information is protected and only visible after sign in.
+                    <p className="text-sm font-bold text-foreground">Protected access</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Your AI-generated billing information and network access is protected by enterprise-grade encryption.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-col gap-2 text-sm text-[#52677A] sm:flex-row sm:items-center sm:justify-between">
-                <span>Need access help?</span>
-                <a href="mailto:support@slt.lk" className="inline-flex items-center gap-2 font-semibold text-[#0066B3] hover:text-[#05264A]">
-                  Contact support
-                  <Headphones size={14} />
+              <div className="mt-6 flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between border-t border-border pt-6">
+                <span>Access denied?</span>
+                <a href="mailto:support@slt.lk" className="inline-flex items-center gap-2 font-bold text-primary hover:text-primary/80 transition-colors">
+                  Contact Support
+                  <Headphones size={16} />
                 </a>
               </div>
             </CardContent>
