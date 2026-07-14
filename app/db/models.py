@@ -21,6 +21,7 @@ from sqlalchemy.orm import relationship
 
 class UserRole(enum.Enum):
     ADMIN = "ADMIN"
+    ADMIN1 = "ADMIN1"
     CUSTOMER = "CUSTOMER"
 
 class TemplateCategory(enum.Enum):
@@ -251,3 +252,21 @@ class NotificationEvent(Base):
     run_id     = Column(BigInteger, ForeignKey("billing_runs.id", ondelete="SET NULL"), nullable=True)
     is_read    = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key   = Column(Text, primary_key=True)
+    value = Column(Text, nullable=False)
+
+
+class TemplateHistory(Base):
+    __tablename__ = "template_history"
+
+    id            = Column(BigInteger, Identity(always=True), primary_key=True)
+    template_name = Column(Text, nullable=False)
+    action        = Column(Text, nullable=False)  # 'APPROVED' or 'REJECTED'
+    filename      = Column(Text)
+    reason        = Column(Text)
+    timestamp     = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

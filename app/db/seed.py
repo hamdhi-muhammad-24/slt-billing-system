@@ -30,9 +30,24 @@ def seed_admin(session: Session) -> None:
             is_active=True,
         )
         session.add(admin)
-        session.commit()
     else:
         log.info(f"Admin user {admin_email} already exists.")
+
+    admin1_email = "admin1@slt.lk"
+    admin1 = session.query(User).filter(User.email == admin1_email).first()
+    if not admin1:
+        log.info(f"Creating default admin1 user: {admin1_email}")
+        admin1 = User(
+            email=admin1_email,
+            password_hash=hash_password("admin1123"),
+            role=UserRole.ADMIN1,
+            is_active=True,
+        )
+        session.add(admin1)
+    else:
+        log.info(f"Admin1 user {admin1_email} already exists.")
+        
+    session.commit()
 
 def main() -> int:
     configure_logging()
