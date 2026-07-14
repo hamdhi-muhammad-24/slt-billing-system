@@ -25,7 +25,11 @@ class ProcessingResult:
         self.attempt = attempt
 
 def process_single_file(args):
-    file_path, temp_pdf_dir, attempt = args
+    file_path = args[0]
+    temp_pdf_dir = args[1]
+    attempt = args[2] if len(args) > 2 else 1
+    is_preview = args[3] if len(args) > 3 else False
+    
     start_time = time.perf_counter()
     result = ProcessingResult(source_file=file_path, attempt=attempt)
 
@@ -43,6 +47,11 @@ def process_single_file(args):
         RendererClass = get_renderer(template_id)
 
         data = parser_func(file_path)
+
+        if is_preview:
+            for list_key in ["product_labels", "lines", "charges", "adjustments", "payments", "taxes", "equipment", "rentals"]:
+                if list_key in data and isinstance(data[list_key], list) and len(data[list_key]) > 10:
+                    data[list_key] = data[list_key][:10]
 
         renderer = RendererClass()
         renderer.render(data)

@@ -44,9 +44,7 @@ def _worker_process(worker_id):
                 time.sleep(1)
                 continue
                 
-            files = list(incoming_dir.glob("*.txt")) + list(incoming_dir.glob("*.csv")) + list(incoming_dir.glob("*.dat")) + list(incoming_dir.glob("*_BILL*"))
-            # Exclude already processing files
-            files = [f for f in files if not f.name.endswith(".processing")]
+            files = [f for f in incoming_dir.iterdir() if f.is_file() and not f.name.startswith(".") and not f.name.endswith(".processing")]
             
             if not files:
                 time.sleep(1)
@@ -204,3 +202,17 @@ def start_workers(num_workers=10):
         processes.append(p)
         
     return processes
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+    logger.info("Starting background worker queue daemon...")
+    procs = start_workers()
+    try:
+        for p in procs:
+            p.join()
+    except KeyboardInterrupt:
+        logger.info("Stopping workers...")

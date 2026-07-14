@@ -95,15 +95,15 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
         result.is_supported = True
 
     elif style == 1:
-        # Check explicitly for BILLTYPE=1 or if the customer has a VAT registration
-        if header.billtype == 1 or is_vat:
+        # Check explicitly if the customer has a VAT registration
+        if is_vat:
             badge = get_badge(header.customer_type or "")
             if badge == "HOME":
                 result.template_id = TEMPLATE_VAT_HOME
-                result.reasons.append("BILLSTYLE=1, BILLTYPE=1 (VAT), Home → VAT Home")
+                result.reasons.append("BILLSTYLE=1, VAT Customer, Home → VAT Home")
             else:
                 result.template_id = TEMPLATE_VAT_ENTERPRISE
-                result.reasons.append("BILLSTYLE=1, BILLTYPE=1 (VAT) → VAT Enterprise")
+                result.reasons.append("BILLSTYLE=1, VAT Customer → VAT Enterprise")
         else:
             badge = get_badge(header.customer_type or "")
             if badge == "HOME":

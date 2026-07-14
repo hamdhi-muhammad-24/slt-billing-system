@@ -291,7 +291,7 @@ def preview_invoice(
     ))
     preview_dir.mkdir(parents=True, exist_ok=True)
 
-    args = (upload.file_path, str(preview_dir), 1)
+    args = (upload.file_path, str(preview_dir), 1, True)
     result = process_single_file(args)
 
     if not result.success:
@@ -745,17 +745,45 @@ def update_template_status(
         
     t.approval_status = new_status
     
-    # Cascade status update to pending uploads
+    # Cascade status update to pending uploads and physically move files
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if new_status == TemplateApprovalStatus.APPROVED:
-        db.query(GmfUpload).filter(
+        uploads = db.query(GmfUpload).filter(
             GmfUpload.template_detected == template_id,
-            GmfUpload.status == GmfUploadStatus.PENDING_APPROVAL
-        ).update({"status": GmfUploadStatus.APPROVED})
+            GmfUpload.status.in_([GmfUploadStatus.PENDING_APPROVAL, GmfUploadStatus.REJECTED])
+        ).all()
+        for upload in uploads:
+            if upload.folder_type != "Test_GMFs":
+                old_path = Path(upload.file_path)
+                new_path = settings.queue_incoming_dir / upload.filename
+                try:
+                    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+                    if old_path.exists() and old_path != new_path:
+                        shutil.move(str(old_path), str(new_path))
+                        upload.file_path = str(new_path)
+                except Exception as e:
+                    logger.error(f"Failed to move file {upload.filename} to incoming queue: {e}")
+            upload.status = GmfUploadStatus.APPROVED
+            
     elif new_status == TemplateApprovalStatus.REJECTED:
-        db.query(GmfUpload).filter(
+        uploads = db.query(GmfUpload).filter(
             GmfUpload.template_detected == template_id,
-            GmfUpload.status == GmfUploadStatus.PENDING_APPROVAL
-        ).update({"status": GmfUploadStatus.REJECTED})
+            GmfUpload.status.in_([GmfUploadStatus.PENDING_APPROVAL, GmfUploadStatus.APPROVED])
+        ).all()
+        for upload in uploads:
+            if upload.folder_type != "Test_GMFs":
+                old_path = Path(upload.file_path)
+                new_path = settings.queue_pending_dir / upload.filename
+                try:
+                    settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+                    if old_path.exists() and old_path != new_path:
+                        shutil.move(str(old_path), str(new_path))
+                        upload.file_path = str(new_path)
+                except Exception as e:
+                    logger.error(f"Failed to move file {upload.filename} to pending queue: {e}")
+            upload.status = GmfUploadStatus.REJECTED
         
     db.commit()
     return {"message": "Status updated successfully", "status": new_status.value}
