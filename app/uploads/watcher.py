@@ -67,9 +67,23 @@ def _get_cycle(folder_name: str) -> int | None:
     return CYCLE_FOLDERS.get(folder_name)
 
 
+def _get_billing_mode() -> str:
+    """Query active billing mode from system settings."""
+    try:
+        from app.db.models import SystemSetting
+        with SessionLocal() as db:
+            setting = db.query(SystemSetting).filter(SystemSetting.key == "billing_mode").first()
+            return setting.value if setting else "auto"
+    except Exception:
+        return "auto"
+
+
 def _should_skip(filename: str) -> bool:
     """Return True if this file should be ignored."""
-    name = os.path.basename(filename)
+    name = os.path.basename(filename).lower()
+    # Skip Windows folder config and thumbnail database files
+    if name in ("desktop.ini", "thumbs.db"):
+        return True
     if any(name.startswith(p) for p in SKIP_PREFIXES):
         return True
     if any(name.endswith(s) for s in SKIP_SUFFIXES):
@@ -145,10 +159,15 @@ class GmfFolderHandler(FileSystemEventHandler):
                 try:
                     # Avoid duplicate records
                     existing = db.query(GmfUpload).filter(
-                        GmfUpload.file_path == str(filepath)
+                        GmfUpload.filename == filename,
+                        GmfUpload.folder_type == folder_name
                     ).first()
                     if existing:
-                        if existing.status in [GmfUploadStatus.FAILED, GmfUploadStatus.COMPLETED]:
+                        if existing.status == GmfUploadStatus.COMPLETED:
+                            logger.info(f"GMF {filename} in {folder_name} is already COMPLETED. Skipping duplicate watcher registration.")
+                            return
+                            
+                        if existing.status == GmfUploadStatus.FAILED:
                             if is_test:
                                 new_filepath = filepath
                                 final_status = GmfUploadStatus.PENDING_APPROVAL
@@ -161,21 +180,25 @@ class GmfFolderHandler(FileSystemEventHandler):
                                 settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                                 settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
                                 
-                                if is_approved:
+                                billing_mode = _get_billing_mode()
+                                if is_approved and billing_mode == "auto":
                                     new_filepath = settings.queue_incoming_dir / filename
+                                    final_status = GmfUploadStatus.APPROVED
+                                elif is_approved and billing_mode == "manual":
+                                    new_filepath = settings.queue_pending_dir / filename
                                     final_status = GmfUploadStatus.APPROVED
                                 else:
                                     new_filepath = settings.queue_pending_dir / filename
                                     final_status = GmfUploadStatus.PENDING_APPROVAL
                                 
                                 try:
-                                    shutil.move(str(filepath), str(new_filepath))
+                                    if filepath.exists() and filepath != new_filepath:
+                                        shutil.move(str(filepath), str(new_filepath))
+                                    existing.file_path = str(new_filepath)
                                 except Exception as move_err:
                                     logger.error(f"Failed to move file {filename} during re-registration: {move_err}")
                                     return
                                     
-                                existing.file_path = str(new_filepath)
-
                             existing.status = final_status
                             existing.error_message = None
                             existing.rejection_reason = None
@@ -208,7 +231,7 @@ class GmfFolderHandler(FileSystemEventHandler):
                                 )
                             db.add(notif)
                             db.commit()
-                            logger.info(f"Re-registered GMF (reset status to {final_status.value}): {filename}")
+                            logger.info(f"Re-registered failed GMF (reset status to {final_status.value}): {filename}")
                         else:
                             logger.info(f"Already registered (currently in status {existing.status.value}): {filename}")
                         return
@@ -227,8 +250,12 @@ class GmfFolderHandler(FileSystemEventHandler):
                         settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                         settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
                         
-                        if is_approved:
+                        billing_mode = _get_billing_mode()
+                        if is_approved and billing_mode == "auto":
                             new_filepath = settings.queue_incoming_dir / filename
+                            final_status = GmfUploadStatus.APPROVED
+                        elif is_approved and billing_mode == "manual":
+                            new_filepath = settings.queue_pending_dir / filename
                             final_status = GmfUploadStatus.APPROVED
                         else:
                             new_filepath = settings.queue_pending_dir / filename
