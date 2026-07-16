@@ -471,6 +471,9 @@ def generate_batch(
     # Create BillingRun to track progress
     run = BillingRun(
         batch_name=f"Single GMF {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        cycle_number=upload.cycle_number if hasattr(upload, "cycle_number") else None,
+        period_start=date.today(),
+        period_end=date.today(),
         status=RunStatus.RUNNING,
         total_accounts=1,
         succeeded=0,
@@ -510,6 +513,9 @@ def generate_batch_endpoint(
     # Create BillingRun to track progress
     run = BillingRun(
         batch_name=f"Batch {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        cycle_number=uploads[0].cycle_number if (uploads and hasattr(uploads[0], "cycle_number")) else None,
+        period_start=date.today(),
+        period_end=date.today(),
         status=RunStatus.RUNNING,
         total_accounts=len(upload_ids),
         succeeded=0,
