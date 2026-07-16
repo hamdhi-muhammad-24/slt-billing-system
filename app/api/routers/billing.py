@@ -593,7 +593,7 @@ def _background_retry_failed_batch(run_id: int):
                     # update upload status
                     upload = db.query(GmfUpload).filter(
                         GmfUpload.filename == filename,
-                        GmfUpload.folder_type != "Test_GMFs"
+                        GmfUpload.folder_type == cycle_label
                     ).first()
                     if upload:
                         upload.status = GmfUploadStatus.COMPLETED
@@ -705,10 +705,35 @@ def get_run_results(run_id: int, db: Session = Depends(get_db), _: UserOut = Dep
                         "account_number": pdf_file.stem
                     })
                     
+    # Fetch GMF source files details
+    uploads = db.query(GmfUpload).filter(GmfUpload.billing_run_id == run_id).all()
+    
+    gmf_successes = []
+    gmf_failures = []
+    gmf_running = []
+    
+    for u in uploads:
+        item = {
+            "id": u.id,
+            "filename": u.filename,
+            "folder_type": u.folder_type,
+            "status": u.status.value if hasattr(u.status, "value") else u.status,
+            "error_message": u.error_message
+        }
+        if u.status == GmfUploadStatus.COMPLETED:
+            gmf_successes.append(item)
+        elif u.status == GmfUploadStatus.FAILED:
+            gmf_failures.append(item)
+        else:
+            gmf_running.append(item)
+            
     return {
         "run_id": run.id,
         "successes": successes,
-        "failures": failures_list
+        "failures": failures_list,
+        "gmf_successes": gmf_successes,
+        "gmf_failures": gmf_failures,
+        "gmf_running": gmf_running
     }
 
 

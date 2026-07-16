@@ -263,7 +263,7 @@ export default function GenerationHub() {
                 </span>
               )}
             </h3>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4 p-1">
               {loadingRuns ? (
                 <div className="h-32 animate-pulse rounded-lg bg-muted" />
               ) : activeRuns.length === 0 ? (
@@ -305,7 +305,7 @@ export default function GenerationHub() {
                 </Button>
               )}
             </div>
-            <div className="flex flex-col gap-3 max-h-[380px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto p-1">
               {loadingRuns ? (
                 <div className="h-32 animate-pulse rounded-lg bg-muted" />
               ) : recentRuns.length === 0 ? (
@@ -385,7 +385,7 @@ export default function GenerationHub() {
               {runs?.find(r => r.id === selectedRunId)?.batch_name || "Run Details"}
             </SheetTitle>
             <SheetDescription className="text-sm">
-              Comprehensive report of successful invoice rendering and failures.
+              Detailed tracking of source GMF uploads and generated PDF invoices.
             </SheetDescription>
           </SheetHeader>
           
@@ -439,46 +439,58 @@ export default function GenerationHub() {
             )
           })()}
           
-          <div className="mt-4 flex flex-col gap-6">
+          <div className="mt-6 flex flex-col gap-6">
             {loadingResults ? (
               <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
             ) : runResults ? (
               <>
-                <div className="flex flex-col gap-3">
-                  <h4 className="font-bold text-sm flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    Generated Invoices ({runResults.successes.length})
-                  </h4>
-                  {runResults.successes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No successful invoices.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
-                      {runResults.successes.map((s: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 rounded border bg-slate-50 dark:bg-slate-900 text-sm">
-                          <div className="flex items-center gap-2">
-                            <FileText size={16} className="text-blue-500" />
-                            <span className="font-semibold">{s.account_number}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon-sm" onClick={() => handleViewPdf(s)} title="View PDF">
-                              <Eye size={14} />
-                            </Button>
-                            <Button variant="ghost" size="icon-sm" onClick={() => handleDownloadPdf(s)} title="Download PDF">
-                              <Download size={14} />
-                            </Button>
-                          </div>
+                {/* 1. Running GMF Files */}
+                {runResults.gmf_running && runResults.gmf_running.length > 0 && (
+                  <div className="flex flex-col gap-3 border-b pb-4">
+                    <h4 className="font-bold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <Loader2 size={15} className="animate-spin text-blue-500" />
+                      Running GMF Files ({runResults.gmf_running.length})
+                    </h4>
+                    <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-2">
+                      {runResults.gmf_running.map((r: any) => (
+                        <div key={r.id} className="flex items-center justify-between p-2.5 rounded border bg-blue-50/20 dark:bg-blue-950/10 text-xs">
+                          <span className="font-semibold text-foreground truncate max-w-[320px]">{r.filename}</span>
+                          <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                            {r.status}
+                          </span>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {runResults.failures.length > 0 && (
-                  <div className="flex flex-col gap-3">
+                {/* 2. Succeeded GMF Files */}
+                {runResults.gmf_successes && runResults.gmf_successes.length > 0 && (
+                  <div className="flex flex-col gap-3 border-b pb-4">
+                    <h4 className="font-bold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 size={15} className="text-emerald-500" />
+                      Succeeded GMF Files ({runResults.gmf_successes.length})
+                    </h4>
+                    <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-2">
+                      {runResults.gmf_successes.map((s: any) => (
+                        <div key={s.id} className="flex items-center justify-between p-2.5 rounded border bg-emerald-50/10 dark:bg-emerald-950/5 text-xs">
+                          <span className="font-semibold text-foreground truncate max-w-[320px]">{s.filename}</span>
+                          <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                            {s.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Failed GMF Files */}
+                {runResults.gmf_failures && runResults.gmf_failures.length > 0 && (
+                  <div className="flex flex-col gap-3 border-b pb-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm flex items-center gap-2 text-red-600">
-                        <XCircle size={16} />
-                        Failures ({runResults.failures.length})
+                      <h4 className="font-bold text-sm flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                        <XCircle size={15} className="text-rose-500" />
+                        Failed GMF Files ({runResults.gmf_failures.length})
                       </h4>
                       <Button
                         variant="outline"
@@ -491,16 +503,50 @@ export default function GenerationHub() {
                         Retry Failed
                       </Button>
                     </div>
-                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
-                      {runResults.failures.map((f: any, idx: number) => (
-                        <div key={idx} className="flex flex-col p-3 rounded border border-red-100 bg-red-50 dark:bg-red-950/20 text-sm">
-                          <span className="font-semibold text-red-700 dark:text-red-400">{f.account_number}</span>
-                          <span className="text-red-600/80 dark:text-red-400/80 text-xs mt-1 font-medium">{f.error_message}</span>
+                    <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-2">
+                      {runResults.gmf_failures.map((f: any) => (
+                        <div key={f.id} className="flex flex-col p-2.5 rounded border border-red-100 dark:border-red-950/30 bg-red-50/20 dark:bg-red-950/10 text-xs">
+                          <span className="font-semibold text-rose-700 dark:text-rose-400">{f.filename}</span>
+                          {f.error_message && (
+                            <span className="text-rose-600/80 dark:text-rose-400/80 mt-1 font-medium leading-relaxed">
+                              {f.error_message}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* 4. Generated PDF Invoices */}
+                <div className="flex flex-col gap-3">
+                  <h4 className="font-bold text-sm flex items-center gap-2">
+                    <FileText size={15} className="text-blue-500" />
+                    Generated PDF Invoices ({runResults.successes.length})
+                  </h4>
+                  {runResults.successes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No successful invoices.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-2">
+                      {runResults.successes.map((s: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-2.5 rounded border bg-slate-50 dark:bg-slate-900 text-xs">
+                          <div className="flex items-center gap-2">
+                            <FileText size={14} className="text-blue-400" />
+                            <span className="font-semibold text-foreground">{s.account_number}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon-sm" onClick={() => handleViewPdf(s)} title="View PDF">
+                              <Eye size={13} />
+                            </Button>
+                            <Button variant="ghost" size="icon-sm" onClick={() => handleDownloadPdf(s)} title="Download PDF">
+                              <Download size={13} />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             ) : null}
           </div>

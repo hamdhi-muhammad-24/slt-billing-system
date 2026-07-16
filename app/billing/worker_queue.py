@@ -69,14 +69,16 @@ def _worker_process(worker_id):
             with SessionLocal() as db:
                 upload = db.query(GmfUpload).filter(
                     GmfUpload.filename == filename,
+                    GmfUpload.status == GmfUploadStatus.APPROVED,
                     GmfUpload.folder_type != "Test_GMFs"
                 ).first()
                 if not upload:
-                    logger.warning(f"No DB record for {filename}, deleting orphan file")
+                    logger.warning(f"No APPROVED DB record for {filename}, deleting orphan file")
                     os.remove(working_path)
                     continue
                 cycle_label = upload.folder_type
                 template_id = upload.template_detected
+                run_id = upload.billing_run_id
                 
             if not template_id:
                 logger.error(f"Cannot process {filename}: template unknown")
@@ -84,6 +86,7 @@ def _worker_process(worker_id):
                 with SessionLocal() as db:
                     upload = db.query(GmfUpload).filter(
                         GmfUpload.filename == filename,
+                        GmfUpload.billing_run_id == run_id,
                         GmfUpload.folder_type != "Test_GMFs"
                     ).first()
                     if upload:
@@ -112,6 +115,7 @@ def _worker_process(worker_id):
                 with SessionLocal() as db:
                     upload = db.query(GmfUpload).filter(
                         GmfUpload.filename == filename,
+                        GmfUpload.billing_run_id == run_id,
                         GmfUpload.folder_type != "Test_GMFs"
                     ).first()
                     if upload:
@@ -167,6 +171,7 @@ def _worker_process(worker_id):
                 with SessionLocal() as db:
                     upload = db.query(GmfUpload).filter(
                         GmfUpload.filename == filename,
+                        GmfUpload.billing_run_id == run_id,
                         GmfUpload.folder_type != "Test_GMFs"
                     ).first()
                     if upload:
@@ -206,15 +211,29 @@ def _worker_process(worker_id):
             logger.error(f"Worker {worker_id} error: {e}", exc_info=True)
             if 'filename' in locals() and 'working_path' in locals() and working_path.exists():
                 try:
-                    # Get cycle_label from DB
+                    # Get cycle_label and run_id from DB
                     cycle_label = "unknown"
+                    local_run_id = None
+                    if 'run_id' in locals():
+                        local_run_id = locals()['run_id']
+                        
                     with SessionLocal() as db:
-                        upload = db.query(GmfUpload).filter(
-                            GmfUpload.filename == filename,
-                            GmfUpload.folder_type != "Test_GMFs"
-                        ).first()
+                        upload = None
+                        if local_run_id:
+                            upload = db.query(GmfUpload).filter(
+                                GmfUpload.filename == filename,
+                                GmfUpload.billing_run_id == local_run_id,
+                                GmfUpload.folder_type != "Test_GMFs"
+                            ).first()
+                        if not upload:
+                            upload = db.query(GmfUpload).filter(
+                                GmfUpload.filename == filename,
+                                GmfUpload.status == GmfUploadStatus.APPROVED,
+                                GmfUpload.folder_type != "Test_GMFs"
+                            ).first()
                         if upload:
                             cycle_label = upload.folder_type
+                            local_run_id = upload.billing_run_id
                             
                     failed_dest = settings.gmf_drive_path / "Failed" / cycle_label
                     failed_dest.mkdir(parents=True, exist_ok=True)
@@ -231,10 +250,20 @@ def _worker_process(worker_id):
                         logger.error(f"Failed to launch rclone delete for {filename}: {delete_err}")
                         
                     with SessionLocal() as db:
-                        upload = db.query(GmfUpload).filter(
-                            GmfUpload.filename == filename,
-                            GmfUpload.folder_type != "Test_GMFs"
-                        ).first()
+                        upload = None
+                        if local_run_id:
+                            upload = db.query(GmfUpload).filter(
+                                GmfUpload.filename == filename,
+                                GmfUpload.billing_run_id == local_run_id,
+                                GmfUpload.folder_type != "Test_GMFs"
+                            ).first()
+                        if not upload:
+                            upload = db.query(GmfUpload).filter(
+                                GmfUpload.filename == filename,
+                                GmfUpload.status == GmfUploadStatus.APPROVED,
+                                GmfUpload.folder_type != "Test_GMFs"
+                            ).first()
+                            
                         if upload:
                             upload.status = GmfUploadStatus.FAILED
                             upload.error_message = str(e)

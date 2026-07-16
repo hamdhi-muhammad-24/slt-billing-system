@@ -200,7 +200,7 @@ export default function UploadCenter() {
                   disabled={uploading}
                   className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-extrabold shadow-[0_4px_12px_rgba(16,185,129,0.25)] text-white hover:scale-[1.01] border-transparent transition-all"
                 >
-                  {uploading ? "Uploading..." : "Upload to Queue"}
+                  {uploading ? "Uploading..." : "Upload"}
                 </Button>
               </div>
             </div>

@@ -243,10 +243,21 @@ export interface RunResultFailure {
   error_message: string
 }
 
+export interface GmfUploadDetail {
+  id: number
+  filename: string
+  folder_type: string
+  status: string
+  error_message: string | null
+}
+
 export interface RunResultsOut {
   run_id: number
   successes: RunResultSuccess[]
   failures: RunResultFailure[]
+  gmf_successes: GmfUploadDetail[]
+  gmf_failures: GmfUploadDetail[]
+  gmf_running: GmfUploadDetail[]
 }
 
 export function getRunResults(runId: number): Promise<RunResultsOut> {
