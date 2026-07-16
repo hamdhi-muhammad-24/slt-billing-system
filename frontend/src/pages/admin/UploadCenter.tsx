@@ -59,13 +59,22 @@ export default function UploadCenter() {
     }
 
     setUploading(true)
+    let processed = 0
+    const total = files.length
+    const BATCH_SIZE = 50 // Chunk size to avoid browser/server crash
+
     try {
-      await uploadGmf(files, folderType)
-      toast.success("Files uploaded successfully! Processing in background...")
+      for (let i = 0; i < total; i += BATCH_SIZE) {
+        const chunk = files.slice(i, i + BATCH_SIZE)
+        await uploadGmf(chunk, folderType)
+        processed += chunk.length
+      }
+
+      toast.success(`Successfully uploaded ${total} files! Processing in background...`)
       setFiles([])
       setSuccess(true)
     } catch (err: any) {
-      toast.error(err?.message || "Failed to upload files.")
+      toast.error(err?.message || `Failed to upload files after processing ${processed}.`)
     } finally {
       setUploading(false)
     }
@@ -89,13 +98,13 @@ export default function UploadCenter() {
             <select
               value={folderType}
               onChange={(e) => setFolderType(e.target.value)}
-              className="w-full sm:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full sm:w-64 rounded-md border-none bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-800 text-white dark:from-slate-100 dark:via-blue-50 dark:to-indigo-200 dark:text-slate-900 font-extrabold px-4 py-2.5 text-sm shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-[1.01] transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 text-center"
             >
-              <option value="Cycle_1">Cycle 1</option>
-              <option value="Cycle_2">Cycle 2</option>
-              <option value="Cycle_3">Cycle 3</option>
-              <option value="Cycle_4">Cycle 4</option>
-              <option value="Test_GMFs">Test GMFs</option>
+              <option value="Cycle_1" className="bg-background text-foreground font-bold">Cycle 1</option>
+              <option value="Cycle_2" className="bg-background text-foreground font-bold">Cycle 2</option>
+              <option value="Cycle_3" className="bg-background text-foreground font-bold">Cycle 3</option>
+              <option value="Cycle_4" className="bg-background text-foreground font-bold">Cycle 4</option>
+              <option value="Test_GMFs" className="bg-background text-foreground font-bold">Test GMFs</option>
             </select>
           </div>
 
@@ -123,7 +132,7 @@ export default function UploadCenter() {
             </div>
             <span className="text-lg font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-700 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 bg-clip-text text-transparent">Drag & Drop files here</span>
             <span className="text-sm text-muted-foreground mt-2 text-center">
-              Supports GMF format files, ZIP archives, or multiple selections.<br/>
+              Supports massive GMF format files (1.5M+), ZIP archives, or folder drops.<br/>
               Or click to browse from your device.
             </span>
           </div>
@@ -144,32 +153,38 @@ export default function UploadCenter() {
               </div>
 
               <div className="max-h-64 overflow-y-auto divide-y">
-                {files.map((file, idx) => {
-                  const isZip = file.name.endsWith('.zip')
-                  return (
-                    <div key={idx} className="flex items-center justify-between py-2 text-sm">
-                      <div className="flex items-center gap-2.5 truncate">
-                        {isZip ? (
-                          <Archive size={16} className="text-amber-500 shrink-0" />
-                        ) : (
-                          <File size={16} className="text-blue-500 shrink-0" />
-                        )}
-                        <span className="font-medium truncate">{file.name}</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
+                {files.length > 100 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    {files.length} files selected. Ready for chunked upload.
+                  </div>
+                ) : (
+                  files.map((file, idx) => {
+                    const isZip = file.name.endsWith('.zip')
+                    return (
+                      <div key={idx} className="flex items-center justify-between py-2 text-sm">
+                        <div className="flex items-center gap-2.5 truncate">
+                          {isZip ? (
+                            <Archive size={16} className="text-amber-500 shrink-0" />
+                          ) : (
+                            <File size={16} className="text-blue-500 shrink-0" />
+                          )}
+                          <span className="font-medium truncate">{file.name}</span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => removeFile(idx)} 
+                          className="rounded-full size-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <X size={14} />
+                        </Button>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => removeFile(idx)} 
-                        className="rounded-full size-8 text-muted-foreground hover:text-destructive"
-                      >
-                        <X size={14} />
-                      </Button>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t">
