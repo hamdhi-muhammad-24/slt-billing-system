@@ -178,8 +178,8 @@ export function getUploads(status?: string, cycle?: number): Promise<GmfUploadOu
   return request(`/billing/uploads${q}`)
 }
 
-export function previewInvoice(uploadId: number): Promise<{ message: string; pdf_url: string; template_detected: string }> {
-  return request(`/billing/preview/${uploadId}`, { method: 'POST' })
+export function previewInvoice(uploadId: number, signal?: AbortSignal): Promise<{ message: string; pdf_url: string; template_detected: string }> {
+  return request(`/billing/preview/${uploadId}`, { method: 'POST', signal })
 }
 
 export function approveUpload(uploadId: number): Promise<{ message: string; upload_id: number }> {
