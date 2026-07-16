@@ -67,7 +67,10 @@ def _worker_process(worker_id):
             
             # DB lookup to get cycle and template ID
             with SessionLocal() as db:
-                upload = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                upload = db.query(GmfUpload).filter(
+                    GmfUpload.filename == filename,
+                    GmfUpload.folder_type != "Test_GMFs"
+                ).first()
                 if not upload:
                     logger.warning(f"No DB record for {filename}, deleting orphan file")
                     os.remove(working_path)
@@ -79,7 +82,10 @@ def _worker_process(worker_id):
                 logger.error(f"Cannot process {filename}: template unknown")
                 os.remove(working_path)
                 with SessionLocal() as db:
-                    upload = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                    upload = db.query(GmfUpload).filter(
+                        GmfUpload.filename == filename,
+                        GmfUpload.folder_type != "Test_GMFs"
+                    ).first()
                     if upload:
                         upload.status = GmfUploadStatus.FAILED
                         upload.error_message = "Template unknown"
@@ -91,7 +97,7 @@ def _worker_process(worker_id):
                                 run.failed += 1
                                 db.add(BillingRunFailure(billing_run_id=run.id, account_number=filename, error_message="Template unknown"))
                                 if run.succeeded + run.failed >= run.total_accounts:
-                                    run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
+                                    run.status = RunStatus.DONE if run.failed == 0 else RunStatus.PARTIAL
                                     run.finished_at = datetime.now()
                         db.commit()
                 continue
@@ -104,7 +110,10 @@ def _worker_process(worker_id):
                 logger.error(f"Cannot process {filename}: parser/renderer not found for {template_id}")
                 os.remove(working_path)
                 with SessionLocal() as db:
-                    upload = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                    upload = db.query(GmfUpload).filter(
+                        GmfUpload.filename == filename,
+                        GmfUpload.folder_type != "Test_GMFs"
+                    ).first()
                     if upload:
                         upload.status = GmfUploadStatus.FAILED
                         upload.error_message = f"Parser/Renderer not found for {template_id}"
@@ -116,15 +125,25 @@ def _worker_process(worker_id):
                                 run.failed += 1
                                 db.add(BillingRunFailure(billing_run_id=run.id, account_number=filename, error_message=f"Parser/Renderer not found for {template_id}"))
                                 if run.succeeded + run.failed >= run.total_accounts:
-                                    run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
+                                    run.status = RunStatus.DONE if run.failed == 0 else RunStatus.PARTIAL
                                     run.finished_at = datetime.now()
                         db.commit()
                 continue
             
-            data = parser_func(str(working_path))
-            renderer = RendererClass()
-            renderer.render(data)
+            # Parse GMF data
+            try:
+                data = parser_func(str(working_path))
+            except Exception as parse_err:
+                raise Exception(f"GMF structure parse error: {parse_err}")
+
+            # Render layout
+            try:
+                renderer = RendererClass()
+                renderer.render(data)
+            except Exception as render_err:
+                raise Exception(f"PDF layout render error: {render_err}")
             
+            # Save PDF
             account_number = str(data.get("account_number", "unknown")).replace(" ", "")
             name_pattern = OUTPUT_PDF_NAMES.get(str(template_id), OUTPUT_PDF_NAME_DEFAULT)
             output_name = name_pattern.format(account_number=account_number, template_id=template_id)
@@ -133,27 +152,49 @@ def _worker_process(worker_id):
             cycle_temp.mkdir(parents=True, exist_ok=True)
             output_pdf_path = cycle_temp / output_name
             
-            renderer.save(str(output_pdf_path))
+            try:
+                renderer.save(str(output_pdf_path))
+            except Exception as save_err:
+                raise Exception(f"PDF save/write error: {save_err}")
             
-            # Update DB
-            with SessionLocal() as db:
-                upload = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
-                if upload:
-                    upload.status = GmfUploadStatus.COMPLETED
-                    upload.processed_at = datetime.now()
-                    
-                    if upload.billing_run_id:
-                        from app.db.models import BillingRun, RunStatus
-                        run = db.query(BillingRun).filter(BillingRun.id == upload.billing_run_id).first()
-                        if run:
-                            run.succeeded += 1
-                            if run.succeeded + run.failed >= run.total_accounts:
-                                run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
-                                run.finished_at = datetime.now()
-                    db.commit()
+            # Move source GMF to Processed folder and update DB
+            try:
+                processed_dest = settings.gmf_drive_path / "Processed" / cycle_label
+                processed_dest.mkdir(parents=True, exist_ok=True)
+                dest_file_path = processed_dest / filename
+                shutil.move(str(working_path), str(dest_file_path))
+                
+                with SessionLocal() as db:
+                    upload = db.query(GmfUpload).filter(
+                        GmfUpload.filename == filename,
+                        GmfUpload.folder_type != "Test_GMFs"
+                    ).first()
+                    if upload:
+                        upload.status = GmfUploadStatus.COMPLETED
+                        upload.processed_at = datetime.now()
+                        upload.file_path = str(dest_file_path)
+                        
+                        if upload.billing_run_id:
+                            from app.db.models import BillingRun, RunStatus
+                            run = db.query(BillingRun).filter(BillingRun.id == upload.billing_run_id).first()
+                            if run:
+                                run.succeeded += 1
+                                if run.succeeded + run.failed >= run.total_accounts:
+                                    run.status = RunStatus.DONE if run.failed == 0 else RunStatus.PARTIAL
+                                    run.finished_at = datetime.now()
+                        db.commit()
+            except Exception as move_err:
+                logger.error(f"Failed to move completed GMF {filename} to Processed: {move_err}")
+                if os.path.exists(working_path):
+                    os.remove(working_path)
             
-            # Cleanup source GMF
-            os.remove(working_path)
+            # Delete from remote Google Drive Cycle folder
+            try:
+                import subprocess
+                subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+            except Exception as delete_err:
+                logger.error(f"Failed to launch rclone delete for {filename}: {delete_err}")
+                
             logger.info(f"Worker {worker_id} successfully generated {output_name}")
             
             # Throttle
@@ -165,16 +206,35 @@ def _worker_process(worker_id):
             logger.error(f"Worker {worker_id} error: {e}", exc_info=True)
             if 'filename' in locals() and 'working_path' in locals() and working_path.exists():
                 try:
-                    failed_dest = Path("./queue/failed")
+                    # Get cycle_label from DB
+                    cycle_label = "unknown"
+                    with SessionLocal() as db:
+                        upload = db.query(GmfUpload).filter(
+                            GmfUpload.filename == filename,
+                            GmfUpload.folder_type != "Test_GMFs"
+                        ).first()
+                        if upload:
+                            cycle_label = upload.folder_type
+                            
+                    failed_dest = settings.gmf_drive_path / "Failed" / cycle_label
                     failed_dest.mkdir(parents=True, exist_ok=True)
-                    clean_filename = filename.replace(".processing", "")
-                    dest_file_path = failed_dest / clean_filename
+                    dest_file_path = failed_dest / filename
                     
-                    # Atomic rename/move to failed queue
+                    # Move to failed queue
                     shutil.move(str(working_path), str(dest_file_path))
                     
+                    # Delete from remote Google Drive Cycle folder
+                    try:
+                        import subprocess
+                        subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+                    except Exception as delete_err:
+                        logger.error(f"Failed to launch rclone delete for {filename}: {delete_err}")
+                        
                     with SessionLocal() as db:
-                        upload = db.query(GmfUpload).filter(GmfUpload.filename == clean_filename).first()
+                        upload = db.query(GmfUpload).filter(
+                            GmfUpload.filename == filename,
+                            GmfUpload.folder_type != "Test_GMFs"
+                        ).first()
                         if upload:
                             upload.status = GmfUploadStatus.FAILED
                             upload.error_message = str(e)
@@ -187,11 +247,11 @@ def _worker_process(worker_id):
                                     run.failed += 1
                                     db.add(BillingRunFailure(
                                         billing_run_id=run.id,
-                                        account_number=clean_filename,
+                                        account_number=filename,
                                         error_message=str(e)
                                     ))
                                     if run.succeeded + run.failed >= run.total_accounts:
-                                        run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
+                                        run.status = RunStatus.DONE if run.failed == 0 else RunStatus.PARTIAL
                                         run.finished_at = datetime.now()
                         db.commit()
                 except Exception as inner_err:
