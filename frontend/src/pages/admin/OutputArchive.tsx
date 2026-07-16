@@ -113,7 +113,7 @@ export default function OutputArchive() {
                     <FolderOpen size={16} className="text-emerald-400 fill-emerald-400/20" />
                     <span className="font-medium">{b.batch.replace('_', ' ')}</span>
                   </div>
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 rounded-full">{b.pdf_count} PDFs</span>
+                  <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 rounded-full">{b.pdf_count} PDFs</span>
                 </div>
               ))
             ) : (
@@ -137,12 +137,12 @@ export default function OutputArchive() {
         {/* Right Panel: PDF Viewer */}
         <div className="w-2/3 flex flex-col glass-card shadow-lg overflow-hidden">
           {loadingPdfBlob ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50 dark:bg-slate-900/50">
               <Loader2 size={48} className="mb-4 opacity-20 animate-spin" />
               <p>Loading secure PDF...</p>
             </div>
           ) : !pdfUrl ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50 dark:bg-slate-900/50">
               <FileText size={48} className="mb-4 opacity-20" />
               <p>Select a PDF file from the browser to view it here.</p>
             </div>
@@ -164,10 +164,10 @@ export default function OutputArchive() {
                   </Button>
                 </div>
               </div>
-              <div className="flex-1 bg-slate-200/50 p-2">
+              <div className="flex-1 bg-slate-200/50 dark:bg-slate-950/50 p-2">
                 <iframe 
                   src={`${pdfUrl}#toolbar=0`} 
-                  className="w-full h-full rounded border bg-white shadow-sm"
+                  className="w-full h-full rounded border bg-white dark:bg-slate-900 shadow-sm"
                   title="PDF Viewer"
                 />
               </div>
