@@ -18,10 +18,11 @@ import InvoiceTemplates from './pages/admin/InvoiceTemplates'
 import ScheduleManager from './pages/admin/ScheduleManager'
 import Admin1Dashboard from './pages/admin/Admin1Dashboard'
 import UploadCenter from './pages/admin/UploadCenter'
+import { ThemeProvider } from './components/ThemeProvider'
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider defaultTheme="system" storageKey="slt-billing-theme">
       <Routes>
         <Route index element={<PublicPortal />} />
         <Route path="/bill-access" element={<BillAccess />} />
@@ -53,6 +54,6 @@ export default function App() {
       </Routes>
 
       <Toaster />
-    </>
+    </ThemeProvider>
   )
 }
