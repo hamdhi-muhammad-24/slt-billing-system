@@ -267,13 +267,18 @@ def get_pending_batches(
     db: Session = Depends(get_db),
     _: UserOut = Depends(require_admin),
 ):
-    """Group approved or pending GMF files into one batch per cycle (excluding Test GMFs)."""
-    
+    """Group approved GMF files into one batch per cycle (excluding Test GMFs) for manual runs."""
+    # Check if we are in auto mode
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "billing_mode").first()
+    billing_mode = setting.value if setting else "auto"
+    if billing_mode == "auto":
+        return []
+        
     pending_uploads = db.query(GmfUpload).join(
         InvoiceTemplate,
         GmfUpload.template_detected == InvoiceTemplate.template_code
     ).filter(
-        GmfUpload.status.in_([GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL]),
+        GmfUpload.status == GmfUploadStatus.APPROVED,
         GmfUpload.folder_type != "Test_GMFs",
         InvoiceTemplate.approval_status == TemplateApprovalStatus.APPROVED
     ).order_by(GmfUpload.detected_at.asc()).all()
@@ -580,7 +585,10 @@ def _background_retry_failed_batch(run_id: int):
                     if failure_record:
                         db.delete(failure_record)
                     # update upload status
-                    upload = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                    upload = db.query(GmfUpload).filter(
+                        GmfUpload.filename == filename,
+                        GmfUpload.folder_type != "Test_GMFs"
+                    ).first()
                     if upload:
                         upload.status = GmfUploadStatus.COMPLETED
                 else:
@@ -592,7 +600,7 @@ def _background_retry_failed_batch(run_id: int):
                     if failure_record:
                         failure_record.error_message = str(res.error) if res.error else "Unknown error"
 
-            run.status = RunStatus.SUCCESS if run.failed == 0 else RunStatus.PARTIAL
+            run.status = RunStatus.DONE if run.failed == 0 else RunStatus.PARTIAL
             run.finished_at = datetime.now()
 
             db.commit()
@@ -673,6 +681,24 @@ def get_run_results(run_id: int, db: Session = Depends(get_db), _: UserOut = Dep
                         "account_number": pdf_file.stem
                     })
                     
+    # Also scan completed_temp for active runs
+    cycle_label = f"Cycle_{run.cycle_number}" if run.cycle_number else None
+    if cycle_label:
+        completed_temp_dir = Path("./queue/completed_temp") / cycle_label
+        if completed_temp_dir.exists():
+            from datetime import date
+            date_str = date.today().strftime("%Y-%m-%d")
+            archived_filenames = {s["filename"] for s in successes}
+            for pdf_file in completed_temp_dir.glob("*.pdf"):
+                if pdf_file.name not in archived_filenames:
+                    successes.append({
+                        "date": date_str,
+                        "cycle": cycle_label,
+                        "batch": "COMPLETED_TEMP",
+                        "filename": pdf_file.name,
+                        "account_number": pdf_file.stem
+                    })
+                    
     return {
         "run_id": run.id,
         "successes": successes,
@@ -690,6 +716,7 @@ def delete_run(run_id: int, db: Session = Depends(get_db), _: UserOut = Depends(
     if run.status in (RunStatus.RUNNING, RunStatus.PENDING):
         raise HTTPException(status_code=400, detail="Cannot delete an active run.")
     
+    db.query(BillingRunItem).filter(BillingRunItem.billing_run_id == run_id).delete(synchronize_session=False)
     db.delete(run)
     db.commit()
     return {"message": "Run deleted successfully"}
@@ -698,10 +725,16 @@ def delete_run(run_id: int, db: Session = Depends(get_db), _: UserOut = Depends(
 @router.delete("/runs")
 def delete_all_runs(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
     # Delete all runs that are not active
-    db.query(BillingRun).filter(
+    inactive_runs = db.query(BillingRun).filter(
         BillingRun.status.notin_([RunStatus.RUNNING, RunStatus.PENDING])
-    ).delete(synchronize_session=False)
-    db.commit()
+    ).all()
+    
+    inactive_run_ids = [r.id for r in inactive_runs]
+    if inactive_run_ids:
+        db.query(BillingRunItem).filter(BillingRunItem.billing_run_id.in_(inactive_run_ids)).delete(synchronize_session=False)
+        db.query(BillingRun).filter(BillingRun.id.in_(inactive_run_ids)).delete(synchronize_session=False)
+        db.commit()
+        
     return {"message": "All completed/failed runs deleted successfully"}
 
 
@@ -757,7 +790,11 @@ def serve_pdf(
     _: UserOut = Depends(require_admin)
 ):
     """Serve a single PDF file for inline viewing."""
-    path = get_pdf_path(date_str, cycle, batch, filename)
+    if batch == "COMPLETED_TEMP":
+        path = os.path.abspath(os.path.join("./queue/completed_temp", cycle, filename))
+    else:
+        path = get_pdf_path(date_str, cycle, batch, filename)
+        
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="PDF file not found")
     return FileResponse(path, media_type="application/pdf", filename=filename)
@@ -859,17 +896,42 @@ def update_template_status(
         for upload in uploads:
             if upload.folder_type != "Test_GMFs":
                 old_path = Path(upload.file_path)
-                new_path = settings.queue_incoming_dir / upload.filename
-                try:
-                    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
-                    if old_path.exists() and old_path != new_path:
-                        shutil.move(str(old_path), str(new_path))
-                        upload.file_path = str(new_path)
-                    non_test_uploads.append(upload)
-                except Exception as e:
-                    logger.error(f"Failed to move file {upload.filename} to incoming queue: {e}")
-            upload.status = GmfUploadStatus.APPROVED
-            upload.rejection_reason = None
+                
+                # Check mode. If auto, move to queue_incoming_dir. If manual, keep in queue_pending_dir
+                if billing_mode == "auto":
+                    new_path = settings.queue_incoming_dir / upload.filename
+                    if old_path.exists():
+                        upload.status = GmfUploadStatus.APPROVED
+                        upload.rejection_reason = None
+                        try:
+                            settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+                            if old_path != new_path:
+                                shutil.move(str(old_path), str(new_path))
+                                upload.file_path = str(new_path)
+                            non_test_uploads.append(upload)
+                        except Exception as e:
+                            logger.error(f"Failed to move file {upload.filename} to incoming queue: {e}")
+                    else:
+                        upload.status = GmfUploadStatus.FAILED
+                        upload.error_message = "Source GMF file missing on disk"
+                else:
+                    new_path = settings.queue_pending_dir / upload.filename
+                    if old_path.exists():
+                        upload.status = GmfUploadStatus.APPROVED
+                        upload.rejection_reason = None
+                        try:
+                            settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+                            if old_path != new_path:
+                                shutil.move(str(old_path), str(new_path))
+                                upload.file_path = str(new_path)
+                        except Exception as e:
+                            logger.error(f"Failed to ensure file {upload.filename} in pending queue: {e}")
+                    else:
+                        upload.status = GmfUploadStatus.FAILED
+                        upload.error_message = "Source GMF file missing on disk"
+            else:
+                upload.status = GmfUploadStatus.APPROVED
+                upload.rejection_reason = None
             
         # In Auto Mode, automatically generate invoices immediately
         if billing_mode == "auto" and non_test_uploads:
@@ -1134,7 +1196,10 @@ def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
                     
                     shutil.copy2(str(file_path), str(final_path))
                 
-                existing = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                existing = db.query(GmfUpload).filter(
+                    GmfUpload.filename == filename,
+                    GmfUpload.folder_type == folder_type
+                ).first()
                 if existing:
                     existing.file_path = str(final_path)
                     existing.status = final_status
@@ -1233,7 +1298,10 @@ def upload_gmf(
                         
                     shutil.copy2(temp_file.name, str(final_path))
                 
-                existing = db.query(GmfUpload).filter(GmfUpload.filename == filename).first()
+                existing = db.query(GmfUpload).filter(
+                    GmfUpload.filename == filename,
+                    GmfUpload.folder_type == folder_type
+                ).first()
                 if existing:
                     existing.file_path = str(final_path)
                     existing.status = final_status
