@@ -108,7 +108,7 @@ export default function Admin1Dashboard() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader 
-          title="Admin 1 Overview" 
+          title="Dashboard Overview" 
           description="GMF upload statistics and sync status" 
         />
         <Button 
