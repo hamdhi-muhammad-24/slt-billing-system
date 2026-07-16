@@ -96,11 +96,14 @@ export default function GmfMonitor() {
     }
   ]
 
+  const allUploads = uploads || []
+  const filteredUploads = allUploads.filter(u => u.folder_type !== 'Test_GMFs')
+
   const summary = {
-    total: uploads?.length || 0,
-    pending: uploads?.filter(u => u.status === 'PENDING_APPROVAL').length || 0,
-    completed: uploads?.filter(u => u.status === 'COMPLETED').length || 0,
-    failed: uploads?.filter(u => u.status === 'FAILED').length || 0,
+    total: allUploads.length,
+    pending: allUploads.filter(u => u.status === 'PENDING_APPROVAL').length,
+    completed: filteredUploads.filter(u => u.status === 'COMPLETED').length,
+    failed: filteredUploads.filter(u => u.status === 'FAILED').length,
   }
 
   return (
@@ -135,7 +138,7 @@ export default function GmfMonitor() {
         ) : (
           <DataTable
             columns={COLS}
-            data={uploads || []}
+            data={allUploads}
             keyExtractor={(upload) => upload.id}
             emptyLabel="No GMF uploads detected yet."
           />
