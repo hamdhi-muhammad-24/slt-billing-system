@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X, AlertCircle, History } from 'lucide-react'
 import { getUploads, previewInvoice, updateTemplateStatus, getSettings, updateSettings, getTemplateHistory } from '../../lib/api'
@@ -16,11 +16,12 @@ export default function InvoicePreview() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [selectedMode, setSelectedMode] = useState<'auto' | 'manual' | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Rejection dialog state
   const [rejectTemplateId, setRejectTemplateId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState<string>('')
-  
+
   const { data: uploads, isLoading } = useQuery({
     queryKey: ['billing-uploads'],
     queryFn: () => getUploads(undefined, undefined),
@@ -58,13 +59,23 @@ export default function InvoicePreview() {
   })
 
   const previewMutation = useMutation({
-    mutationFn: (id: number) => previewInvoice(id),
+    mutationFn: (id: number) => {
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      return previewInvoice(id, controller.signal)
+    },
     onSuccess: (resData) => {
       toast.success(resData.message)
       setPreviewPdfUrl(resData.pdf_url)
       queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
     },
-    onError: (err: any) => toast.error(err.detail || 'Failed to generate preview')
+    onError: (err: any) => {
+      if (err.name === 'AbortError') {
+        // Ignored since cancel button handles notification
+        return
+      }
+      toast.error(err.detail || 'Failed to generate preview')
+    }
   })
 
   const approveMutation = useMutation({
@@ -79,7 +90,7 @@ export default function InvoicePreview() {
   })
 
   const rejectMutation = useMutation({
-    mutationFn: ({ templateId, reason }: { templateId: string, reason: string }) => 
+    mutationFn: ({ templateId, reason }: { templateId: string, reason: string }) =>
       updateTemplateStatus(templateId, 'REJECTED', reason),
     onSuccess: () => {
       toast.success(`Template REJECTED successfully`)
@@ -110,10 +121,18 @@ export default function InvoicePreview() {
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between shrink-0">
-        <PageHeader 
-          title="Invoice Preview" 
-          description="Review test GMFs, generate preview invoices, and approve them for batch generation." 
+        <PageHeader
+          title="Invoice Preview"
+          description="Review test GMFs, generate preview invoices, and approve them for batch generation."
         />
+        <Button
+          variant="outline"
+          onClick={() => setShowHistory(true)}
+          className="flex items-center justify-center gap-2 font-bold shadow-sm h-10 border-border hover:bg-muted shrink-0"
+        >
+          <History size={16} className="text-muted-foreground" />
+          View Logs
+        </Button>
       </div>
 
       {/* Mode Selector */}
@@ -134,8 +153,8 @@ export default function InvoicePreview() {
             type="button"
             className={cn(
               "flex-1 py-6 text-base font-bold shadow-sm transition-all border",
-              selectedMode === 'auto' 
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent" 
+              selectedMode === 'auto'
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent"
                 : "bg-card border-border hover:bg-muted/50 hover:border-primary/20 text-muted-foreground hover:text-foreground font-semibold"
             )}
             onClick={() => settingsMutation.mutate('auto')}
@@ -148,8 +167,8 @@ export default function InvoicePreview() {
             type="button"
             className={cn(
               "flex-1 py-6 text-base font-bold shadow-sm transition-all border",
-              selectedMode === 'manual' 
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent" 
+              selectedMode === 'manual'
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent"
                 : "bg-card border-border hover:bg-muted/50 hover:border-primary/20 text-muted-foreground hover:text-foreground font-semibold"
             )}
             onClick={() => settingsMutation.mutate('manual')}
@@ -162,17 +181,17 @@ export default function InvoicePreview() {
       </div>
 
       {/* Main Workspace (Responsive Height) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[400px]">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 flex-1 min-h-[400px]">
+
         {/* Left Panel: List of Test GMFs */}
-        <div className="lg:col-span-1 rounded-xl border bg-card shadow-sm p-4 flex flex-col h-full max-h-[calc(100vh-270px)]">
+        <div className="lg:col-span-2 rounded-xl border bg-card shadow-sm p-4 flex flex-col h-full max-h-[calc(100vh-270px)]">
           <div className="flex items-center justify-between border-b pb-3 shrink-0 mb-3">
             <h3 className="font-bold text-lg flex items-center gap-2 text-foreground">
               <FileText size={18} className="text-primary" />
               Test GMF Files
             </h3>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
             {isLoading ? (
               <div className="h-32 flex items-center justify-center">
@@ -188,7 +207,7 @@ export default function InvoicePreview() {
                 {testGmfs.map(gmf => {
                   const isSelected = gmf.id === selectedId
                   return (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       key={gmf.id}
@@ -197,42 +216,42 @@ export default function InvoicePreview() {
                         setPreviewPdfUrl(null)
                       }}
                       className={cn(
-                        "flex flex-col p-3 rounded-lg cursor-pointer border transition-all duration-200 relative pl-4 mb-2 overflow-hidden",
-                        isSelected 
-                          ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                        "flex flex-col p-3 rounded-lg cursor-pointer border transition-all duration-200 relative pl-4 mb-2 select-none",
+                        isSelected
+                          ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20"
                           : "border-border/60 hover:bg-muted/60 hover:border-border"
                       )}
                     >
                       <div className={cn("absolute left-0 top-0 bottom-0 w-1 transition-all", isSelected ? "bg-primary" : "bg-transparent")} />
-                      
+
                       <div className="flex flex-col gap-2">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 overflow-hidden">
+                          <div className="flex items-center gap-2 overflow-hidden w-full">
                             <FileText size={16} className={cn("shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
-                            <span className={cn("font-medium text-[14px] truncate leading-tight", isSelected ? "text-primary font-bold" : "text-foreground")} title={gmf.filename}>
+                            <span className={cn("font-bold text-[14px] truncate leading-tight text-foreground", isSelected && "text-primary")} title={gmf.filename}>
                               {gmf.filename}
                             </span>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center justify-between">
+
+                        <div className="flex items-center justify-between gap-2">
                           <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors uppercase border tracking-wider",
+                            "text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors uppercase border tracking-wider shrink-0",
                             gmf.status === 'PENDING_APPROVAL' ? "bg-cyan-50 text-cyan-600 border-cyan-200/50 dark:bg-cyan-950/30" :
-                            gmf.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/30" :
-                            gmf.status === 'REJECTED' ? "bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/30" :
-                            "bg-muted text-muted-foreground border-border"
+                              gmf.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/30" :
+                                gmf.status === 'REJECTED' ? "bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/30" :
+                                  "bg-muted text-muted-foreground border-border"
                           )}>
                             {gmf.status === 'PENDING_APPROVAL' ? 'Pending' : gmf.status}
                           </span>
-                          
-                          <span className="font-bold bg-background border px-2 py-0.5 rounded-md text-[11px] text-foreground shadow-sm shrink-0">
+
+                          <span className="font-extrabold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/60 px-2 py-0.5 rounded text-[12px] shadow-sm truncate max-w-[150px]" title={gmf.template_detected || 'Unknown'}>
                             {gmf.template_detected || 'Unknown'}
                           </span>
                         </div>
-                        
+
                         {gmf.rejection_reason && (
-                          <div className="text-[11px] text-red-500 font-semibold truncate bg-red-50/50 dark:bg-red-950/10 px-2 py-1 rounded" title={gmf.rejection_reason}>
+                          <div className="text-[11px] text-red-500 font-semibold bg-red-50/50 dark:bg-red-950/10 px-2 py-1 rounded truncate" title={gmf.rejection_reason}>
                             <span className="font-bold">Reason:</span> {gmf.rejection_reason}
                           </div>
                         )}
@@ -243,24 +262,14 @@ export default function InvoicePreview() {
               </div>
             )}
           </div>
-          
-          <div className="pt-3 mt-1 border-t shrink-0">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowHistory(true)}
-              className="w-full flex items-center justify-center gap-2 font-bold shadow-sm h-10 border-border hover:bg-muted"
-            >
-              <History size={16} className="text-muted-foreground" />
-              View Validation Logs
-            </Button>
-          </div>
+
         </div>
 
         {/* Right Panel: PDF Viewer and Action Area */}
-        <div className="lg:col-span-2 rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col h-full max-h-[calc(100vh-270px)] relative bg-slate-50/50 dark:bg-slate-900/10">
+        <div className="lg:col-span-3 rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col h-full max-h-[calc(100vh-270px)] relative bg-slate-50/50 dark:bg-slate-900/10">
           <AnimatePresence mode="wait">
             {!selectedGmf ? (
-              <motion.div 
+              <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -274,7 +283,7 @@ export default function InvoicePreview() {
                 <p className="text-sm text-center max-w-md">Select a Test GMF from the sidebar to begin review, render a preview invoice, and validate the template layout.</p>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 key="content"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -291,10 +300,10 @@ export default function InvoicePreview() {
                       Detected Template: <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded border border-primary/20">{selectedGmf.template_detected || 'Unrecognized'}</span>
                     </span>
                   </div>
-                  
+
                   {selectedGmf.status === 'PENDING_APPROVAL' && previewPdfUrl && selectedGmf.template_detected && (
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         variant="outline"
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 font-bold"
                         onClick={() => checkMode(() => setRejectTemplateId(selectedGmf.template_detected!))}
@@ -302,7 +311,7 @@ export default function InvoicePreview() {
                       >
                         <XCircle size={16} className="mr-2" /> Reject Template
                       </Button>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md font-bold border-none"
                         onClick={() => checkMode(() => approveMutation.mutate(selectedGmf.template_detected!))}
                         disabled={approveMutation.isPending}
@@ -328,23 +337,37 @@ export default function InvoicePreview() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Preview Content Area */}
                 <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-slate-100/30 dark:bg-slate-900/40 min-h-0 overflow-hidden relative">
                   {previewMutation.isPending ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="flex flex-col items-center p-8 bg-background rounded-2xl shadow-lg border"
                     >
                       <Loader2 size={40} className="animate-spin text-primary mb-4" />
                       <h3 className="text-lg font-bold mb-2">Rendering Preview...</h3>
-                      <p className="text-sm text-muted-foreground text-center max-w-[280px]">
+                      <p className="text-sm text-muted-foreground text-center max-w-[280px] mb-6">
                         The AI billing engine is parsing the GMF data and mapping it to the layout. This may take a moment.
                       </p>
+                      <Button
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 border-red-200 hover:border-red-300 font-extrabold px-6 h-10 transition-all shadow-sm flex items-center gap-2"
+                        onClick={() => {
+                          if (abortControllerRef.current) {
+                            abortControllerRef.current.abort()
+                          }
+                          previewMutation.reset()
+                          toast.error("Preview generation cancelled.")
+                        }}
+                      >
+                        <X size={16} />
+                        Cancel Generation
+                      </Button>
                     </motion.div>
                   ) : previewPdfUrl ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="w-full h-full relative flex flex-col"
@@ -357,14 +380,14 @@ export default function InvoicePreview() {
                           <Download size={14} className="mr-1.5" /> Download
                         </Button>
                       </div>
-                      <iframe 
-                        src={`${previewPdfUrl}#toolbar=0`} 
+                      <iframe
+                        src={`${previewPdfUrl}#toolbar=0`}
                         className="w-full h-full rounded-xl shadow-xl border border-border bg-white"
                         title="Invoice Preview"
                       />
                     </motion.div>
                   ) : (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex flex-col items-center justify-center text-center p-10 max-w-md bg-background border rounded-2xl shadow-lg relative overflow-hidden"
@@ -377,7 +400,7 @@ export default function InvoicePreview() {
                       <p className="text-muted-foreground mb-8 leading-relaxed">
                         Generate a high-fidelity PDF preview to verify the layout, calculations, and visual aesthetics before approving this batch for production.
                       </p>
-                      <Button 
+                      <Button
                         size="lg"
                         className="w-full h-12 shadow-lg text-base font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none transition-all"
                         onClick={() => checkMode(() => previewMutation.mutate(selectedGmf.id))}
@@ -414,17 +437,17 @@ export default function InvoicePreview() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-4 right-4 z-10 flex gap-2">
-                <button 
+                <button
                   className="text-slate-600 hover:text-slate-900 bg-white/90 hover:bg-white rounded-full p-2.5 shadow-md transition-colors backdrop-blur-sm border"
                   onClick={() => setIsFullscreen(false)}
                 >
                   <X size={20} />
                 </button>
               </div>
-              
-              <iframe 
-                src={`${previewPdfUrl}#toolbar=0&navpanes=0`} 
-                title="Full Template Preview" 
+
+              <iframe
+                src={`${previewPdfUrl}#toolbar=0&navpanes=0`}
+                title="Full Template Preview"
                 className="w-full h-full bg-white"
               />
             </motion.div>
@@ -463,8 +486,8 @@ export default function InvoicePreview() {
                 className="w-full rounded-xl border border-input bg-muted/50 px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary mb-6 transition-all"
               />
               <div className="flex justify-end gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setRejectTemplateId(null)
                     setRejectReason('')
@@ -516,7 +539,7 @@ export default function InvoicePreview() {
                       {log.action}
                     </span>
                   </div>
-                  {log.filename && <div className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5"><FileText size={12}/> {log.filename}</div>}
+                  {log.filename && <div className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5"><FileText size={12} /> {log.filename}</div>}
                   {log.reason && <div className="text-red-600 dark:text-red-400 font-semibold text-xs mt-1.5 bg-red-50 dark:bg-red-950/20 px-2.5 py-1.5 rounded flex gap-1.5 items-start"><AlertCircle size={14} className="shrink-0 mt-0.5" /> {log.reason}</div>}
                   <div className="text-[11px] text-muted-foreground mt-2 font-mono bg-muted/50 px-2 py-1 rounded w-fit">
                     {new Date(log.timestamp).toLocaleString()}
