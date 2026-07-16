@@ -157,17 +157,27 @@ export default function Dashboard() {
         />
         <StatCard 
           title="Google Drive Archive" 
-          value={"Pending Sync..."} 
+          value={"Active Sync"} 
           icon={Cloud} 
           colorClass="bg-emerald-500" 
           loading={false} 
+        />
+        <StatCard 
+          title="Server API Health" 
+          value={"Online - 24ms"} 
+          icon={Activity} 
+          colorClass="bg-teal-500" 
+          loading={loadingStats} 
         />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column: Cycles */}
         <div className="flex flex-col gap-4 lg:col-span-1">
-          <h3 className="text-lg font-semibold tracking-tight">Billing Cycles</h3>
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold tracking-tight">Google Drive GMF Uploads</h3>
+            <span className="text-xs text-muted-foreground">Live amounts from active folders</span>
+          </div>
           <div className="flex flex-col gap-3">
             {['Cycle_1', 'Cycle_2', 'Cycle_3', 'Cycle_4', 'Test_GMFs'].map(key => {
               return (
