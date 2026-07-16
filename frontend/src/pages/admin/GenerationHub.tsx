@@ -31,7 +31,7 @@ function RunCard({
   onDelete?: (id: number) => void 
 }) {
   const isRunning = run.status === 'RUNNING' || run.status === 'QUEUED' || run.status === 'PENDING'
-  const isComplete = run.status === 'COMPLETED' || run.status === 'SUCCESS'
+  const isComplete = run.status === 'COMPLETED' || run.status === 'SUCCESS' || run.status === 'DONE'
   const isFailed = run.status === 'FAILED'
   const isPartial = run.status === 'COMPLETED_WITH_ERRORS' || run.status === 'PARTIAL'
   
@@ -229,7 +229,7 @@ export default function GenerationHub() {
   const batchesList = pendingBatches || []
   const hasBatches = batchesList.length > 0
 
-  const activeCyclesStr = batchesList.map(b => b.cycle_number).join(', ')
+  const activeCyclesStr = batchesList.map(b => 'Cycle ' + b.cycle_number).join(', ')
 
   return (
     <div className="flex flex-col gap-6">
@@ -250,10 +250,86 @@ export default function GenerationHub() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Approved GMFs ready to generate */}
-        <div className="flex flex-col gap-4">
-          <h3 className="font-semibold text-lg">Ready for Generation (Batches of 10)</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left Column: Live Runs and History (Wider Panel) */}
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          {/* Live Runs Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              Live Runs
+              {activeRuns.length > 0 && (
+                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full animate-pulse font-bold">
+                  {activeRuns.length} Active
+                </span>
+              )}
+            </h3>
+            <div className="flex flex-col gap-3">
+              {loadingRuns ? (
+                <div className="h-32 animate-pulse rounded-lg bg-muted" />
+              ) : activeRuns.length === 0 ? (
+                <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
+                  No active billing runs at the moment.
+                </div>
+              ) : (
+                activeRuns.map(run => (
+                  <RunCard 
+                    key={run.id} 
+                    run={run} 
+                    onClick={(id) => setSelectedRunId(id)} 
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Recent Completed Runs Section */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                Recent Completed Runs
+              </h3>
+              {recentRuns.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to clear all completed history?")) {
+                      deleteAllRunsMutation.mutate()
+                    }
+                  }}
+                  disabled={deleteAllRunsMutation.isPending}
+                  className="text-muted-foreground hover:text-destructive flex items-center gap-1.5 h-8 font-semibold border-muted-foreground/25"
+                >
+                  <Trash2 size={13} />
+                  Delete All Runs
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-col gap-3 max-h-[380px] overflow-y-auto pr-1">
+              {loadingRuns ? (
+                <div className="h-32 animate-pulse rounded-lg bg-muted" />
+              ) : recentRuns.length === 0 ? (
+                <div className="rounded-xl border border-dashed bg-transparent p-6 text-center text-sm text-muted-foreground">
+                  No recent run history.
+                </div>
+              ) : (
+                recentRuns.map(run => (
+                  <RunCard 
+                    key={run.id} 
+                    run={run} 
+                    onRetry={(id) => retryMutation.mutate(id)} 
+                    onClick={(id) => setSelectedRunId(id)}
+                    onDelete={(id) => deleteRunMutation.mutate(id)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Approved GMFs ready to generate */}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <h3 className="font-semibold text-lg">Ready for Generation</h3>
           <div className="rounded-xl border bg-card shadow-sm flex flex-col min-h-[400px]">
             {loadingBatches ? (
               <div className="flex-1 flex items-center justify-center">
@@ -273,26 +349,25 @@ export default function GenerationHub() {
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-blue-500" />
                         <span className="font-semibold text-[15px]">Cycle {batch.cycle_number}</span>
-                        <span className="text-muted-foreground text-sm mx-2">|</span>
-                        <span className="text-muted-foreground text-sm font-medium">{batch.date}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                         <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
                           {batch.file_count} Invoices
                         </span>
+                        <span className="font-medium">{batch.date}</span>
                       </div>
                     </div>
                     <Button 
                       onClick={() => batchMutation.mutate(batch.upload_ids)}
                       disabled={batchMutation.isPending}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-extrabold shadow-[0_4px_12px_rgba(59,130,246,0.2)] text-white hover:scale-[1.01] border-transparent transition-all"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-extrabold shadow-[0_4px_12px_rgba(59,130,246,0.2)] text-white hover:scale-[1.01] border-transparent transition-all px-3 py-1 h-9 text-xs"
                     >
                       {batchMutation.isPending && batchMutation.variables === batch.upload_ids ? (
-                        <Loader2 size={16} className="mr-2 animate-spin" />
+                        <Loader2 size={12} className="mr-1.5 animate-spin" />
                       ) : (
-                        <Play size={16} className="mr-2" />
+                        <Play size={12} className="mr-1.5" />
                       )}
-                      Generate Cycle {batch.cycle_number}
+                      Generate
                     </Button>
                   </div>
                 ))}
@@ -300,90 +375,71 @@ export default function GenerationHub() {
             )}
           </div>
         </div>
-
-        {/* Right Column: Live Runs and History (Swapped Order) */}
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              Recent Completed Runs
-            </h3>
-            {recentRuns.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to clear all completed history?")) {
-                    deleteAllRunsMutation.mutate()
-                  }
-                }}
-                disabled={deleteAllRunsMutation.isPending}
-                className="text-muted-foreground hover:text-destructive flex items-center gap-1.5 h-8 font-semibold border-muted-foreground/25"
-              >
-                <Trash2 size={13} />
-                Delete All Runs
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1">
-            {loadingRuns ? (
-              <div className="h-32 animate-pulse rounded-lg bg-muted" />
-            ) : recentRuns.length === 0 ? (
-              <div className="rounded-xl border border-dashed bg-transparent p-6 text-center text-sm text-muted-foreground">
-                No recent run history.
-              </div>
-            ) : (
-              recentRuns.map(run => (
-                <RunCard 
-                  key={run.id} 
-                  run={run} 
-                  onRetry={(id) => retryMutation.mutate(id)} 
-                  onClick={(id) => setSelectedRunId(id)}
-                  onDelete={(id) => deleteRunMutation.mutate(id)}
-                />
-              ))
-            )}
-          </div>
-
-          <div className="flex items-center justify-between mt-6">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              Live Runs
-              {activeRuns.length > 0 && (
-                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full animate-pulse font-bold">
-                  {activeRuns.length} Active
-                </span>
-              )}
-            </h3>
-          </div>
-          <div className="flex flex-col gap-3">
-            {loadingRuns ? (
-              <div className="h-32 animate-pulse rounded-lg bg-muted" />
-            ) : activeRuns.length === 0 ? (
-              <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
-                No active billing runs at the moment.
-              </div>
-            ) : (
-              activeRuns.map(run => (
-                <RunCard 
-                  key={run.id} 
-                  run={run} 
-                  onClick={(id) => setSelectedRunId(id)} 
-                />
-              ))
-            )}
-          </div>
-        </div>
       </div>
 
       <Sheet open={!!selectedRunId} onOpenChange={(open) => !open && setSelectedRunId(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Run Details</SheetTitle>
-            <SheetDescription>
-              View successful generated invoices and failures for this run.
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto dark:bg-slate-950">
+          <SheetHeader className="border-b pb-4">
+            <SheetTitle className="text-xl font-extrabold flex items-center gap-2">
+              <Zap size={20} className="text-blue-500 fill-blue-500/20" />
+              {runs?.find(r => r.id === selectedRunId)?.batch_name || "Run Details"}
+            </SheetTitle>
+            <SheetDescription className="text-sm">
+              Comprehensive report of successful invoice rendering and failures.
             </SheetDescription>
           </SheetHeader>
           
-          <div className="mt-6 flex flex-col gap-6">
+          {(() => {
+            const run = runs?.find(r => r.id === selectedRunId)
+            if (!run) return null
+            const total = run.total_accounts || 1
+            const progress = Math.round(((run.succeeded + run.failed) / total) * 100)
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3 my-5 p-4 rounded-xl border bg-muted/30 text-center">
+                  <div className="flex flex-col">
+                    <span className="text-lg font-extrabold text-foreground">{run.succeeded}</span>
+                    <span className="text-[10px] uppercase font-bold text-emerald-600">Succeeded</span>
+                  </div>
+                  <div className="flex flex-col border-x">
+                    <span className="text-lg font-extrabold text-foreground">{run.failed}</span>
+                    <span className="text-[10px] uppercase font-bold text-rose-600">Failed</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-extrabold text-foreground">{progress}%</span>
+                    <span className="text-[10px] uppercase font-bold text-blue-600">Progress</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border bg-background text-sm">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground font-bold">Total Accounts</span>
+                    <span className="font-semibold text-foreground mt-0.5">{run.total_accounts}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground font-bold">Status</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 uppercase">{run.status}</span>
+                  </div>
+                  <div className="flex flex-col col-span-2 border-t pt-2.5">
+                    <span className="text-xs text-muted-foreground font-bold">Started At</span>
+                    <span className="font-medium text-foreground mt-0.5">
+                      {run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}
+                    </span>
+                  </div>
+                  {run.finished_at && (
+                    <div className="flex flex-col col-span-2 border-t pt-2.5">
+                      <span className="text-xs text-muted-foreground font-bold">Finished At</span>
+                      <span className="font-medium text-foreground mt-0.5">
+                        {new Date(run.finished_at).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+          
+          <div className="mt-4 flex flex-col gap-6">
             {loadingResults ? (
               <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
             ) : runResults ? (
@@ -398,7 +454,7 @@ export default function GenerationHub() {
                   ) : (
                     <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
                       {runResults.successes.map((s: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 rounded border bg-slate-50 text-sm">
+                        <div key={idx} className="flex items-center justify-between p-3 rounded border bg-slate-50 dark:bg-slate-900 text-sm">
                           <div className="flex items-center gap-2">
                             <FileText size={16} className="text-blue-500" />
                             <span className="font-semibold">{s.account_number}</span>
@@ -437,9 +493,9 @@ export default function GenerationHub() {
                     </div>
                     <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
                       {runResults.failures.map((f: any, idx: number) => (
-                        <div key={idx} className="flex flex-col p-3 rounded border border-red-100 bg-red-50 text-sm">
-                          <span className="font-semibold text-red-700">{f.account_number}</span>
-                          <span className="text-red-600/80 text-xs mt-1 font-medium">{f.error_message}</span>
+                        <div key={idx} className="flex flex-col p-3 rounded border border-red-100 bg-red-50 dark:bg-red-950/20 text-sm">
+                          <span className="font-semibold text-red-700 dark:text-red-400">{f.account_number}</span>
+                          <span className="text-red-600/80 dark:text-red-400/80 text-xs mt-1 font-medium">{f.error_message}</span>
                         </div>
                       ))}
                     </div>
