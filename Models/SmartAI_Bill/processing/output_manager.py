@@ -21,6 +21,11 @@ def create_output_batches(temp_pdf_dir, cycle_label="Cycle_1", log_callback=None
 
     Returns a list of batch folder paths that were created.
     """
+    if cycle_label == "Test_GMFs":
+        if log_callback:
+            log_callback("Skipping output batch creation for test GMF preview run")
+        return []
+
     if not os.path.exists(temp_pdf_dir):
         if log_callback:
             log_callback("No PDFs to organise — temp dir does not exist")
