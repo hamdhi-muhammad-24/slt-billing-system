@@ -154,7 +154,7 @@ export default function InvoicePreview() {
             className={cn(
               "flex-1 py-6 text-base font-bold shadow-sm transition-all border",
               selectedMode === 'auto'
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent"
+                ? "bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-800 hover:from-black hover:via-blue-950 hover:to-indigo-900 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 dark:hover:from-white dark:hover:via-blue-50 dark:hover:to-indigo-200 text-white dark:text-slate-900 scale-[1.01] shadow-[0_8px_20px_rgba(30,58,138,0.3)] dark:shadow-[0_4px_15px_rgba(199,210,254,0.15)] font-extrabold border-transparent"
                 : "bg-card border-border hover:bg-muted/50 hover:border-primary/20 text-muted-foreground hover:text-foreground font-semibold"
             )}
             onClick={() => settingsMutation.mutate('auto')}
@@ -168,7 +168,7 @@ export default function InvoicePreview() {
             className={cn(
               "flex-1 py-6 text-base font-bold shadow-sm transition-all border",
               selectedMode === 'manual'
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white scale-[1.01] shadow-[0_4px_15px_rgba(59,130,246,0.3)] font-extrabold border-transparent"
+                ? "bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-800 hover:from-black hover:via-blue-950 hover:to-indigo-900 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 dark:hover:from-white dark:hover:via-blue-50 dark:hover:to-indigo-200 text-white dark:text-slate-900 scale-[1.01] shadow-[0_8px_20px_rgba(30,58,138,0.3)] dark:shadow-[0_4px_15px_rgba(199,210,254,0.15)] font-extrabold border-transparent"
                 : "bg-card border-border hover:bg-muted/50 hover:border-primary/20 text-muted-foreground hover:text-foreground font-semibold"
             )}
             onClick={() => settingsMutation.mutate('manual')}
