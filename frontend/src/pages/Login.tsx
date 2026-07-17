@@ -5,10 +5,8 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Building2,
   Eye,
   EyeOff,
-  UserRound,
   ShieldCheck,
   Zap,
   Mail,
@@ -23,30 +21,13 @@ import Brand from '../components/Brand'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 
 const ROLE_HOME = { admin: '/admin', admin1: '/admin1', customer: '/app' } as const
-
-type GatewayMode = 'customer' | 'staff'
-
-const roleTabs = [
-  {
-    id: 'customer' as const,
-    icon: UserRound,
-    label: 'Customer Portal',
-  },
-  {
-    id: 'staff' as const,
-    icon: Building2,
-    label: 'Staff Console',
-  },
-]
 
 export default function Login() {
   const { session, isChecking, login } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
-  const [activeMode, setActiveMode] = useState<GatewayMode>('customer')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -66,25 +47,18 @@ export default function Login() {
       const me = await authMe()
       const role = me.role === 'ADMIN' ? 'admin' : me.role === 'ADMIN1' ? 'admin1' : 'customer'
 
-      if (activeMode === 'staff' && role !== 'admin' && role !== 'admin1') {
+      if (role !== 'admin' && role !== 'admin1') {
         clearToken()
-        setError('These credentials are not authorised for staff access. Please use the Customer portal.')
-        return
-      }
-      if (activeMode === 'customer' && role !== 'customer') {
-        clearToken()
-        setError('Staff accounts must sign in through the Staff / Admin portal.')
+        setError('These credentials are not authorised for staff access.')
         return
       }
 
       const nextSession =
-        role === 'customer' && me.customer_id != null
-          ? { role: 'customer' as const, customerId: me.customer_id }
-          : role === 'admin1'
-            ? { role: 'admin1' as const }
-            : { role: 'admin' as const }
+        role === 'admin1'
+          ? { role: 'admin1' as const }
+          : { role: 'admin' as const }
       login(nextSession)
-      navigate(role === 'admin1' ? '/admin1' : role === 'admin' ? '/admin' : '/app', { replace: true })
+      navigate(role === 'admin1' ? '/admin1' : '/admin', { replace: true })
     } catch (err: any) {
       console.error("Login error:", err)
       setError(err?.detail || err?.message || 'Login failed. Please verify your credentials and try again.')
@@ -191,39 +165,11 @@ export default function Login() {
         {/* Form Container */}
         <div className="relative z-10 flex h-full w-full flex-col justify-center px-6 sm:px-12 xl:px-20 pt-28 lg:pt-0">
 
-          <div className="flex flex-col space-y-2 mb-8">
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Welcome Back</h2>
+          <div className="flex flex-col space-y-2 mb-10">
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Staff Login</h2>
             <p className="text-[15px] font-medium text-muted-foreground">
-              Sign in to access the SLT-MOBITEL {activeMode === 'staff' ? 'staff console' : 'customer billing portal'}.
+              Sign in to access the SLT-MOBITEL billing environment.
             </p>
-          </div>
-
-          <div className="mb-10">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1.5 ring-1 ring-inset ring-border/80 shadow-inner">
-              {roleTabs.map((tab) => {
-                const Icon = tab.icon
-                const isActive = activeMode === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveMode(tab.id)
-                      setError(null)
-                    }}
-                    className={cn(
-                      'flex h-12 items-center justify-center gap-2.5 rounded-lg text-[14px] font-bold transition-all duration-300',
-                      isActive
-                        ? 'bg-background text-foreground shadow-md ring-1 ring-border/50'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
-                    )}
-                  >
-                    <Icon size={18} />
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-7">
@@ -240,7 +186,7 @@ export default function Login() {
                   type="email"
                   autoComplete="username"
                   required
-                  placeholder={activeMode === 'staff' ? 'admin@slt.lk' : 'customer@example.com'}
+                  placeholder="admin@slt.lk"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-14 pl-12 pr-4 text-[15px] bg-background border-border shadow-sm focus-visible:ring-2 focus-visible:border-[#0066b3] focus-visible:ring-[#0066b3]/20 rounded-xl transition-all placeholder:text-muted-foreground/60 font-medium"

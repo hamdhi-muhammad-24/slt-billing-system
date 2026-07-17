@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
-import { FileText, CheckCircle2, AlertTriangle, Loader2, XCircle } from 'lucide-react'
-import { getUploads, type GmfUploadOut } from '../../lib/api'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { FileText, CheckCircle2, AlertTriangle, Loader2, XCircle, Trash2 } from 'lucide-react'
+import { getUploads, deleteUpload, clearAllUploads, type GmfUploadOut } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { DataTable, type ColumnDef } from '../../components/ui-kit/DataTable'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'PENDING_APPROVAL') {
@@ -46,11 +51,48 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function GmfMonitor() {
+  const queryClient = useQueryClient()
+  const [showCompleted, setShowCompleted] = useState(false)
+
   const { data: uploads, isLoading } = useQuery({
     queryKey: ['billing-uploads'],
     queryFn: () => getUploads(),
     refetchInterval: 1000,
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteUpload(id),
+    onSuccess: (data) => {
+      toast.success(data.message || "GMF file deleted successfully.")
+      queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to delete GMF file.")
+    }
+  })
+
+  const clearAllMutation = useMutation({
+    mutationFn: () => clearAllUploads(),
+    onSuccess: (data: any) => {
+      toast.success(data.message || "GMF uploads cleared.")
+      queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to clear GMF uploads.")
+    }
+  })
+
+  const handleDelete = (id: number) => {
+    if (confirm("Are you sure you want to delete this GMF file?")) {
+      deleteMutation.mutate(id)
+    }
+  }
+
+  const handleClearAll = () => {
+    if (confirm("Are you sure you want to clear all GMF uploads that are not associated with approved or rejected templates?")) {
+      clearAllMutation.mutate()
+    }
+  }
 
   const COLS: ColumnDef<GmfUploadOut>[] = [
     {
@@ -62,10 +104,10 @@ export default function GmfMonitor() {
             <span className="font-semibold text-foreground">{upload.filename}</span>
           </div>
           {upload.error_message && (
-             <span className="text-xs text-red-500 mt-1 flex items-center gap-1">
-               <AlertTriangle size={10} />
-               {upload.error_message}
-             </span>
+            <span className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <AlertTriangle size={10} />
+              {upload.error_message}
+            </span>
           )}
         </div>
       ),
@@ -93,11 +135,39 @@ export default function GmfMonitor() {
     {
       header: 'Status',
       cell: (upload) => <StatusBadge status={upload.status} />,
+    },
+    {
+      header: 'Actions',
+      cell: (upload) => {
+        const isLocked = upload.template_status === 'APPROVED' || upload.template_status === 'REJECTED'
+        return (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDelete(upload.id)
+            }}
+            disabled={isLocked || deleteMutation.isPending}
+            title={isLocked ? "Cannot delete: Associated template has been approved/rejected" : "Delete GMF"}
+            className="rounded-full size-8 text-muted-foreground hover:text-destructive disabled:opacity-40"
+          >
+            <Trash2 size={14} />
+          </Button>
+        )
+      }
     }
   ]
 
   const allUploads = uploads || []
   const filteredUploads = allUploads.filter(u => u.folder_type !== 'Test_GMFs')
+
+  const displayedUploads = allUploads.filter((u) => {
+    if (!showCompleted && u.status === 'COMPLETED') {
+      return false
+    }
+    return true
+  })
 
   const summary = {
     total: allUploads.length,
@@ -108,9 +178,23 @@ export default function GmfMonitor() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="GMF Monitor" 
-        description="Monitor detected GMF files and their generation status." 
+      <PageHeader
+        title="GMF Monitor"
+        description="Monitor detected GMF files and their generation status."
+        actions={
+          allUploads.length > 0 ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleClearAll}
+              disabled={clearAllMutation.isPending}
+              className="flex items-center gap-1.5 font-bold shadow-sm"
+            >
+              <Trash2 size={14} />
+              {clearAllMutation.isPending ? "Clearing..." : "Clear All Uploads"}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="grid grid-cols-4 gap-4 glass-card p-5 shadow-lg">
@@ -132,13 +216,27 @@ export default function GmfMonitor() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Queue Files</span>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="show-completed" className="text-xs font-semibold text-muted-foreground cursor-pointer select-none">
+              Show Completed Files
+            </Label>
+            <Switch
+              id="show-completed"
+              checked={showCompleted}
+              onCheckedChange={setShowCompleted}
+            />
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="h-64 animate-pulse rounded-lg bg-muted" />
         ) : (
           <DataTable
             columns={COLS}
-            data={allUploads}
+            data={displayedUploads}
             keyExtractor={(upload) => upload.id}
             emptyLabel="No GMF uploads detected yet."
           />

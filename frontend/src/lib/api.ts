@@ -128,6 +128,7 @@ export interface GmfUploadOut {
   error_message: string | null
   rejection_reason: string | null
   billing_run_id: number | null
+  template_status?: string | null
 }
 
 export interface BillingRunOut {
@@ -412,4 +413,13 @@ export async function uploadGmf(files: File[], folderType: string): Promise<{ me
     throw new ApiError(res.status, detail)
   }
   return res.json() as Promise<{ message: string }>
+}
+
+export function deleteUpload(uploadId: number): Promise<{ message: string }> {
+  return request(`/billing/uploads/${uploadId}`, { method: 'DELETE' })
+}
+
+export function clearAllUploads(folderType?: string): Promise<{ message: string; deleted_count: number; skipped_count: number }> {
+  const q = folderType ? `?folder_type=${folderType}` : ''
+  return request(`/billing/uploads${q}`, { method: 'DELETE' })
 }

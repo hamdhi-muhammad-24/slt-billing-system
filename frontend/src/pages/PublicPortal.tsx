@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   Bot,
-  CreditCard,
   FileText,
   Headphones,
   HelpCircle,
@@ -31,33 +30,22 @@ const navLinks = [
 
 const actionCards = [
   {
-    icon: FileText,
-    title: 'Customer Invoice Access',
-    description: 'Verify your account and instantly view or download your latest AI-generated billing statements securely.',
-    cta: 'View My Bill',
-    helper: 'OTP Verified',
-    path: '/bill-access',
+    icon: Zap,
+    title: 'Billing Operations Console',
+    description: 'For billing operators and staff to upload GMF files, manage processing queues, and monitor cycle batches in real-time.',
+    cta: 'Enter Operations Portal',
+    helper: 'Operations Staff',
+    path: 'signin' as const,
     accentClass: 'from-blue-600 to-cyan-500',
     iconClass: 'bg-gradient-to-br from-[#0066b3] to-[#00b2e3] text-white shadow-[0_12px_30px_rgba(0,102,179,0.35)]',
     buttonClass: 'bg-gradient-to-r from-[#0066b3] to-[#00b2e3] text-white shadow-lg hover:shadow-[#00b2e3]/25 hover:-translate-y-0.5',
   },
   {
-    icon: CreditCard,
-    title: 'Secure Payments',
-    description: 'Quickly look up your account to process a payment through our encrypted, bank-grade payment gateway.',
-    cta: 'Pay Now',
-    helper: 'Bank-Grade',
-    path: '/pay-bill',
-    accentClass: 'from-[#00a651] to-teal-600',
-    iconClass: 'bg-gradient-to-br from-[#00a651] to-teal-600 text-white shadow-[0_12px_30px_rgba(0,166,81,0.35)]',
-    buttonClass: 'bg-gradient-to-r from-[#00a651] to-teal-600 text-white shadow-lg hover:shadow-[#00a651]/25 hover:-translate-y-0.5',
-  },
-  {
     icon: LockKeyhole,
-    title: 'Staff / Admin Console',
-    description: 'Authorized SLT personnel sign in here to manage GMF uploads, trigger AI generation, and monitor cycle batches.',
-    cta: 'Sign In',
-    helper: 'Staff Only',
+    title: 'System Administration Console',
+    description: 'For administrators to manage billing templates, configure processing schedules, monitor logs, and manage system parameters.',
+    cta: 'Enter Admin Console',
+    helper: 'System Admin',
     path: 'signin' as const,
     accentClass: 'from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-400',
     iconClass: 'bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-400 text-white dark:text-slate-900 shadow-[0_12px_30px_rgba(51,65,85,0.35)] dark:shadow-[0_12px_30px_rgba(255,255,255,0.15)]',
@@ -79,7 +67,7 @@ const featureCards = [
   {
     icon: ShieldCheck,
     title: 'Enterprise Security',
-    description: 'From OTP customer verification to strict Role-Based Access Control, your sensitive data is protected by AES-256 encryption.',
+    description: 'From multi-factor staff authentication to strict Role-Based Access Control, administrative operations are secured by AES-256 encryption.',
   },
 ]
 
@@ -202,7 +190,7 @@ export default function PublicPortal() {
               </span>
             </h1>
             <p className="mt-8 max-w-2xl text-lg sm:text-xl leading-relaxed text-muted-foreground font-medium">
-              Experience the future of telecommunications billing. Our AI-driven platform processes millions of GMF records, generating beautiful, accurate invoices instantly while providing a secure portal for both customers and administrators.
+              Experience the future of telecommunications billing. Our AI-driven platform processes millions of GMF records, generating beautiful, accurate invoices instantly while providing a secure portal for billing administrators and operations staff.
             </p>
 
             <div className="mt-12 flex flex-wrap items-center gap-4">
@@ -278,7 +266,7 @@ export default function PublicPortal() {
               <div className="mt-8 flex items-start gap-4 rounded-2xl bg-muted/30 p-4 border border-border/40">
                 <LockKeyhole size={20} className="shrink-0 text-[#0066b3] mt-0.5" />
                 <p className="text-xs leading-relaxed text-muted-foreground font-medium">
-                  <strong className="text-foreground">Bank-Grade Security:</strong> End-to-end AES-256 encryption active for all customer billing data and staff generation operations across the SLT-MOBITEL network.
+                  <strong className="text-foreground">Bank-Grade Security:</strong> End-to-end AES-256 encryption active for all system billing data and staff generation operations across the SLT-MOBITEL network.
                 </p>
               </div>
             </div>
@@ -292,7 +280,7 @@ export default function PublicPortal() {
           <p className="mt-4 text-lg text-muted-foreground font-medium max-w-2xl mx-auto">Choose the appropriate portal below to securely access your dedicated SLT-MOBITEL billing environment.</p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
           {actionCards.map((action) => {
             const Icon = action.icon
             return (
@@ -338,7 +326,7 @@ export default function PublicPortal() {
                 Modern Telecom <br className="hidden sm:block" /> E-Billing Made Simple
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-muted-foreground max-w-2xl font-medium">
-                We've revolutionized how billing data is processed. By ingesting complex GMF files, our AI engine designs, formats, and generates pixel-perfect PDF statements, ensuring accuracy and security for every customer.
+                We've revolutionized how billing data is processed. By ingesting complex GMF files, our AI engine designs, formats, and generates pixel-perfect PDF statements, ensuring accuracy and security across the network.
               </p>
             </div>
           </div>
@@ -372,7 +360,7 @@ export default function PublicPortal() {
             <div>
               <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Need Assistance?</h2>
               <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted-foreground font-medium">
-                Our support team is ready to help with OTP verification, portal access issues, or questions regarding your AI-generated billing statements.
+                Our support team is ready to help with credential verification, portal access issues, or system administration questions.
               </p>
             </div>
           </div>

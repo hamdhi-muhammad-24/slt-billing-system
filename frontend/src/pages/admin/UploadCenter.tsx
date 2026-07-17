@@ -25,21 +25,43 @@ export default function UploadCenter() {
     setDragging(false)
   }
 
+  const isValidGmfFile = (file: File): boolean => {
+    const name = file.name
+    const lastDot = name.lastIndexOf('.')
+    if (lastDot === -1) return true // no extension is valid GMF
+    const ext = name.substring(lastDot).toLowerCase()
+    const extClean = ext.startsWith('.') ? ext.substring(1) : ext
+    const isNumeric = /^\d+$/.test(extClean)
+    return ext === '.zip' || ext === '.gmf' || isNumeric
+  }
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
     if (e.dataTransfer.files) {
       const droppedFiles = Array.from(e.dataTransfer.files)
-      setFiles(prev => [...prev, ...droppedFiles])
-      setSuccess(false)
+      const valid = droppedFiles.filter(isValidGmfFile)
+      if (valid.length !== droppedFiles.length) {
+        toast.error("Invalid file format. Please upload valid GMF formats (no extension, numeric suffixes like .1, .6, or .gmf, or .zip).")
+      }
+      if (valid.length > 0) {
+        setFiles(prev => [...prev, ...valid])
+        setSuccess(false)
+      }
     }
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
-      setFiles(prev => [...prev, ...selectedFiles])
-      setSuccess(false)
+      const valid = selectedFiles.filter(isValidGmfFile)
+      if (valid.length !== selectedFiles.length) {
+        toast.error("Invalid file format. Please upload valid GMF formats (no extension, numeric suffixes like .1, .6, or .gmf, or .zip).")
+      }
+      if (valid.length > 0) {
+        setFiles(prev => [...prev, ...valid])
+        setSuccess(false)
+      }
     }
   }
 
@@ -132,7 +154,7 @@ export default function UploadCenter() {
             </div>
             <span className="text-lg font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-700 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 bg-clip-text text-transparent">Drag & Drop files here</span>
             <span className="text-sm text-muted-foreground mt-2 text-center">
-              Supports massive GMF format files (1.5M+), ZIP archives, or folder drops.<br/>
+              Supports GMF format files (no extension, numeric suffixes like .1, .6, or .gmf) or ZIP archives.<br/>
               Or click to browse from your device.
             </span>
           </div>

@@ -76,10 +76,10 @@ function SidebarFrame({ email, onNav }: { email?: string; onNav?: () => void }) 
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-medium text-sidebar-foreground truncate">
-              {email ?? 'Admin 1'}
+              {email ?? 'Billing Operator'}
             </span>
             <span className="mt-1 inline-flex w-fit items-center rounded-full bg-indigo-400/15 px-2 py-px text-[10px] font-medium text-indigo-200">
-              Admin 1
+              Billing Operator
             </span>
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function Admin1Layout() {
 
           <div className="hidden flex-col leading-tight sm:flex">
             <span className="text-sm font-semibold">SLT-MOBITEL Billing Upload Console</span>
-            <span className="text-xs text-muted-foreground">Admin 1 portal for file uploads and monitoring</span>
+            <span className="text-xs text-muted-foreground">This portal for file uploads and monitoring</span>
           </div>
 
           <span className="flex-1" />
