@@ -54,8 +54,45 @@ def reset_test_data():
             print(f"Reset {updated_templates} templates to PENDING status.")
             
             db.commit()
-            print("\nSUCCESS! The database has been wiped clean of transaction history.")
-            print("You can now move your GMF files back into Cycle_1 and they will be treated as brand new uploads.")
+            print("\nDatabase reset successful.")
+            
+            # --- CLEAR PHYSICAL FILES ---
+            from app.core.config import settings
+            import shutil
+            from pathlib import Path
+
+            print("\nCleaning up physical files...")
+            paths_to_clean = [
+                settings.queue_incoming_dir,
+                settings.queue_pending_dir,
+                Path("./queue/completed_temp"),
+                Path("./output"),
+                settings.gmf_drive_path / "Test_GMFs",
+                settings.gmf_drive_path / "Cycle_1",
+                settings.gmf_drive_path / "Cycle_2",
+                settings.gmf_drive_path / "Cycle_3",
+                settings.gmf_drive_path / "Cycle_4",
+                settings.gmf_drive_path / "Processed",
+                settings.gmf_drive_path / "Failed"
+            ]
+
+            files_deleted = 0
+            for p in paths_to_clean:
+                if p.exists():
+                    for item in p.iterdir():
+                        try:
+                            if item.is_file():
+                                item.unlink()
+                                files_deleted += 1
+                            elif item.is_dir():
+                                shutil.rmtree(item)
+                                files_deleted += 1
+                        except Exception as file_err:
+                            print(f"Warning: could not delete {item}: {file_err}")
+                            
+            print(f"Cleaned up {files_deleted} files/folders from processing queues and drive.")
+            print("\nSUCCESS! The system has been wiped clean of transaction history and temporary files.")
+            print("You can now upload your GMF files back into the system and they will be treated as brand new uploads.")
         except Exception as e:
             db.rollback()
             print(f"An error occurred: {e}")
