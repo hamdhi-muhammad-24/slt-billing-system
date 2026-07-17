@@ -6,6 +6,7 @@ import os
 import sys
 import shutil
 import tempfile
+import logging
 from typing import List, Optional
 from pathlib import Path
 from datetime import datetime, date
@@ -14,6 +15,8 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import get_db
 from app.auth.dependencies import require_admin, require_admin1_or_admin
@@ -68,6 +71,7 @@ class GmfUploadOut(BaseModel):
     error_message: Optional[str]
     rejection_reason: Optional[str]
     billing_run_id: Optional[int]
+    template_status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -320,7 +324,31 @@ def get_uploads(
             pass
     if cycle:
         q = q.filter(GmfUpload.cycle_number == cycle)
-    return q.order_by(GmfUpload.detected_at.desc()).all()
+    
+    uploads = q.order_by(GmfUpload.detected_at.desc()).all()
+    
+    templates = db.query(InvoiceTemplate.template_code, InvoiceTemplate.approval_status).all()
+    template_status_map = {t.template_code: t.approval_status.value for t in templates}
+    
+    res = []
+    for u in uploads:
+        d = {
+            "id": u.id,
+            "filename": u.filename,
+            "file_path": u.file_path,
+            "folder_type": u.folder_type,
+            "cycle_number": u.cycle_number,
+            "template_detected": u.template_detected,
+            "status": u.status.value if hasattr(u.status, 'value') else u.status,
+            "detected_at": u.detected_at,
+            "processed_at": u.processed_at,
+            "error_message": u.error_message,
+            "rejection_reason": u.rejection_reason,
+            "billing_run_id": u.billing_run_id,
+            "template_status": template_status_map.get(u.template_detected) if u.template_detected else None
+        }
+        res.append(d)
+    return res
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -457,17 +485,6 @@ def generate_batch(
     if not os.path.exists(upload.file_path):
         raise HTTPException(status_code=400, detail=f"GMF file not found on disk: {upload.file_path}")
 
-    # Move to incoming queue
-    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
-    filename = Path(upload.file_path).name
-    new_path = settings.queue_incoming_dir / filename
-    
-    try:
-        shutil.move(upload.file_path, str(new_path))
-        upload.file_path = str(new_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to move file to queue: {e}")
-
     # Create BillingRun to track progress
     run = BillingRun(
         batch_name=f"Single GMF {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
@@ -486,6 +503,28 @@ def generate_batch(
     upload.status = GmfUploadStatus.APPROVED
     upload.billing_run_id = run.id
     db.commit()
+    
+    # Expire the run object so the second commit won't overwrite
+    # any worker-modified counter values with stale cached zeros.
+    db.expire(run)
+
+    # Move to incoming queue AFTER database is committed
+    settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+    filename = Path(upload.file_path).name
+    new_path = settings.queue_incoming_dir / filename
+    
+    try:
+        if os.path.exists(new_path):
+            os.remove(new_path)
+        shutil.move(upload.file_path, str(new_path))
+        upload.file_path = str(new_path)
+        db.commit()
+    except Exception as e:
+        # Rollback db updates if move fails
+        upload.status = GmfUploadStatus.PENDING_APPROVAL
+        upload.billing_run_id = None
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to move file to queue: {e}")
 
     return {"message": "File queued for generation"}
 
@@ -524,27 +563,65 @@ def generate_batch_endpoint(
     )
     db.add(run)
     db.flush()
+    run_id = run.id
     
-    success_count = 0
+    # First, mark uploads as approved and set billing_run_id in DB, and commit
+    valid_uploads = []
     for upload in uploads:
         if upload.status not in (GmfUploadStatus.APPROVED, GmfUploadStatus.PENDING_APPROVAL):
             continue
         if not os.path.exists(upload.file_path):
             continue
-
+        upload.status = GmfUploadStatus.APPROVED
+        upload.billing_run_id = run.id
+        valid_uploads.append(upload)
+        
+    db.commit()
+    
+    # CRITICAL: After this commit, background workers may immediately start
+    # processing files and incrementing run.succeeded / run.failed in the DB.
+    # We must NOT write stale cached values (succeeded=0, failed=0) back to the
+    # DB in the second commit below. Expire the run object so SQLAlchemy will
+    # re-read from DB if we access its attributes, and avoid setting succeeded/failed.
+    db.expire(run)
+    
+    # Now, move the files to incoming queue AFTER database transaction has committed
+    success_count = 0
+    staging_failures = 0
+    for upload in valid_uploads:
+        filename = Path(upload.file_path).name
         try:
-            filename = Path(upload.file_path).name
             new_path = settings.queue_incoming_dir / filename
+            if os.path.exists(new_path):
+                os.remove(new_path)
             if str(Path(upload.file_path)) != str(new_path):
                 shutil.move(upload.file_path, str(new_path))
             upload.file_path = str(new_path)
-            upload.status = GmfUploadStatus.APPROVED
-            upload.billing_run_id = run.id
             success_count += 1
-        except Exception:
-            pass
+        except Exception as e:
+            # If move fails, mark this GMF as failed immediately so the run status stays consistent
+            upload.status = GmfUploadStatus.FAILED
+            upload.error_message = f"Failed to stage file: {e}"
+            staging_failures += 1
+            from app.db.models import BillingRunFailure
+            db.add(BillingRunFailure(
+                billing_run_id=run_id,
+                account_number=filename,
+                error_message=f"Failed to stage file: {e}"
+            ))
 
-    run.total_accounts = success_count
+    # Use atomic SQL UPDATE to set total_accounts and increment failed counter
+    # without overwriting the succeeded/failed values that workers may have
+    # already modified since our first commit.
+    from sqlalchemy import update
+    db.execute(
+        update(BillingRun)
+        .where(BillingRun.id == run_id)
+        .values(
+            total_accounts=success_count + staging_failures,
+            failed=BillingRun.failed + staging_failures,
+        )
+    )
     db.commit()
     return {"message": f"{success_count} files queued for generation"}
 
@@ -937,6 +1014,8 @@ def update_template_status(
                         try:
                             settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                             if old_path != new_path:
+                                if new_path.exists():
+                                    new_path.unlink()
                                 shutil.move(str(old_path), str(new_path))
                                 upload.file_path = str(new_path)
                             non_test_uploads.append(upload)
@@ -953,6 +1032,8 @@ def update_template_status(
                         try:
                             settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
                             if old_path != new_path:
+                                if new_path.exists():
+                                    new_path.unlink()
                                 shutil.move(str(old_path), str(new_path))
                                 upload.file_path = str(new_path)
                         except Exception as e:
@@ -1004,6 +1085,8 @@ def update_template_status(
                 try:
                     settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
                     if old_path.exists() and old_path != new_path:
+                        if new_path.exists():
+                            new_path.unlink()
                         shutil.move(str(old_path), str(new_path))
                         upload.file_path = str(new_path)
                 except Exception as e:
@@ -1216,7 +1299,6 @@ def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
                     final_path = settings.gmf_drive_path / folder_type / filename
                     final_status = GmfUploadStatus.PENDING_APPROVAL
                     final_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(str(file_path), str(final_path))
                 else:
                     if is_approved:
                         final_path = settings.queue_incoming_dir / filename
@@ -1224,9 +1306,8 @@ def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
                     else:
                         final_path = settings.queue_pending_dir / filename
                         final_status = GmfUploadStatus.PENDING_APPROVAL
-                    
-                    shutil.copy2(str(file_path), str(final_path))
                 
+                # 1. Update/Insert DB record FIRST
                 existing = db.query(GmfUpload).filter(
                     GmfUpload.filename == filename,
                     GmfUpload.folder_type == folder_type
@@ -1248,8 +1329,11 @@ def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
                     )
                     db.add(upload)
                 
-                if (idx + 1) % batch_size == 0 or (idx + 1) == len(extracted_files):
-                    db.commit()
+                # 2. COMMIT DB to ensure the watcher sees this record if it triggers
+                db.commit()
+                
+                # 3. NOW copy the file to disk (which fires the watcher)
+                shutil.copy2(str(file_path), str(final_path))
             
             # Create a single summary notification
             notif = NotificationEvent(
@@ -1289,6 +1373,16 @@ def upload_gmf(
         if not filename:
             continue
             
+        ext = os.path.splitext(filename)[1].lower()
+        ext_clean = ext[1:] if ext.startswith('.') else ext
+        is_numeric = ext_clean.isdigit()
+        
+        if ext_clean not in ("", "gmf", "zip") and not is_numeric:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file format: {filename}. Only GMF files (no extension, numeric suffixes like .1, .6, or .gmf) and .zip archives are allowed."
+            )
+            
         if filename.lower().endswith(".zip"):
             temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
             try:
@@ -1315,7 +1409,6 @@ def upload_gmf(
                     final_path = settings.gmf_drive_path / folder_type / filename
                     final_status = GmfUploadStatus.PENDING_APPROVAL
                     final_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(temp_file.name, str(final_path))
                 else:
                     settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                     settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
@@ -1327,8 +1420,7 @@ def upload_gmf(
                         final_path = settings.queue_pending_dir / filename
                         final_status = GmfUploadStatus.PENDING_APPROVAL
                         
-                    shutil.copy2(temp_file.name, str(final_path))
-                
+                # 1. Update/Insert DB record FIRST
                 existing = db.query(GmfUpload).filter(
                     GmfUpload.filename == filename,
                     GmfUpload.folder_type == folder_type
@@ -1360,7 +1452,12 @@ def upload_gmf(
                     upload_id=upload_id
                 )
                 db.add(notif)
+                
+                # 2. COMMIT DB to ensure the watcher sees this record if it triggers
                 db.commit()
+                
+                # 3. NOW copy the file to disk (which fires the watcher)
+                shutil.copy2(temp_file.name, str(final_path))
             except Exception as e:
                 db.rollback()
                 raise HTTPException(status_code=500, detail=f"Failed to process uploaded file {filename}: {e}")
@@ -1377,3 +1474,76 @@ def scan_drive(background_tasks: BackgroundTasks, _: UserOut = Depends(require_a
     from app.uploads.watcher import _scan_existing_files, WATCH_DIR
     background_tasks.add_task(_scan_existing_files, WATCH_DIR)
     return {"message": "Drive scan triggered in background."}
+
+
+@router.delete("/uploads/{upload_id}")
+def delete_upload(
+    upload_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(require_admin1_or_admin)
+):
+    upload = db.query(GmfUpload).filter(GmfUpload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail="GMF upload not found.")
+        
+    if current_user.role == "ADMIN1" and upload.template_detected:
+        template = db.query(InvoiceTemplate).filter(
+            InvoiceTemplate.template_code == upload.template_detected
+        ).first()
+        if template and template.approval_status in (TemplateApprovalStatus.APPROVED, TemplateApprovalStatus.REJECTED):
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot delete GMF uploads associated with an approved or rejected template."
+            )
+            
+    if upload.file_path and os.path.exists(upload.file_path):
+        try:
+            os.remove(upload.file_path)
+        except Exception as e:
+            logger.error(f"Failed to delete physical GMF file: {e}")
+            
+    db.delete(upload)
+    db.commit()
+    return {"message": "GMF upload deleted successfully."}
+
+
+@router.delete("/uploads")
+def delete_all_uploads(
+    folder_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(require_admin1_or_admin)
+):
+    query = db.query(GmfUpload)
+    if folder_type:
+        query = query.filter(GmfUpload.folder_type == folder_type)
+    uploads = query.all()
+    
+    deleted_count = 0
+    skipped_count = 0
+    
+    for upload in uploads:
+        can_delete = True
+        if current_user.role == "ADMIN1" and upload.template_detected:
+            template = db.query(InvoiceTemplate).filter(
+                InvoiceTemplate.template_code == upload.template_detected
+            ).first()
+            if template and template.approval_status in (TemplateApprovalStatus.APPROVED, TemplateApprovalStatus.REJECTED):
+                can_delete = False
+                
+        if can_delete:
+            if upload.file_path and os.path.exists(upload.file_path):
+                try:
+                    os.remove(upload.file_path)
+                except Exception as e:
+                    logger.error(f"Failed to delete physical GMF file: {e}")
+            db.delete(upload)
+            deleted_count += 1
+        else:
+            skipped_count += 1
+            
+    db.commit()
+    return {
+        "message": f"Successfully deleted {deleted_count} GMF uploads. Skipped {skipped_count} uploads associated with approved/rejected templates.",
+        "deleted_count": deleted_count,
+        "skipped_count": skipped_count
+    }

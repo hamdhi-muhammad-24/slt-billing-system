@@ -193,6 +193,8 @@ class GmfFolderHandler(FileSystemEventHandler):
                                 
                                 try:
                                     if filepath.exists() and filepath != new_filepath:
+                                        if new_filepath.exists():
+                                            new_filepath.unlink()
                                         shutil.move(str(filepath), str(new_filepath))
                                     existing.file_path = str(new_filepath)
                                 except Exception as move_err:
@@ -263,6 +265,8 @@ class GmfFolderHandler(FileSystemEventHandler):
                             
                         # Move the file from Google Drive to the VM local queue
                         try:
+                            if new_filepath.exists():
+                                new_filepath.unlink()
                             shutil.move(str(filepath), str(new_filepath))
                             logger.info(f"Moved {filename} to {new_filepath}")
                         except Exception as move_err:
