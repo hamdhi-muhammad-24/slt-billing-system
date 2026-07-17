@@ -50,11 +50,13 @@ services:
       CORS_ORIGINS: '["http://localhost", "http://127.0.0.1", "http://206.189.159.175", "http://206.189.159.175:8080"]'
       LOG_LEVEL: INFO
       GMF_DRIVE_PATH: /app/gmf_uploads
+      OUTPUT_DIR: /app/output
       TZ: Asia/Colombo
     ports:
       - "8000:8000"
     volumes:
-      - /root/SLT_GMF_Uploads:/app/gmf_uploads
+      - /var/slt-billing/gmf_uploads:/app/gmf_uploads
+      - /var/slt-billing/output_invoices:/app/output
     depends_on:
       db:
         condition: service_healthy
@@ -79,9 +81,11 @@ services:
       EMAIL_FROM: "SLT Billing <billing@slt.lk>"
       LOG_LEVEL: INFO
       GMF_DRIVE_PATH: /app/gmf_uploads
+      OUTPUT_DIR: /app/output
       TZ: Asia/Colombo
     volumes:
-      - /root/SLT_GMF_Uploads:/app/gmf_uploads
+      - /var/slt-billing/gmf_uploads:/app/gmf_uploads
+      - /var/slt-billing/output_invoices:/app/output
     depends_on:
       db:
         condition: service_healthy
@@ -102,7 +106,7 @@ services:
       GMF_DRIVE_PATH: /app/gmf_uploads
       TZ: Asia/Colombo
     volumes:
-      - /root/SLT_GMF_Uploads:/app/gmf_uploads
+      - /var/slt-billing/gmf_uploads:/app/gmf_uploads
     depends_on:
       redis:
         condition: service_healthy
@@ -130,7 +134,7 @@ services:
       GMF_DRIVE_PATH: /app/gmf_uploads
       TZ: Asia/Colombo
     volumes:
-      - /root/SLT_GMF_Uploads:/app/gmf_uploads
+      - /var/slt-billing/gmf_uploads:/app/gmf_uploads
     depends_on:
       db:
         condition: service_healthy
