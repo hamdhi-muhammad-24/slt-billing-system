@@ -42,7 +42,7 @@ function RunCard({
   return (
     <div 
       className={cn(
-        "flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm relative overflow-hidden pl-5 transition-all duration-200 hover:shadow-md hover:scale-[1.005]", 
+        "flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm relative overflow-hidden pl-5 transition-all duration-200 hover:shadow-md hover:scale-[1.005] shrink-0", 
         isComplete && "border-l-4 border-l-emerald-500 bg-gradient-to-br from-card to-emerald-50/5 dark:to-emerald-950/2",
         isFailed && "border-l-4 border-l-red-500 bg-gradient-to-br from-card to-red-50/5 dark:to-red-950/2",
         isPartial && "border-l-4 border-l-amber-500 bg-gradient-to-br from-card to-amber-50/5 dark:to-amber-950/2",
