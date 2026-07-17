@@ -245,7 +245,7 @@ export default function InvoicePreview() {
                             {gmf.status === 'PENDING_APPROVAL' ? 'Pending' : gmf.status}
                           </span>
 
-                          <span className="font-extrabold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/60 px-2 py-0.5 rounded text-[12px] shadow-sm truncate max-w-[150px]" title={gmf.template_detected || 'Unknown'}>
+                          <span className="font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 px-2 py-0.5 rounded text-[11px] leading-tight break-all shadow-sm">
                             {gmf.template_detected || 'Unknown'}
                           </span>
                         </div>
@@ -402,7 +402,7 @@ export default function InvoicePreview() {
                       </p>
                       <Button
                         size="lg"
-                        className="w-full h-12 shadow-lg text-base font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none transition-all"
+                        className="w-full h-12 shadow-lg text-base font-extrabold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-800 hover:from-black hover:via-blue-950 hover:to-indigo-900 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-300 dark:hover:from-white dark:hover:via-blue-50 dark:hover:to-indigo-200 text-white dark:text-slate-900 shadow-[0_8px_20px_rgba(30,58,138,0.3)] dark:shadow-[0_4px_15px_rgba(199,210,254,0.15)] border-none transition-all"
                         onClick={() => checkMode(() => previewMutation.mutate(selectedGmf.id))}
                         disabled={previewMutation.isPending}
                       >
