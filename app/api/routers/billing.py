@@ -191,6 +191,24 @@ def get_template_history(db: Session = Depends(get_db), _: UserOut = Depends(req
     return db.query(TemplateHistory).order_by(TemplateHistory.timestamp.desc()).all()
 
 
+@router.delete("/template-history/{history_id}")
+def delete_template_history(history_id: int, db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    history = db.query(TemplateHistory).filter(TemplateHistory.id == history_id).first()
+    if not history:
+        raise HTTPException(status_code=404, detail="Template history log not found")
+
+    db.delete(history)
+    db.commit()
+    return {"message": "Template history log deleted successfully"}
+
+
+@router.delete("/template-history")
+def delete_all_template_history(db: Session = Depends(get_db), _: UserOut = Depends(require_admin)):
+    db.query(TemplateHistory).delete(synchronize_session=False)
+    db.commit()
+    return {"message": "All template history logs deleted successfully"}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Dashboard stats
 # ─────────────────────────────────────────────────────────────────────────────

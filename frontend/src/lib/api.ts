@@ -405,6 +405,14 @@ export function getTemplateHistory(): Promise<any[]> {
   return request('/billing/template-history')
 }
 
+export function deleteTemplateHistoryLog(historyId: number): Promise<{ message: string }> {
+  return request(`/billing/template-history/${historyId}`, { method: 'DELETE' })
+}
+
+export function deleteAllTemplateHistoryLogs(): Promise<{ message: string }> {
+  return request('/billing/template-history', { method: 'DELETE' })
+}
+
 export function deleteRun(runId: number): Promise<{ message: string }> {
   return request(`/billing/runs/${runId}`, { method: 'DELETE' })
 }

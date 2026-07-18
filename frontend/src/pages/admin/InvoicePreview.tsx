@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X, AlertCircle, History } from 'lucide-react'
-import { getUploads, previewInvoice, fetchPreviewPdfBlobUrl, updateTemplateStatus, getSettings, updateSettings, getTemplateHistory } from '../../lib/api'
+import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X, AlertCircle, History, Trash2 } from 'lucide-react'
+import { getUploads, previewInvoice, fetchPreviewPdfBlobUrl, updateTemplateStatus, getSettings, updateSettings, getTemplateHistory, deleteTemplateHistoryLog, deleteAllTemplateHistoryLogs } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -114,6 +114,24 @@ export default function InvoicePreview() {
       queryClient.invalidateQueries({ queryKey: ['template-history'] })
     },
     onError: (err: any) => toast.error(err.detail || 'Failed to reject template')
+  })
+
+  const deleteHistoryMutation = useMutation({
+    mutationFn: (historyId: number) => deleteTemplateHistoryLog(historyId),
+    onSuccess: () => {
+      toast.success('Template history log deleted.')
+      queryClient.invalidateQueries({ queryKey: ['template-history'] })
+    },
+    onError: (err: any) => toast.error(err.detail || 'Failed to delete history log')
+  })
+
+  const deleteAllHistoryMutation = useMutation({
+    mutationFn: () => deleteAllTemplateHistoryLogs(),
+    onSuccess: () => {
+      toast.success('All template history logs deleted.')
+      queryClient.invalidateQueries({ queryKey: ['template-history'] })
+    },
+    onError: (err: any) => toast.error(err.detail || 'Failed to delete history logs')
   })
 
   const checkMode = (action: () => void) => {
@@ -526,10 +544,28 @@ export default function InvoicePreview() {
       <Sheet open={showHistory} onOpenChange={setShowHistory}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto border-l shadow-2xl">
           <SheetHeader className="border-b pb-5">
-            <SheetTitle className="flex items-center gap-2 text-xl font-extrabold">
-              <History className="text-primary" />
-              Template History Logs
-            </SheetTitle>
+            <div className="flex items-start justify-between gap-3">
+              <SheetTitle className="flex items-center gap-2 text-xl font-extrabold">
+                <History className="text-primary" />
+                Template History Logs
+              </SheetTitle>
+              {historyData && historyData.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete all template history logs?')) {
+                      deleteAllHistoryMutation.mutate()
+                    }
+                  }}
+                  disabled={deleteAllHistoryMutation.isPending}
+                  className="h-8 shrink-0 text-muted-foreground hover:text-destructive border-muted-foreground/25"
+                >
+                  <Trash2 size={13} className="mr-1.5" />
+                  Delete All
+                </Button>
+              )}
+            </div>
             <SheetDescription className="text-sm">
               View approval and rejection log history for test GMF templates.
             </SheetDescription>
@@ -545,12 +581,28 @@ export default function InvoicePreview() {
                 <div key={log.id} className="p-4 border rounded-xl bg-card shadow-sm text-sm flex flex-col gap-2 transition-all hover:shadow-md hover:border-border">
                   <div className="flex items-center justify-between font-bold">
                     <span className="text-foreground text-[15px] tracking-tight">{log.template_name}</span>
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-md text-[11px] uppercase tracking-wider font-extrabold shadow-sm",
-                      log.action === 'APPROVED' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
-                    )}>
-                      {log.action}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] uppercase tracking-wider font-extrabold shadow-sm",
+                        log.action === 'APPROVED' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                      )}>
+                        {log.action}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Delete log"
+                        onClick={() => {
+                          if (window.confirm('Delete this template history log?')) {
+                            deleteHistoryMutation.mutate(log.id)
+                          }
+                        }}
+                        disabled={deleteHistoryMutation.isPending}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </div>
                   {log.filename && <div className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5"><FileText size={12} /> {log.filename}</div>}
                   {log.reason && <div className="text-red-600 dark:text-red-400 font-semibold text-xs mt-1.5 bg-red-50 dark:bg-red-950/20 px-2.5 py-1.5 rounded flex gap-1.5 items-start"><AlertCircle size={14} className="shrink-0 mt-0.5" /> {log.reason}</div>}
