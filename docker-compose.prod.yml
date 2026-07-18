@@ -51,12 +51,15 @@ services:
       LOG_LEVEL: INFO
       GMF_DRIVE_PATH: /app/gmf_uploads
       OUTPUT_DIR: /app/output
+      QUEUE_INCOMING_DIR: /app/queue/incoming
+      QUEUE_PENDING_DIR: /app/queue/pending
       TZ: Asia/Colombo
     ports:
       - "8000:8000"
     volumes:
       - /var/slt-billing/gmf_uploads:/app/gmf_uploads
       - /var/slt-billing/output_invoices:/app/output
+      - slt_queue_data:/app/queue
     depends_on:
       db:
         condition: service_healthy
@@ -82,10 +85,13 @@ services:
       LOG_LEVEL: INFO
       GMF_DRIVE_PATH: /app/gmf_uploads
       OUTPUT_DIR: /app/output
+      QUEUE_INCOMING_DIR: /app/queue/incoming
+      QUEUE_PENDING_DIR: /app/queue/pending
       TZ: Asia/Colombo
     volumes:
       - /var/slt-billing/gmf_uploads:/app/gmf_uploads
       - /var/slt-billing/output_invoices:/app/output
+      - slt_queue_data:/app/queue
     depends_on:
       db:
         condition: service_healthy
@@ -104,9 +110,12 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       LOG_LEVEL: INFO
       GMF_DRIVE_PATH: /app/gmf_uploads
+      QUEUE_INCOMING_DIR: /app/queue/incoming
+      QUEUE_PENDING_DIR: /app/queue/pending
       TZ: Asia/Colombo
     volumes:
       - /var/slt-billing/gmf_uploads:/app/gmf_uploads
+      - slt_queue_data:/app/queue
     depends_on:
       redis:
         condition: service_healthy
@@ -132,9 +141,12 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/slt_ebill
       GMF_DRIVE_PATH: /app/gmf_uploads
+      QUEUE_INCOMING_DIR: /app/queue/incoming
+      QUEUE_PENDING_DIR: /app/queue/pending
       TZ: Asia/Colombo
     volumes:
       - /var/slt-billing/gmf_uploads:/app/gmf_uploads
+      - slt_queue_data:/app/queue
     depends_on:
       db:
         condition: service_healthy
@@ -143,3 +155,4 @@ services:
 volumes:
   db_data:
   redis_data:
+  slt_queue_data:
