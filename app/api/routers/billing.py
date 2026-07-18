@@ -1690,13 +1690,18 @@ def scan_drive(background_tasks: BackgroundTasks, _: UserOut = Depends(require_a
     return {"message": "Drive scan triggered in background."}
 
 
+def _is_admin1_role(role: str) -> bool:
+    role_value = getattr(role, "value", role)
+    return str(role_value).upper().split(".")[-1] == "ADMIN1"
+
+
 @router.delete("/uploads/{upload_id}")
 def delete_upload(
     upload_id: int,
     db: Session = Depends(get_db),
     current_user: UserOut = Depends(require_admin1_or_admin)
 ):
-    if current_user.role != "ADMIN1":
+    if not _is_admin1_role(current_user.role):
         raise HTTPException(status_code=403, detail="Only Admin1 can delete uploaded GMF files.")
 
     upload = db.query(GmfUpload).filter(GmfUpload.id == upload_id).first()
@@ -1730,7 +1735,7 @@ def delete_all_uploads(
     db: Session = Depends(get_db),
     current_user: UserOut = Depends(require_admin1_or_admin)
 ):
-    if current_user.role != "ADMIN1":
+    if not _is_admin1_role(current_user.role):
         raise HTTPException(status_code=403, detail="Only Admin1 can clear uploaded GMF files.")
 
     query = db.query(GmfUpload)

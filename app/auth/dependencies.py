@@ -39,7 +39,7 @@ def get_current_user(
     return UserOut(
         id=user.id,
         email=user.email,
-        role=payload["role"],
+        role=user.role.value,
     )
 
 
