@@ -179,8 +179,39 @@ export function getUploads(status?: string, cycle?: number): Promise<GmfUploadOu
   return request(`/billing/uploads${q}`)
 }
 
-export function previewInvoice(uploadId: number, signal?: AbortSignal): Promise<{ message: string; pdf_url: string; template_detected: string }> {
+export interface PreviewInvoiceResponse {
+  message: string
+  pdf_url: string
+  template_detected: string
+}
+
+export function previewInvoice(uploadId: number, signal?: AbortSignal): Promise<PreviewInvoiceResponse> {
   return request(`/billing/preview/${uploadId}`, { method: 'POST', signal })
+}
+
+export async function fetchPreviewPdfBlobUrl(pdfUrl: string, signal?: AbortSignal): Promise<string> {
+  const token = getToken()
+  const url = pdfUrl.startsWith('http') ? pdfUrl : `${BASE_URL}${pdfUrl}`
+  const response = await fetch(url, {
+    signal,
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  if (!response.ok) {
+    let detail = response.statusText
+    try {
+      const json = await response.json() as { detail: string }
+      if (json.detail) detail = json.detail
+    } catch {
+      // ignore
+    }
+    throw new ApiError(response.status, detail)
+  }
+
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
 }
 
 export function approveUpload(uploadId: number): Promise<{ message: string; upload_id: number }> {

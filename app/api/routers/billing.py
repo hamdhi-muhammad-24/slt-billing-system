@@ -372,10 +372,7 @@ def preview_invoice(
             detail=f"GMF file not found on disk: {upload.file_path}"
         )
 
-    # Save previews where React dev server can serve them
-    preview_dir = Path(os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../../../frontend/public/previews")
-    ))
+    preview_dir = settings.output_dir / "previews"
     preview_dir.mkdir(parents=True, exist_ok=True)
 
     args = (upload.file_path, str(preview_dir), 1, True)
@@ -401,9 +398,26 @@ def preview_invoice(
     pdf_filename = os.path.basename(result.output_pdf)
     return {
         "message": "Preview generated successfully",
-        "pdf_url": f"/previews/{pdf_filename}",
+        "pdf_url": f"/billing/preview-pdfs/{pdf_filename}",
         "template_detected": result.template_id,
     }
+
+
+@router.get("/preview-pdfs/{filename}")
+def serve_preview_pdf(
+    filename: str,
+    _: UserOut = Depends(require_admin),
+):
+    """Serve a generated preview PDF from backend-managed storage."""
+    safe_filename = Path(filename).name
+    if safe_filename != filename or not safe_filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid preview PDF filename")
+
+    path = settings.output_dir / "previews" / safe_filename
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Preview PDF not found")
+
+    return FileResponse(path, media_type="application/pdf", filename=safe_filename)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

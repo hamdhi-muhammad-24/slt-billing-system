@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, Eye, CheckCircle2, XCircle, Loader2, Sparkles, FileSearch, Maximize2, Download, X, AlertCircle, History } from 'lucide-react'
-import { getUploads, previewInvoice, updateTemplateStatus, getSettings, updateSettings, getTemplateHistory } from '../../lib/api'
+import { getUploads, previewInvoice, fetchPreviewPdfBlobUrl, updateTemplateStatus, getSettings, updateSettings, getTemplateHistory } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -39,6 +39,14 @@ export default function InvoicePreview() {
     }
   }, [settingsData])
 
+  useEffect(() => {
+    return () => {
+      if (previewPdfUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewPdfUrl)
+      }
+    }
+  }, [previewPdfUrl])
+
   const { data: historyData } = useQuery({
     queryKey: ['template-history'],
     queryFn: getTemplateHistory,
@@ -59,13 +67,18 @@ export default function InvoicePreview() {
   })
 
   const previewMutation = useMutation({
-    mutationFn: (id: number) => {
+    mutationFn: async (id: number) => {
       const controller = new AbortController()
       abortControllerRef.current = controller
-      return previewInvoice(id, controller.signal)
+      const resData = await previewInvoice(id, controller.signal)
+      const previewBlobUrl = await fetchPreviewPdfBlobUrl(resData.pdf_url, controller.signal)
+      return { ...resData, pdf_url: previewBlobUrl }
     },
     onSuccess: (resData) => {
       toast.success(resData.message)
+      if (previewPdfUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewPdfUrl)
+      }
       setPreviewPdfUrl(resData.pdf_url)
       queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
     },
