@@ -8,7 +8,7 @@ echo "Syncing every 5 seconds..."
 # LOOP 1: GMF Downloads (Runs in background, check every 30 seconds)
 # This loop is never blocked by slow upload operations.
 while true; do
-  rclone copy gdrive:SLT_GMF_Uploads /root/SLT_GMF_Uploads \
+  rclone copy gdrive:SLT_GMF_Uploads /var/slt-billing/gmf_uploads \
     --exclude "/Output/**" \
     --exclude "/Output/" \
     --exclude "/Processed/**" \
@@ -24,7 +24,7 @@ while true; do
     --quiet
 
   # Copy test GMF files (retains them on Google Drive)
-  rclone copy gdrive:SLT_GMF_Uploads/Test_GMFs /root/SLT_GMF_Uploads/Test_GMFs \
+  rclone copy gdrive:SLT_GMF_Uploads/Test_GMFs /var/slt-billing/gmf_uploads/Test_GMFs \
     --exclude "desktop.ini" \
     --exclude "Thumbs.db" \
     --exclude "DESKTOP.INI" \
@@ -36,8 +36,8 @@ done &
 # LOOP 2: Output, Processed, & Failed Uploads (Runs in foreground, check every 60 seconds)
 while true; do
   # Copy generated output PDFs from VM to Google Drive (if not already syncing)
-  if ! pgrep -f "rclone copy /root/SLT_GMF_Uploads/Output" > /dev/null; then
-    rclone copy /root/SLT_GMF_Uploads/Output gdrive:SLT_GMF_Uploads/Output \
+  if ! pgrep -f "rclone copy /var/slt-billing/gmf_uploads/Output" > /dev/null; then
+    rclone copy /var/slt-billing/gmf_uploads/Output gdrive:SLT_GMF_Uploads/Output \
       --exclude "desktop.ini" \
       --exclude "Thumbs.db" \
       --exclude "DESKTOP.INI" \
@@ -46,8 +46,8 @@ while true; do
   fi
 
   # Move Processed folders from VM to Google Drive (if not already syncing)
-  if ! pgrep -f "rclone move /root/SLT_GMF_Uploads/Processed" > /dev/null; then
-    rclone move /root/SLT_GMF_Uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
+  if ! pgrep -f "rclone move /var/slt-billing/gmf_uploads/Processed" > /dev/null; then
+    rclone move /var/slt-billing/gmf_uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
       --exclude "desktop.ini" \
       --exclude "Thumbs.db" \
       --exclude "DESKTOP.INI" \
@@ -56,8 +56,8 @@ while true; do
   fi
 
   # Move Failed folders from VM to Google Drive (if not already syncing)
-  if ! pgrep -f "rclone move /root/SLT_GMF_Uploads/Failed" > /dev/null; then
-    rclone move /root/SLT_GMF_Uploads/Failed gdrive:SLT_GMF_Uploads/Failed \
+  if ! pgrep -f "rclone move /var/slt-billing/gmf_uploads/Failed" > /dev/null; then
+    rclone move /var/slt-billing/gmf_uploads/Failed gdrive:SLT_GMF_Uploads/Failed \
       --exclude "desktop.ini" \
       --exclude "Thumbs.db" \
       --exclude "DESKTOP.INI" \
