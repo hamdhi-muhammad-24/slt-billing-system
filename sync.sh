@@ -45,6 +45,21 @@ while true; do
       --quiet &
   fi
 
+  # Delete original cycle files from Google Drive once the worker has archived
+  # them locally as Processed. rclone is configured on the VM host, not inside
+  # the app containers.
+  if ! pgrep -f "rclone deletefile gdrive:SLT_GMF_Uploads/Cycle_" > /dev/null; then
+    find /var/slt-billing/gmf_uploads/Processed -type f -print0 2>/dev/null | while IFS= read -r -d '' file; do
+      cycle="$(basename "$(dirname "$file")")"
+      filename="$(basename "$file")"
+      case "$cycle" in
+        Cycle_1|Cycle_2|Cycle_3|Cycle_4)
+          rclone deletefile "gdrive:SLT_GMF_Uploads/${cycle}/${filename}" --quiet || true
+          ;;
+      esac
+    done &
+  fi
+
   # Move Processed folders from VM to Google Drive (if not already syncing)
   if ! pgrep -f "rclone move /var/slt-billing/gmf_uploads/Processed" > /dev/null; then
     rclone move /var/slt-billing/gmf_uploads/Processed gdrive:SLT_GMF_Uploads/Processed \
@@ -53,6 +68,20 @@ while true; do
       --exclude "DESKTOP.INI" \
       --exclude "THUMBS.DB" \
       --delete-empty-src-dirs --quiet &
+  fi
+
+  # Delete original cycle files from Google Drive once the worker has archived
+  # them locally as Failed.
+  if ! pgrep -f "rclone deletefile gdrive:SLT_GMF_Uploads/Cycle_" > /dev/null; then
+    find /var/slt-billing/gmf_uploads/Failed -type f -print0 2>/dev/null | while IFS= read -r -d '' file; do
+      cycle="$(basename "$(dirname "$file")")"
+      filename="$(basename "$file")"
+      case "$cycle" in
+        Cycle_1|Cycle_2|Cycle_3|Cycle_4)
+          rclone deletefile "gdrive:SLT_GMF_Uploads/${cycle}/${filename}" --quiet || true
+          ;;
+      esac
+    done &
   fi
 
   # Move Failed folders from VM to Google Drive (if not already syncing)

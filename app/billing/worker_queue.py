@@ -250,7 +250,10 @@ def _worker_process(worker_id):
             # Delete from remote Google Drive Cycle folder
             try:
                 import subprocess
-                subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+                if shutil.which("rclone"):
+                    subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+                else:
+                    logger.info("rclone not available in container; host sync service will clean remote GMF %s", filename)
             except Exception as delete_err:
                 logger.error(f"Failed to launch rclone delete for {filename}: {delete_err}")
                 
@@ -307,7 +310,10 @@ def _worker_process(worker_id):
                     # Delete from remote Google Drive Cycle folder
                     try:
                         import subprocess
-                        subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+                        if shutil.which("rclone"):
+                            subprocess.Popen(["rclone", "deletefile", f"gdrive:SLT_GMF_Uploads/{cycle_label}/{filename}"])
+                        else:
+                            logger.info("rclone not available in container; host sync service will clean remote GMF %s", filename)
                     except Exception as delete_err:
                         logger.error(f"Failed to launch rclone delete for {filename}: {delete_err}")
                         
