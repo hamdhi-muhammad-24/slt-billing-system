@@ -23,8 +23,8 @@ from app.auth.dependencies import require_admin, require_admin1_or_admin
 from app.auth.schemas import UserOut
 from app.db.models import (
     GmfUpload, GmfUploadStatus,
-    BillingRun, RunStatus, BillingRunFailure,
-    BillingSchedule, BillingScheduleMode,
+    BillingRun, BillingRunItem, BillingRunFailure, BillingRunApproval,
+    RunStatus, BillingSchedule, BillingScheduleMode,
     NotificationEvent, NotificationEventType,
     InvoiceTemplate, TemplateApprovalStatus,
     SystemSetting, TemplateHistory,
@@ -838,6 +838,19 @@ def delete_run(run_id: int, db: Session = Depends(get_db), _: UserOut = Depends(
     if run.status in (RunStatus.RUNNING, RunStatus.PENDING):
         raise HTTPException(status_code=400, detail="Cannot delete an active run.")
     
+    db.query(GmfUpload).filter(GmfUpload.billing_run_id == run_id).update(
+        {GmfUpload.billing_run_id: None},
+        synchronize_session=False,
+    )
+    db.query(NotificationEvent).filter(NotificationEvent.run_id == run_id).update(
+        {NotificationEvent.run_id: None},
+        synchronize_session=False,
+    )
+    db.query(BillingRunApproval).filter(BillingRunApproval.billing_run_id == run_id).update(
+        {BillingRunApproval.billing_run_id: None},
+        synchronize_session=False,
+    )
+    db.query(BillingRunFailure).filter(BillingRunFailure.billing_run_id == run_id).delete(synchronize_session=False)
     db.query(BillingRunItem).filter(BillingRunItem.billing_run_id == run_id).delete(synchronize_session=False)
     db.delete(run)
     db.commit()
@@ -853,6 +866,19 @@ def delete_all_runs(db: Session = Depends(get_db), _: UserOut = Depends(require_
     
     inactive_run_ids = [r.id for r in inactive_runs]
     if inactive_run_ids:
+        db.query(GmfUpload).filter(GmfUpload.billing_run_id.in_(inactive_run_ids)).update(
+            {GmfUpload.billing_run_id: None},
+            synchronize_session=False,
+        )
+        db.query(NotificationEvent).filter(NotificationEvent.run_id.in_(inactive_run_ids)).update(
+            {NotificationEvent.run_id: None},
+            synchronize_session=False,
+        )
+        db.query(BillingRunApproval).filter(BillingRunApproval.billing_run_id.in_(inactive_run_ids)).update(
+            {BillingRunApproval.billing_run_id: None},
+            synchronize_session=False,
+        )
+        db.query(BillingRunFailure).filter(BillingRunFailure.billing_run_id.in_(inactive_run_ids)).delete(synchronize_session=False)
         db.query(BillingRunItem).filter(BillingRunItem.billing_run_id.in_(inactive_run_ids)).delete(synchronize_session=False)
         db.query(BillingRun).filter(BillingRun.id.in_(inactive_run_ids)).delete(synchronize_session=False)
         db.commit()
