@@ -1,20 +1,76 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useSyncExternalStore } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { uploadGmf } from '../../lib/api'
-import { Upload, File, Archive, X, Trash2, CheckCircle2 } from 'lucide-react'
+import { getUploads, type GmfUploadOut } from '../../lib/api'
+import { Upload, File, Archive, X, Trash2, CheckCircle2, Loader2, AlertTriangle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { clearCompletedUploadJobs, getUploadJobsSnapshot, startUploadJob, subscribeUploadJobs, type UploadJob } from '../../lib/uploadQueue'
+
+function formatDate(value: string | null): string {
+  if (!value) return '-'
+  return new Date(value).toLocaleString()
+}
+
+function UploadJobBadge({ job }: { job: UploadJob }) {
+  if (job.status === 'uploading') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+        <Loader2 size={12} className="animate-spin" />
+        Uploading
+      </span>
+    )
+  }
+  if (job.status === 'completed') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
+        <CheckCircle2 size={12} />
+        Completed
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200/60 bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+      <AlertTriangle size={12} />
+      Failed
+    </span>
+  )
+}
+
+function GmfStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    PENDING_APPROVAL: 'border-cyan-200/60 bg-cyan-50 text-cyan-700 dark:border-cyan-900/50 dark:bg-cyan-950/20 dark:text-cyan-300',
+    APPROVED: 'border-emerald-200/60 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300',
+    GENERATING: 'border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300',
+    COMPLETED: 'border-blue-200/60 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300',
+    FAILED: 'border-red-200/60 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300',
+  }
+
+  return (
+    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold', styles[status] || styles.FAILED)}>
+      {status.replace('_', ' ')}
+    </span>
+  )
+}
 
 export default function UploadCenter() {
+  const queryClient = useQueryClient()
   const [folderType, setFolderType] = useState<string>('Cycle_1')
   const [files, setFiles] = useState<File[]>([])
   const [dragging, setDragging] = useState<boolean>(false)
-  const [uploading, setUploading] = useState<boolean>(false)
   const [success, setSuccess] = useState<boolean>(false)
+  const uploadJobs = useSyncExternalStore(subscribeUploadJobs, getUploadJobsSnapshot, getUploadJobsSnapshot)
+  const hasActiveJobs = uploadJobs.some(job => job.status === 'uploading')
   
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: uploadHistory, isLoading: historyLoading } = useQuery({
+    queryKey: ['billing-uploads'],
+    queryFn: () => getUploads(),
+    refetchInterval: hasActiveJobs ? 1000 : 5000,
+  })
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -80,27 +136,25 @@ export default function UploadCenter() {
       return
     }
 
-    setUploading(true)
-    let processed = 0
     const total = files.length
-    const BATCH_SIZE = 200 // Larger batches are safe now that server-side parsing runs in background.
+    const selectedFiles = files
 
-    try {
-      for (let i = 0; i < total; i += BATCH_SIZE) {
-        const chunk = files.slice(i, i + BATCH_SIZE)
-        await uploadGmf(chunk, folderType)
-        processed += chunk.length
+    const { done } = startUploadJob(selectedFiles, folderType)
+    toast.success(`Upload started for ${total} file(s). You can safely open another tab.`)
+    setFiles([])
+    setSuccess(true)
+
+    done.then((job) => {
+      queryClient.invalidateQueries({ queryKey: ['billing-uploads'] })
+      if (job.status === 'completed') {
+        toast.success(`Uploaded ${job.uploadedCount} file(s). Registration continues in background.`)
+      } else {
+        toast.error(job.message || `Upload failed for ${job.failedCount} file(s).`)
       }
-
-      toast.success(`Successfully uploaded ${total} files! Processing in background...`)
-      setFiles([])
-      setSuccess(true)
-    } catch (err: any) {
-      toast.error(err?.message || `Failed to upload files after processing ${processed}.`)
-    } finally {
-      setUploading(false)
-    }
+    })
   }
+
+  const history = uploadHistory || []
 
   return (
     <div className="space-y-6">
@@ -213,16 +267,15 @@ export default function UploadCenter() {
                 <Button 
                   variant="outline" 
                   onClick={clearAll}
-                  disabled={uploading}
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleUpload}
-                  disabled={uploading}
                   className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-extrabold shadow-[0_4px_12px_rgba(16,185,129,0.25)] text-white hover:scale-[1.01] border-transparent transition-all"
                 >
-                  {uploading ? "Uploading..." : "Upload"}
+                  <Upload size={16} />
+                  Upload Now
                 </Button>
               </div>
             </div>
@@ -234,8 +287,110 @@ export default function UploadCenter() {
               <div className="flex flex-col">
                 <span className="font-semibold text-sm">Batch upload successfully queued</span>
                 <span className="text-xs text-muted-foreground mt-0.5">
-                  The files have been transferred to the processing server and will reflect in GMF Monitor shortly.
+                  Upload continues in the background and will reflect in the history below shortly.
                 </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card shadow-lg">
+        <CardContent className="space-y-4 p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-base font-extrabold">Upload Sessions</h3>
+              <p className="text-xs text-muted-foreground">Current and recent Upload Center transfers stay visible after navigation.</p>
+            </div>
+            {uploadJobs.some(job => job.status !== 'uploading') && (
+              <Button variant="outline" size="sm" onClick={clearCompletedUploadJobs} className="w-fit">
+                Clear Completed
+              </Button>
+            )}
+          </div>
+
+          {uploadJobs.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
+              No Upload Center sessions yet.
+            </div>
+          ) : (
+            <div className="max-h-72 overflow-y-auto divide-y rounded-lg border">
+              {uploadJobs.map(job => {
+                const doneCount = job.uploadedCount + job.failedCount
+                const progress = Math.round((doneCount / job.fileCount) * 100)
+                return (
+                  <div key={job.id} className="space-y-2 p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold">{job.fileCount} file(s) to {job.folderType.replace('_', ' ')}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(job.startedAt)}</span>
+                      </div>
+                      <UploadJobBadge job={job} />
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{job.uploadedCount} uploaded / {job.failedCount} failed</span>
+                      <span>{progress}%</span>
+                    </div>
+                    {job.message && job.status === 'failed' && (
+                      <div className="rounded-md bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 dark:bg-red-950/20 dark:text-red-300">
+                        {job.message}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card shadow-lg">
+        <CardContent className="space-y-4 p-6">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base font-extrabold">Complete Upload History</h3>
+            <p className="text-xs text-muted-foreground">All GMF records currently registered in the system.</p>
+          </div>
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center rounded-lg border p-8 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Loading upload history...
+            </div>
+          ) : history.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
+              No uploaded GMF files found yet.
+            </div>
+          ) : (
+            <div className="max-h-[460px] overflow-auto rounded-lg border">
+              <div className="min-w-[680px]">
+                <div className="grid grid-cols-[minmax(220px,1fr)_110px_150px_150px] gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-extrabold uppercase text-muted-foreground">
+                  <span>Filename</span>
+                  <span>Status</span>
+                  <span>Folder</span>
+                  <span>Uploaded At</span>
+                </div>
+                {history.map((upload: GmfUploadOut) => (
+                  <div key={upload.id} className="grid grid-cols-[minmax(220px,1fr)_110px_150px_150px] gap-3 border-b px-4 py-3 text-sm last:border-b-0">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <File size={15} className="shrink-0 text-muted-foreground" />
+                        <span className="truncate font-semibold">{upload.filename}</span>
+                      </div>
+                      <div className="mt-1 truncate text-xs text-muted-foreground">
+                        {upload.template_detected || 'Template pending detection'}
+                      </div>
+                    </div>
+                    <GmfStatusBadge status={upload.status} />
+                    <span className="text-xs font-semibold text-muted-foreground">{upload.folder_type.replace('_', ' ')}</span>
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock size={12} />
+                      {formatDate(upload.detected_at)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
