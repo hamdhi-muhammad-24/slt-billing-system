@@ -88,7 +88,7 @@ TEMPLATE_REGISTRY = {
         "description": "BILLSTYLE=18 - PLACEHOLDER (GMF labels TBD)",
         "renderer": InvoiceOfSummaryRenderer,
         "parser": parse_invoice_of_summary,
-        "ready": False,
+        "ready": True,
     },
     "vat_creditnote": {
         "name": "VAT Credit Note",
