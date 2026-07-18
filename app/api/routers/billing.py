@@ -1696,11 +1696,14 @@ def delete_upload(
     db: Session = Depends(get_db),
     current_user: UserOut = Depends(require_admin1_or_admin)
 ):
+    if current_user.role != "ADMIN1":
+        raise HTTPException(status_code=403, detail="Only Admin1 can delete uploaded GMF files.")
+
     upload = db.query(GmfUpload).filter(GmfUpload.id == upload_id).first()
     if not upload:
         raise HTTPException(status_code=404, detail="GMF upload not found.")
         
-    if current_user.role == "ADMIN1" and upload.template_detected:
+    if upload.template_detected:
         template = db.query(InvoiceTemplate).filter(
             InvoiceTemplate.template_code == upload.template_detected
         ).first()
@@ -1727,6 +1730,9 @@ def delete_all_uploads(
     db: Session = Depends(get_db),
     current_user: UserOut = Depends(require_admin1_or_admin)
 ):
+    if current_user.role != "ADMIN1":
+        raise HTTPException(status_code=403, detail="Only Admin1 can clear uploaded GMF files.")
+
     query = db.query(GmfUpload)
     if folder_type:
         query = query.filter(GmfUpload.folder_type == folder_type)
@@ -1737,7 +1743,7 @@ def delete_all_uploads(
     
     for upload in uploads:
         can_delete = True
-        if current_user.role == "ADMIN1" and upload.template_detected:
+        if upload.template_detected:
             template = db.query(InvoiceTemplate).filter(
                 InvoiceTemplate.template_code == upload.template_detected
             ).first()

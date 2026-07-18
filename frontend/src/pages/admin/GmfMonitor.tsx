@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useAuth } from '../../auth/AuthProvider'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'PENDING_APPROVAL') {
@@ -52,7 +53,9 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function GmfMonitor() {
   const queryClient = useQueryClient()
+  const { session } = useAuth()
   const [showCompleted, setShowCompleted] = useState(false)
+  const canManageUploads = session?.role === 'admin1'
 
   const { data: uploads, isLoading } = useQuery({
     queryKey: ['billing-uploads'],
@@ -136,27 +139,29 @@ export default function GmfMonitor() {
       header: 'Status',
       cell: (upload) => <StatusBadge status={upload.status} />,
     },
-    {
-      header: 'Actions',
-      cell: (upload) => {
-        const isLocked = upload.template_status === 'APPROVED' || upload.template_status === 'REJECTED'
-        return (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleDelete(upload.id)
-            }}
-            disabled={isLocked || deleteMutation.isPending}
-            title={isLocked ? "Cannot delete: Associated template has been approved/rejected" : "Delete GMF"}
-            className="rounded-full size-8 text-muted-foreground hover:text-destructive disabled:opacity-40"
-          >
-            <Trash2 size={14} />
-          </Button>
-        )
-      }
-    }
+    ...(canManageUploads
+      ? [{
+          header: 'Actions',
+          cell: (upload: GmfUploadOut) => {
+            const isLocked = upload.template_status === 'APPROVED' || upload.template_status === 'REJECTED'
+            return (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDelete(upload.id)
+                }}
+                disabled={isLocked || deleteMutation.isPending}
+                title={isLocked ? "Cannot delete: Associated template has been approved/rejected" : "Delete GMF"}
+                className="rounded-full size-8 text-muted-foreground hover:text-destructive disabled:opacity-40"
+              >
+                <Trash2 size={14} />
+              </Button>
+            )
+          }
+        } satisfies ColumnDef<GmfUploadOut>]
+      : [])
   ]
 
   const allUploads = uploads || []
@@ -182,7 +187,7 @@ export default function GmfMonitor() {
         title="GMF Monitor"
         description="Monitor detected GMF files and their generation status."
         actions={
-          allUploads.length > 0 ? (
+          canManageUploads && allUploads.length > 0 ? (
             <Button
               variant="destructive"
               size="sm"
