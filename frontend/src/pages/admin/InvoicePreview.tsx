@@ -544,11 +544,14 @@ export default function InvoicePreview() {
       <Sheet open={showHistory} onOpenChange={setShowHistory}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto border-l shadow-2xl">
           <SheetHeader className="border-b pb-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 pr-10">
               <SheetTitle className="flex items-center gap-2 text-xl font-extrabold">
                 <History className="text-primary" />
                 Template History Logs
               </SheetTitle>
+              <SheetDescription className="text-sm">
+                View approval and rejection log history for test GMF templates.
+              </SheetDescription>
               {historyData && historyData.length > 0 && (
                 <Button
                   variant="outline"
@@ -559,16 +562,13 @@ export default function InvoicePreview() {
                     }
                   }}
                   disabled={deleteAllHistoryMutation.isPending}
-                  className="h-8 shrink-0 text-muted-foreground hover:text-destructive border-muted-foreground/25"
+                  className="h-8 w-fit text-muted-foreground hover:text-destructive border-muted-foreground/25"
                 >
                   <Trash2 size={13} className="mr-1.5" />
                   Delete All
                 </Button>
               )}
             </div>
-            <SheetDescription className="text-sm">
-              View approval and rejection log history for test GMF templates.
-            </SheetDescription>
           </SheetHeader>
           <div className="mt-6 flex flex-col gap-4">
             {!historyData || historyData.length === 0 ? (
