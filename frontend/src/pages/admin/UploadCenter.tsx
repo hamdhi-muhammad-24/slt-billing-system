@@ -1,10 +1,9 @@
 import { useState, useRef, useSyncExternalStore } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { getUploads, type GmfUploadOut } from '../../lib/api'
-import { Upload, File, Archive, X, Trash2, CheckCircle2, Loader2, AlertTriangle, Clock } from 'lucide-react'
+import { Upload, File, Archive, X, Trash2, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { clearCompletedUploadJobs, getUploadJobsSnapshot, startUploadJob, subscribeUploadJobs, type UploadJob } from '../../lib/uploadQueue'
@@ -39,22 +38,6 @@ function UploadJobBadge({ job }: { job: UploadJob }) {
   )
 }
 
-function GmfStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    PENDING_APPROVAL: 'border-cyan-200/60 bg-cyan-50 text-cyan-700 dark:border-cyan-900/50 dark:bg-cyan-950/20 dark:text-cyan-300',
-    APPROVED: 'border-emerald-200/60 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300',
-    GENERATING: 'border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300',
-    COMPLETED: 'border-blue-200/60 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300',
-    FAILED: 'border-red-200/60 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300',
-  }
-
-  return (
-    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold', styles[status] || styles.FAILED)}>
-      {status.replace('_', ' ')}
-    </span>
-  )
-}
-
 export default function UploadCenter() {
   const queryClient = useQueryClient()
   const [folderType, setFolderType] = useState<string>('Cycle_1')
@@ -62,15 +45,8 @@ export default function UploadCenter() {
   const [dragging, setDragging] = useState<boolean>(false)
   const [success, setSuccess] = useState<boolean>(false)
   const uploadJobs = useSyncExternalStore(subscribeUploadJobs, getUploadJobsSnapshot, getUploadJobsSnapshot)
-  const hasActiveJobs = uploadJobs.some(job => job.status === 'uploading')
   
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const { data: uploadHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['billing-uploads'],
-    queryFn: () => getUploads(),
-    refetchInterval: hasActiveJobs ? 1000 : 5000,
-  })
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -153,8 +129,6 @@ export default function UploadCenter() {
       }
     })
   }
-
-  const history = uploadHistory || []
 
   return (
     <div className="space-y-6">
@@ -342,56 +316,6 @@ export default function UploadCenter() {
                   </div>
                 )
               })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="glass-card shadow-lg">
-        <CardContent className="space-y-4 p-6">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-base font-extrabold">Complete Upload History</h3>
-            <p className="text-xs text-muted-foreground">All GMF records currently registered in the system.</p>
-          </div>
-
-          {historyLoading ? (
-            <div className="flex items-center justify-center rounded-lg border p-8 text-sm text-muted-foreground">
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Loading upload history...
-            </div>
-          ) : history.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
-              No uploaded GMF files found yet.
-            </div>
-          ) : (
-            <div className="max-h-[460px] overflow-auto rounded-lg border">
-              <div className="min-w-[680px]">
-                <div className="grid grid-cols-[minmax(220px,1fr)_110px_150px_150px] gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-extrabold uppercase text-muted-foreground">
-                  <span>Filename</span>
-                  <span>Status</span>
-                  <span>Folder</span>
-                  <span>Uploaded At</span>
-                </div>
-                {history.map((upload: GmfUploadOut) => (
-                  <div key={upload.id} className="grid grid-cols-[minmax(220px,1fr)_110px_150px_150px] gap-3 border-b px-4 py-3 text-sm last:border-b-0">
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <File size={15} className="shrink-0 text-muted-foreground" />
-                        <span className="truncate font-semibold">{upload.filename}</span>
-                      </div>
-                      <div className="mt-1 truncate text-xs text-muted-foreground">
-                        {upload.template_detected || 'Template pending detection'}
-                      </div>
-                    </div>
-                    <GmfStatusBadge status={upload.status} />
-                    <span className="text-xs font-semibold text-muted-foreground">{upload.folder_type.replace('_', ' ')}</span>
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock size={12} />
-                      {formatDate(upload.detected_at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </CardContent>
