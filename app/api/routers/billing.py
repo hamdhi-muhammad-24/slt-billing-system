@@ -1266,6 +1266,121 @@ def delete_schedule(
 # GMF Uploads and Drive Syncing
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _is_valid_gmf_upload_name(filename: str) -> bool:
+    ext = os.path.splitext(filename)[1].lower()
+    ext_clean = ext[1:] if ext.startswith(".") else ext
+    return ext_clean in ("", "gmf", "zip") or ext_clean.isdigit()
+
+
+def _background_register_staged_gmfs(staged_files: list[tuple[str, str]], folder_type: str, cleanup_dir: str):
+    """Register uploaded GMFs after the HTTP request has already returned."""
+    import logging
+    import shutil
+    from app.db.base import SessionLocal
+    from app.db.models import GmfUpload, GmfUploadStatus, NotificationEvent, NotificationEventType, InvoiceTemplate, TemplateApprovalStatus
+    from app.uploads.watcher import _detect_template, _get_cycle
+
+    logger = logging.getLogger("gmf_upload")
+    logger.setLevel(logging.INFO)
+
+    cycle_number = _get_cycle(folder_type)
+    is_test = folder_type == "Test_GMFs"
+    registered_count = 0
+    failed_count = 0
+
+    db = SessionLocal()
+    try:
+        settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
+        settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
+        templates_cache = {t.template_code: t.approval_status for t in db.query(InvoiceTemplate).all()}
+        move_plan: list[tuple[Path, Path, str]] = []
+
+        for source_path_str, filename in staged_files:
+            source_path = Path(source_path_str)
+            if not source_path.exists():
+                failed_count += 1
+                logger.error("Staged upload disappeared before registration: %s", source_path)
+                continue
+
+            template_detected = _detect_template(str(source_path))
+            is_approved = (
+                templates_cache.get(template_detected) == TemplateApprovalStatus.APPROVED
+                if template_detected
+                else False
+            )
+
+            if is_test:
+                final_path = settings.gmf_drive_path / folder_type / filename
+                final_status = GmfUploadStatus.PENDING_APPROVAL
+                final_path.parent.mkdir(parents=True, exist_ok=True)
+            elif is_approved:
+                final_path = settings.queue_incoming_dir / filename
+                final_status = GmfUploadStatus.APPROVED
+            else:
+                final_path = settings.queue_pending_dir / filename
+                final_status = GmfUploadStatus.PENDING_APPROVAL
+
+            existing = db.query(GmfUpload).filter(
+                GmfUpload.filename == filename,
+                GmfUpload.folder_type == folder_type,
+            ).first()
+            if existing:
+                existing.file_path = str(final_path)
+                existing.status = final_status
+                existing.error_message = None
+                existing.rejection_reason = None
+                existing.billing_run_id = None
+                existing.template_detected = template_detected
+            else:
+                db.add(GmfUpload(
+                    filename=filename,
+                    file_path=str(final_path),
+                    folder_type=folder_type,
+                    cycle_number=cycle_number,
+                    template_detected=template_detected,
+                    status=final_status,
+                ))
+
+            registered_count += 1
+            move_plan.append((source_path, final_path, filename))
+
+        db.commit()
+
+        for source_path, final_path, filename in move_plan:
+            try:
+                final_path.parent.mkdir(parents=True, exist_ok=True)
+                if final_path.exists():
+                    final_path.unlink()
+                shutil.move(str(source_path), str(final_path))
+            except Exception as move_err:
+                failed_count += 1
+                logger.error("Failed to move staged GMF %s to %s: %s", filename, final_path, move_err)
+                upload = db.query(GmfUpload).filter(
+                    GmfUpload.filename == filename,
+                    GmfUpload.folder_type == folder_type,
+                ).first()
+                if upload:
+                    upload.status = GmfUploadStatus.FAILED
+                    upload.error_message = f"Failed to stage uploaded file: {move_err}"
+
+        db.add(NotificationEvent(
+            event_type=NotificationEventType.TEST_GMF_RECEIVED if is_test else NotificationEventType.GMF_DETECTED,
+            title=f"GMF Upload Batch Queued - {folder_type}",
+            message=(
+                f"Registered {registered_count} uploaded GMF file(s)"
+                + (f"; {failed_count} failed." if failed_count else ".")
+            ),
+        ))
+        db.commit()
+        logger.info("Background GMF registration complete: registered=%d failed=%d", registered_count, failed_count)
+    except Exception as err:
+        db.rollback()
+        logger.error("Error in background GMF registration: %s", err, exc_info=True)
+    finally:
+        db.close()
+        shutil.rmtree(cleanup_dir, ignore_errors=True)
+
+
 def _background_process_gmf_zip(temp_zip_path: str, folder_type: str):
     """Processes uploaded ZIP containing GMF files in the background."""
     import zipfile
@@ -1381,6 +1496,47 @@ def upload_gmf(
     """Accept direct GMF file or ZIP uploads."""
     if folder_type not in ("Cycle_1", "Cycle_2", "Cycle_3", "Cycle_4", "Test_GMFs"):
         raise HTTPException(status_code=400, detail="Invalid folder_type.")
+
+    staged_files: list[tuple[str, str]] = []
+    staging_dir = tempfile.mkdtemp(prefix="slt_gmf_upload_")
+    try:
+        for file in files:
+            filename = Path(file.filename or "").name
+            if not filename:
+                continue
+
+            if not _is_valid_gmf_upload_name(filename):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid file format: {filename}. Only GMF files (no extension, numeric suffixes like .1, .6, or .gmf) and .zip archives are allowed.",
+                )
+
+            if filename.lower().endswith(".zip"):
+                temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+                try:
+                    shutil.copyfileobj(file.file, temp_zip, length=1024 * 1024)
+                    temp_zip.close()
+                    background_tasks.add_task(_background_process_gmf_zip, temp_zip.name, folder_type)
+                except Exception as e:
+                    raise HTTPException(status_code=500, detail=f"Failed to stage uploaded ZIP: {e}")
+            else:
+                staged_path = Path(staging_dir) / filename
+                try:
+                    with staged_path.open("wb") as out_file:
+                        shutil.copyfileobj(file.file, out_file, length=1024 * 1024)
+                    staged_files.append((str(staged_path), filename))
+                except Exception as e:
+                    raise HTTPException(status_code=500, detail=f"Failed to stage uploaded file {filename}: {e}")
+
+        if staged_files:
+            background_tasks.add_task(_background_register_staged_gmfs, staged_files, folder_type, staging_dir)
+        else:
+            shutil.rmtree(staging_dir, ignore_errors=True)
+    except Exception:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        raise
+
+    return {"message": "Files uploaded and queued for background processing."}
         
     for file in files:
         filename = file.filename
