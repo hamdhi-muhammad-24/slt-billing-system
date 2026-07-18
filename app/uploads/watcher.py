@@ -88,6 +88,10 @@ def _should_skip(filename: str) -> bool:
         return True
     if any(name.endswith(s) for s in SKIP_SUFFIXES):
         return True
+    ext = os.path.splitext(name)[1].lower()
+    ext_clean = ext[1:] if ext.startswith(".") else ext
+    if ext_clean and ext_clean != "gmf" and not ext_clean.isdigit():
+        return True
     return False
 
 
@@ -329,6 +333,12 @@ def _scan_existing_files(watch_path: Path):
     watcher was not running (or events that Google Drive's virtual filesystem
     failed to deliver)."""
     handler = GmfFolderHandler()
+    with SessionLocal() as db:
+        known_uploads = {
+            (row.filename, row.folder_type): row.status
+            for row in db.query(GmfUpload.filename, GmfUpload.folder_type, GmfUpload.status).all()
+        }
+
     for subfolder in watch_path.iterdir():
         if not subfolder.is_dir():
             continue
@@ -336,9 +346,24 @@ def _scan_existing_files(watch_path: Path):
         if folder_name not in VALID_FOLDERS:
             continue
         for file in subfolder.iterdir():
-            if file.is_file() and not _should_skip(file.name):
-                logger.info(f"Startup scan — processing existing file: {file}")
-                handler._process_file(file, file.name, folder_name)
+            if not file.is_file() or _should_skip(file.name):
+                continue
+            existing_status = known_uploads.get((file.name, folder_name))
+            if existing_status and existing_status != GmfUploadStatus.FAILED:
+                continue
+            logger.info(f"Drive scan processing file: {file}")
+            handler._process_file(file, file.name, folder_name)
+
+
+def _periodic_scan_loop(watch_path: Path):
+    """Recover Drive/rclone files when filesystem events are missed."""
+    interval = max(1, int(settings.gmf_scan_interval_seconds))
+    while True:
+        time.sleep(interval)
+        try:
+            _scan_existing_files(watch_path)
+        except Exception as err:
+            logger.error(f"Periodic GMF scan failed: {err}", exc_info=True)
 
 
 def start_watcher():
@@ -353,6 +378,10 @@ def start_watcher():
     logger.info("Running startup scan for existing files...")
     _scan_existing_files(watch_path)
     logger.info("Startup scan complete.")
+
+    scan_thread = threading.Thread(target=_periodic_scan_loop, args=(watch_path,), daemon=True)
+    scan_thread.start()
+    logger.info(f"Periodic GMF scan enabled every {settings.gmf_scan_interval_seconds} seconds.")
 
     handler = GmfFolderHandler()
     observer = Observer()

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     gmf_drive_path: Path = Path("G:/My Drive/SLT_GMF_Uploads")
     queue_incoming_dir: Path = Path("./queue/incoming")
     queue_pending_dir: Path = Path("./queue/pending")
+    gmf_scan_interval_seconds: int = 5
     log_level: str = "INFO"
 
     # JWT / Auth

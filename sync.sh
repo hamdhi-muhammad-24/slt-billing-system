@@ -5,7 +5,7 @@
 echo "Starting SLT Billing Google Drive Sync Daemon..."
 echo "Syncing every 5 seconds..."
 
-# LOOP 1: GMF Downloads (Runs in background, check every 30 seconds)
+# LOOP 1: GMF Downloads (Runs in background, check every 5 seconds)
 # This loop is never blocked by slow upload operations.
 while true; do
   rclone copy gdrive:SLT_GMF_Uploads /var/slt-billing/gmf_uploads \
@@ -30,7 +30,7 @@ while true; do
     --exclude "DESKTOP.INI" \
     --exclude "THUMBS.DB" \
     --quiet
-  sleep 30
+  sleep 5
 done &
 
 # LOOP 2: Output, Processed, & Failed Uploads (Runs in foreground, check every 60 seconds)

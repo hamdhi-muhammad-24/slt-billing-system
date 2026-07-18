@@ -83,7 +83,7 @@ export default function UploadCenter() {
     setUploading(true)
     let processed = 0
     const total = files.length
-    const BATCH_SIZE = 50 // Chunk size to avoid browser/server crash
+    const BATCH_SIZE = 200 // Larger batches are safe now that server-side parsing runs in background.
 
     try {
       for (let i = 0; i < total; i += BATCH_SIZE) {
