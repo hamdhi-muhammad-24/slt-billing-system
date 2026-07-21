@@ -66,23 +66,27 @@ class SubscriptionRefGroupingRenderer(BaseRenderer):
 
     def _draw_customer(self, data):
         f = FONTS["customer_name"]
+        lines = []
         if data.get("address_name_not_required"):
             top = data.get("business_name") or data.get("customer_name", "")
+            if top:
+                lines.append(top)
         else:
-            top = data.get("customer_name", "")
-        self.text(*COORDS["customer_name"], top,
-                  size=f["size"], bold=f["bold"])
-        if data.get("business_name") and not data.get("address_name_not_required"):
-            self.text(*COORDS["customer_business"], data["business_name"],
-                      size=f["size"], bold=f["bold"])
+            if data.get("customer_name"):
+                lines.append(data["customer_name"])
+            if data.get("business_name"):
+                lines.append(data["business_name"])
+                
+        lines.extend(data.get("address_lines", []))
+        if data.get("zip_code"):
+            lines.append(data["zip_code"])
 
-        fa   = FONTS["customer_addr"]
-        addr = data["address_lines"] + (
-            [data["zip_code"]] if data["zip_code"] else [])
+        start_y = COORDS["customer_name"][1]
+        line_h = COORDS.get("customer_addr_line_h", 11)
         self.multiline_block(
-            COORDS["customer_addr_x"], COORDS["customer_addr_start"],
-            addr, line_height=COORDS["customer_addr_line_h"],
-            size=fa["size"], bold=fa["bold"],
+            COORDS["customer_name"][0], start_y,
+            lines, line_height=line_h,
+            size=f["size"], bold=f["bold"],
         )
 
     def _draw_badge(self, data):
@@ -504,12 +508,12 @@ class SubscriptionRefGroupingRenderer(BaseRenderer):
             c = self.canvases[idx][1]
             c.setFont("Helvetica", 9)
             if idx == 0:
-                c.drawRightString(555, 750,
-                                  f"1 of {total_pages}")
+                c.drawRightString(540, 750,
+                                  f"1  of  {total_pages}")
             else:
                 c.setFont("Helvetica-Bold", 10)
                 c.drawString(45, 795,
                              f'Invoice No.{data["invoice_number"]}')
                 c.setFont("Helvetica", 9)
-                c.drawRightString(555, 795,
-                                  f"{idx + 1} of {total_pages}")
+                c.drawRightString(540, 795,
+                                  f"{idx + 1}  of  {total_pages}")

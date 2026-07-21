@@ -14,7 +14,7 @@ COORDS = {
     "customer_business":    (280, 715),
     "customer_addr_start":  705,
     "customer_addr_x":      280,
-    "customer_addr_line_h": 9,
+    "customer_addr_line_h": 11,
 
     "badge_text":           (330, 612),
 
