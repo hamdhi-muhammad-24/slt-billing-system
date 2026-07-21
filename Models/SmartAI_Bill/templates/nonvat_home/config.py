@@ -14,7 +14,7 @@ COORDS = {
     "customer_name":        (280, 725),
     "customer_addr_start":  715,
     "customer_addr_x":      280,
-    "customer_addr_line_h": 9,
+    "customer_addr_line_h": 11,
 
     # HOME badge
     "badge_text":           (330, 612),
@@ -27,8 +27,8 @@ COORDS = {
     "payment_due_date":     (510, 512),
 
     # Page indicators
-    "page_indicator_p1":    (555, 742),
-    "page_indicator_p2":    (555, 780),
+    "page_indicator_p1":    (536, 751),
+    "page_indicator_p2":    (536, 780),
     "page_invoice_no_p2":   (45, 780),
 
 
