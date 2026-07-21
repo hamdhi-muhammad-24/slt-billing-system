@@ -14,8 +14,8 @@ COORDS_HEADER = {
     "barcode_width":      100,
     "barcode_height":     20,
 
-    "page_num_x":         540,
-    "page_num_y":         753,
+    "page_num_x":         550,
+    "page_num_y":         750,
 }
 
 TABLE_COLS = {
@@ -47,16 +47,16 @@ TOTAL_ROW = {
 
 MIDDLE_PAGE = {
     "invoice_no_x":   45,
-    "invoice_no_y":   790,
+    "invoice_no_y":   780,
     "page_num_x":     540,
-    "page_num_y":     790,
+    "page_num_y":     780,
 }
 
 FONTS = {
-    "header":     {"size": 10, "bold": False},
-    "customer":   {"size": 8,  "bold": False},
-    "table_row":  {"size": 8,  "bold": False},
-    "total_row":  {"size": 8, "bold": True},
-    "page_num":   {"size": 7,  "bold": False},
+    "header":     {"size": 8.5, "bold": False},
+    "customer":   {"size": 8,   "bold": False},
+    "table_row":  {"size": 8,   "bold": False},
+    "total_row":  {"size": 8,  "bold": True},
+    "page_num":   {"size": 8,  "bold": False},
     "invoice_no": {"size": 7, "bold": True},
 }

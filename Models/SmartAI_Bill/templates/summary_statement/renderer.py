@@ -134,7 +134,7 @@ class SummaryStatementRenderer(BaseRenderer):
         # Page number
         f = FONTS["page_num"]
         x, y = COORDS_HEADER["page_num_x"], COORDS_HEADER["page_num_y"]
-        self.text(x, y, f"1 of {total_pages}", size=f["size"])
+        self.text(x, y, f"1  of  {total_pages}", size=f["size"], align="right")
 
         # Draw table rows
         y = TABLE["page1_y_start"]
@@ -156,7 +156,7 @@ class SummaryStatementRenderer(BaseRenderer):
         # Page indicator
         f = FONTS["page_num"]
         self.text(MIDDLE_PAGE["page_num_x"], MIDDLE_PAGE["page_num_y"],
-                   f"{page_num} of {total_pages}", size=f["size"])
+                   f"{page_num}  of  {total_pages}", size=f["size"], align="right")
 
         # Table rows
         y = TABLE["middle_y_start"]
