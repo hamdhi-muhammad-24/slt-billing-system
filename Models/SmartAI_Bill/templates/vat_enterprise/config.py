@@ -10,7 +10,7 @@ COORDS = {
     "customer_vat_reg":     (273.60, 745),
 
     # Standard Headers (Right side)
-    "telephone_number":     (172, 735),
+    "telephone_number":     (180, 735),
     "account_number":       (160, 707),   # was 615.44 (landing on billing-period row)
     "invoice_number":       (155, 680),
     "billing_date":         (160, 650),
@@ -58,7 +58,7 @@ COORDS = {
     # p1: x=536 (right-aligned; places "1" at x≈511 = template position), y=751.2 (top of page)
     # p1 previously had y=86.96 (top-origin → drew near bottom) and x=511.2 (gave wrong x)
     "page_indicator_p1":    (536.00, 759),
-    "page_indicator_p2":    (511.20, 788.00),
+    "page_indicator_p2":    (536.00, 788.00),
     "page_invoice_no_p2":   (43.20, 784.40),
 
     # Barcodes & QR Codes

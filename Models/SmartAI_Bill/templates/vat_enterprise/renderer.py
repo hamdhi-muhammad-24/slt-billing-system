@@ -568,7 +568,7 @@ class VATEnterpriseRenderer(BaseRenderer):
             
             c.setFont("Helvetica", f["size"])
             c.setFillColor(black)
-            c.drawRightString(x, y, f"{idx + 1} of {total_pages}")
+            c.drawRightString(x, y, f"{idx + 1}  of  {total_pages}")
             if idx > 0:
                 ix, iy = COORDS["page_invoice_no_p2"]
                 # Mask the invoice number area on page 2+
