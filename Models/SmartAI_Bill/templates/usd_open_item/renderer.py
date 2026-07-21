@@ -226,7 +226,7 @@ class USDOpenItemRenderer(BaseRenderer):
         # Print page count ("1 of 1" etc.) just above the address box,
         # right-aligned to the right edge of the address box, clear of the border.
         total_pages = self.page_count()
-        page_label = f"1 of {total_pages}"
+        page_label = f"1  of  {total_pages}"
         self.text(
             555,
             y + 12,
