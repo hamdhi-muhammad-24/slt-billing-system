@@ -61,7 +61,7 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
         """BPR05/07: only when show_vat_lines is True (VATDL check)."""
         if not data.get("show_vat_lines"):
             return
-        f = FONTS["header"]
+        f = FONTS.get("vat_reg", FONTS["header"])
         if data.get("slt_vat_reg"):
             self.text(*COORDS["slt_vat_reg_label"],
                       f"SLT VAT Registration Number: {data['slt_vat_reg']}",
@@ -74,25 +74,28 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
 
     def _draw_customer(self, data):
         f = FONTS["customer_name"]
-        # BPR13: ACC_ADDRESS_NAME_N_REQIURED
+        lines = []
         if data.get("address_name_not_required"):
             top = data.get("business_name") or data.get("customer_name", "")
+            if top:
+                lines.append(top)
         else:
             top = data.get("department") or data.get("customer_name", "")
-        self.text(COORDS["customer_name"][0], COORDS["customer_name"][1],
-                  top, size=f["size"], bold=True)
-        if data.get("business_name") and not data.get("address_name_not_required"):
-            self.text(COORDS["customer_name"][0],
-                      COORDS["customer_business_y"],
-                      data["business_name"], size=f["size"], bold=True)
+            if top:
+                lines.append(top)
+            if data.get("business_name"):
+                lines.append(data["business_name"])
 
-        fa   = FONTS["customer_addr"]
-        addr = data["address_lines"] + (
-            [data["zip_code"]] if data["zip_code"] else [])
+        lines.extend(data.get("address_lines", []))
+        if data.get("zip_code"):
+            lines.append(data["zip_code"])
+
+        start_y = COORDS["customer_name"][1]
+        line_h = COORDS.get("customer_addr_line_h", 11)
         self.multiline_block(
-            COORDS["customer_addr_x"], COORDS["customer_addr_start"],
-            addr, line_height=COORDS["customer_addr_line_h"],
-            size=fa["size"], bold=fa["bold"],
+            COORDS["customer_name"][0], start_y,
+            lines, line_height=line_h,
+            size=f["size"], bold=True,
         )
 
     def _draw_badge(self, data):
@@ -513,14 +516,14 @@ class InvoiceOfSummaryRenderer(BaseRenderer):
             c = self.canvases[idx][1]
             if idx == 0:
                 c.setFont("Helvetica", 9)
-                c.drawRightString(555, 750, f"1 of {total}")
+                c.drawRightString(540, 750, f"1  of  {total}")
             else:
                 c.setFont("Helvetica-Bold", 10)
                 c.drawString(45, 795,
                              f'Invoice No.{data["invoice_number"]}')
                 c.setFont("Helvetica", 9)
-                c.drawRightString(555, 795,
-                                  f"{idx + 1} of {total}")
+                c.drawRightString(540, 795,
+                                  f"{idx + 1}  of  {total}")
 
 
 def _safe_float(v):

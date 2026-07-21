@@ -101,6 +101,7 @@ USAGE_TABLE_2COL = {
 
 FONTS = {
     "header":        {"size": 9,   "bold": False},
+    "vat_reg":       {"size": 7.5, "bold": False},
     "customer_name": {"size": 9.5, "bold": True},
     "customer_addr": {"size": 9,   "bold": True},
     "badge":         {"size": 11,  "bold": True},
