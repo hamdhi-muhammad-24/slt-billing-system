@@ -13,7 +13,8 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://postgres:password@localhost:5432/slt_ebill"
     output_dir: Path = Path("./output")
-    gmf_drive_path: Path = Path("G:/My Drive/SLT_GMF_Uploads")
+    # gmf_drive_path: Path = Path("G:/My Drive/SLT_GMF_Uploads")
+    gmf_drive_path: Path = Path("./local_gmf_uploads")
     queue_incoming_dir: Path = Path("./queue/incoming")
     queue_pending_dir: Path = Path("./queue/pending")
     gmf_scan_interval_seconds: int = 5
