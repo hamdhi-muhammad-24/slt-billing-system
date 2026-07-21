@@ -111,14 +111,14 @@ export default function Admin1Dashboard() {
           title="Dashboard Overview" 
           description="GMF upload statistics and sync status" 
         />
-        <Button 
+        {/* <Button 
           onClick={() => scanMutation.mutate()} 
           disabled={scanMutation.isPending}
           className="flex items-center gap-2"
         >
           <RefreshCw className={cn("size-4", scanMutation.isPending && "animate-spin")} />
           Scan Google Drive Folder
-        </Button>
+        </Button> */}
       </div>
 
       {/* Stat Cards */}
@@ -137,13 +137,13 @@ export default function Admin1Dashboard() {
           colorClass="bg-amber-500" 
           loading={loadingStats} 
         />
-        <StatCard 
+        {/* <StatCard 
           title="Google Drive Watch" 
           value={"Connected & Watching..."} 
           icon={Cloud} 
           colorClass="bg-emerald-500" 
           loading={false} 
-        />
+        /> */}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

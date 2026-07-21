@@ -54,15 +54,15 @@ Start-Process powershell -ArgumentList @(
 Write-Host "      React window opened." -ForegroundColor Green
 Write-Host ""
 
-# ── Step 4: GMF Watcher (new window) ──────────────────────────────────────────
-Write-Host "[3/4] Starting Google Drive Watcher ..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList @(
-    "-NoExit",
-    "-Command",
-    "Set-Location '$ProjectRoot'; uv run python -m app.uploads.watcher"
-) -WindowStyle Normal
-Write-Host "      Watcher window opened." -ForegroundColor Green
-Write-Host ""
+# # ── Step 4: GMF Watcher (new window) ──────────────────────────────────────────
+# Write-Host "[3/4] Starting Google Drive Watcher ..." -ForegroundColor Yellow
+# Start-Process powershell -ArgumentList @(
+#     "-NoExit",
+#     "-Command",
+#     "Set-Location '$ProjectRoot'; uv run python -m app.uploads.watcher"
+# ) -WindowStyle Normal
+# Write-Host "      Watcher window opened." -ForegroundColor Green
+# Write-Host ""
 
 # ── Step 5: Background Worker Queue (new window) ──────────────────────────────
 Write-Host "[4/4] Starting Async Background Worker Queue ..." -ForegroundColor Yellow

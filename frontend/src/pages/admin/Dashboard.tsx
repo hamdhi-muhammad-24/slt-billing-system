@@ -155,13 +155,13 @@ export default function Dashboard() {
           colorClass="bg-blue-500" 
           loading={loadingStats} 
         />
-        <StatCard 
+        {/* <StatCard 
           title="Google Drive Archive" 
           value={"Active Sync"} 
           icon={Cloud} 
           colorClass="bg-emerald-500" 
           loading={false} 
-        />
+        /> */}
         <StatCard 
           title="Server API Health" 
           value={"Online - 24ms"} 
@@ -173,7 +173,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column: Cycles */}
-        <div className="flex flex-col gap-4 lg:col-span-1">
+        {/* <div className="flex flex-col gap-4 lg:col-span-1">
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold tracking-tight">Google Drive GMF Uploads</h3>
             <span className="text-xs text-muted-foreground">Live amounts from active folders</span>
@@ -189,7 +189,7 @@ export default function Dashboard() {
               )
             })}
           </div>
-        </div>
+        </div> */}
 
         {/* Right Column: Activity Feed */}
         <div className="flex flex-col gap-4 lg:col-span-2">
