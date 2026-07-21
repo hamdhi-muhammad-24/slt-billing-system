@@ -451,7 +451,7 @@ class NonVATEnterpriseRenderer(BaseRenderer):
             else:
                 x, y = COORDS["page_indicator_p2"]
             c.setFont("Helvetica", f["size"])
-            c.drawRightString(x, y, f"{idx + 1} of {total_pages}")
+            c.drawRightString(x, y, f"{idx + 1}  of  {total_pages}")
             if idx > 0:
                 ix, iy = COORDS["page_invoice_no_p2"]
                 c.setFont("Helvetica-Bold", inv_f["size"])

@@ -12,7 +12,7 @@ COORDS = {
     "customer_business":    (280, 725),
     "customer_addr_start":  715,
     "customer_addr_x":      280,
-    "customer_addr_line_h": 9,
+    "customer_addr_line_h": 11,
 
     # ENTERPRISE badge
     "badge_text":           (330, 612),
@@ -42,8 +42,8 @@ COORDS = {
     "payments_total_label":   "Total Payments Received",
 
     # Page indicators
-    "page_indicator_p1":    (555, 742),
-    "page_indicator_p2":    (555, 780),
+    "page_indicator_p1":    (542, 752),
+    "page_indicator_p2":    (536, 780),
     "page_invoice_no_p2":   (45, 780),
 
     # Barcode
