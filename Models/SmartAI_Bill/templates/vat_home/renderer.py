@@ -304,7 +304,7 @@ class VATHomeRenderer:
         f = FONTS["page_indicator"]
         for idx in range(self.doc.page_count):
             page = self.doc[idx]
-            text = f"{idx + 1} of {total_pages}"
+            text = f"{idx + 1}  of  {total_pages}"
             if idx == 0:
                 x, y = COORDS["page_indicator"]
                 page.insert_text((x, y), text, fontname="helv", fontsize=f["size"])
