@@ -72,7 +72,15 @@ def create_output_batches(temp_pdf_dir, cycle_label="Cycle_1", log_callback=None
             continue
             
         moved_in_this_batch = 0
-        while moved_in_this_batch < space_left and pdf_index < len(pdfs):
+        while pdf_index < len(pdfs):
+            # Strict check before moving each file to ensure batch NEVER exceeds BATCH_FOLDER_SIZE
+            existing_count = len([f for f in os.listdir(batch_dir) if f.lower().endswith(".pdf")])
+            if existing_count >= BATCH_FOLDER_SIZE:
+                current_batch_num += 1
+                batch_dir = os.path.join(base, f"Batch_{current_batch_num}")
+                os.makedirs(batch_dir, exist_ok=True)
+                existing_count = len([f for f in os.listdir(batch_dir) if f.lower().endswith(".pdf")])
+
             pdf_path = pdfs[pdf_index]
             dest = os.path.join(batch_dir, os.path.basename(pdf_path))
             

@@ -5,7 +5,8 @@ import multiprocessing
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", r"G:\My Drive\SLT_GMF_Uploads")
-GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", os.path.join(BASE_DIR, "local_gmf_uploads"))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
+GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", os.path.join(ROOT_DIR, "local_gmf_uploads"))
 
 INBOUND_DIR   = os.path.join(BASE_DIR, "data", "inbound")
 PROCESSED_DIR = os.path.join(GMF_DRIVE_PATH, "Processed")

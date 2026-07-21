@@ -19,7 +19,11 @@ from app.db.models import (
 def reset_test_data():
     print("WARNING: This script will delete all transaction history (GMF Uploads, Invoices, Billing Runs, Notifications).")
     print("It will NOT delete Users, Templates, or Billing Schedules.")
-    confirm = input("Are you sure you want to proceed? Type 'YES' to confirm: ")
+    
+    if "--yes" in sys.argv or "-y" in sys.argv:
+        confirm = "YES"
+    else:
+        confirm = input("Are you sure you want to proceed? Type 'YES' to confirm: ")
     
     if confirm != "YES":
         print("Operation cancelled.")
@@ -62,6 +66,8 @@ def reset_test_data():
             from pathlib import Path
 
             print("\nCleaning up physical files...")
+            legacy_gdrive = Path(r"G:\My Drive\SLT_GMF_Uploads")
+            
             paths_to_clean = [
                 settings.queue_incoming_dir,
                 settings.queue_pending_dir,
@@ -73,8 +79,17 @@ def reset_test_data():
                 settings.gmf_drive_path / "Cycle_3",
                 settings.gmf_drive_path / "Cycle_4",
                 settings.gmf_drive_path / "Processed",
-                settings.gmf_drive_path / "Failed"
+                settings.gmf_drive_path / "Failed",
+                settings.gmf_drive_path / "Output",
+                Path("./Models/SmartAI_Bill/local_gmf_uploads/Output"),
+                Path("./Models/SmartAI_Bill/local_gmf_uploads/Processed"),
+                Path("./Models/SmartAI_Bill/local_gmf_uploads/Failed"),
+                Path("./Models/SmartAI_Bill/local_gmf_uploads/Test_GMFs"),
             ]
+
+            if legacy_gdrive.exists():
+                for sub in ["Test_GMFs", "Cycle_1", "Cycle_2", "Cycle_3", "Cycle_4", "Processed", "Failed", "Output"]:
+                    paths_to_clean.append(legacy_gdrive / sub)
 
             files_deleted = 0
             for p in paths_to_clean:
