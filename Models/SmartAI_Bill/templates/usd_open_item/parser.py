@@ -412,7 +412,7 @@ def parse_usd_open_item(file_path: str) -> dict:
         data['bill_period'] = (
             f"{data['billing_period_start']} - {data['billing_period_end']}"
         )
-    data['file_info_string'] = data['source_filename'].lower()
+    data['file_info_string'] = data['source_filename']
     data['top_level_discounts'] = top_discounts.discounts
 
     # Drop empty product-label blocks (no charges) and empty subscription-ref

@@ -20,19 +20,19 @@ COORDS = {
     # 656/636) sat 5-6pt too high, landing each value on the divider line
     # above its intended row instead of inside it (confirmed by rendering
     # and visually inspecting the struck-through text before this fix).
-    "account_number":   (220, 706),
-    "invoice_number":   (206, 688),
-    "billing_date":     (220, 666),
-    "bill_period":      (205, 646),
-    "invoice_amount":   (220, 625),
-    "payment_due_date": (462, 628),
+    "account_number":   (220, 713),
+    "invoice_number":   (206, 695),
+    "billing_date":     (220, 675),
+    "bill_period":      (205, 655),
+    "invoice_amount":   (220, 632),
+    "payment_due_date": (462, 632),
 
     # Contact lines (filename string + customer segment, under the address box)
     "contact_line1":    (285, 598),
     "contact_line2":    (285, 588),
 
     # Main barcode (account/invoice area)
-    "barcode": (415, 660),
+    "barcode": (440, 660),
     "barcode_width": 100,
     "barcode_height": 20,
 

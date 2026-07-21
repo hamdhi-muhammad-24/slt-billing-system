@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from reportlab.lib.colors import black
 
@@ -135,13 +136,18 @@ class USDOpenItemRenderer(BaseRenderer):
         self._draw_page_indicators()
 
     # --------------------------------------------------
-    # System Strings ($File_name in small letters + customer segment)
+    # System Strings ($File_name (original case) + generation timestamp +
+    # customer segment). The timestamp is the live moment this PDF is
+    # rendered (HH:MM:SS + microseconds) - not sourced from the GMF, since
+    # no tag or file-metadata value in the source data accounts for it.
     # --------------------------------------------------
     def _draw_system_strings(self, data):
         top_x = 40
         top_y = PAGE_H - 100
 
-        self.text(top_x, top_y, data.get("file_info_string", ""), size=7.5)
+        timestamp = datetime.now().strftime("_%H:%M:%S%f")
+        file_info = data.get("file_info_string", "") + timestamp
+        self.text(top_x, top_y, file_info, size=7.5)
         self.text(top_x, top_y - 8, data.get("customer_segment", ""), size=7.5, bold=True)
 
     # --------------------------------------------------
