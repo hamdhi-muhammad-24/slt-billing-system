@@ -54,7 +54,7 @@ def parse_vat_enterprise(file_path: str) -> dict:
         "top_level_discounts":   [],
         "marketing_messages":    [],
         "suspended_message":     "",
-        "source_filename":       os.path.basename(file_path),
+        "source_filename":       os.path.basename(file_path).removesuffix(".processing"),
         "customer_segment":      "",
         "slt_vat_reg":           "",
         "customer_vat_reg":      "",

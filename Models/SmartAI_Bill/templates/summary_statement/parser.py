@@ -19,7 +19,7 @@ def parse_summary_statement(file_path: str) -> dict:
         "total_net":         0,
         "total_tax":         0,
         "total_gross":       0,
-        "source_filename":   os.path.basename(file_path),
+        "source_filename":   os.path.basename(file_path).removesuffix(".processing"),
     }
 
     # Collect raw address tags for BPR13 reordering

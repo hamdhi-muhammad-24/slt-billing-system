@@ -53,7 +53,7 @@ def parse_vat_creditnote(file_path: str) -> dict:
         "adjustments": [],
         "taxes_levies": [],
 
-        "source_filename": os.path.basename(file_path)
+        "source_filename": os.path.basename(file_path).removesuffix(".processing")
     }
 
 
@@ -125,7 +125,7 @@ def parse_vat_creditnote(file_path: str) -> dict:
 
     # Extra header lines
 
-    filename = os.path.basename(file_path)
+    filename = os.path.basename(file_path).removesuffix(".processing")
     timestamp = datetime.datetime.now().strftime("%H:%M:%d%m%Y")
 
     data["header_extra_line1"] = (

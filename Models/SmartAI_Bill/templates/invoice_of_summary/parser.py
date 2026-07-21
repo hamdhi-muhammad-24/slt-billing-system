@@ -53,7 +53,7 @@ def parse_invoice_of_summary(file_path: str) -> dict:
         "total_payments":        0,
         "marketing_messages":    [],
         "suspended_message":     "",
-        "source_filename":       os.path.basename(file_path),
+        "source_filename":       os.path.basename(file_path).removesuffix(".processing"),
         "customer_segment":      "",
         "slt_vat_reg":           "",
         "customer_vat_reg":      "",

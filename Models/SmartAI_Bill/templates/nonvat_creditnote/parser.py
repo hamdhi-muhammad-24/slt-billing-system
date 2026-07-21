@@ -223,7 +223,7 @@ def parse_nonvat_creditnote(file_path):
     # Extra Header Information
     # --------------------------------------------------
 
-    filename = os.path.basename(file_path)
+    filename = os.path.basename(file_path).removesuffix(".processing")
 
     timestamp = datetime.datetime.now().strftime(
         "%H:%M:%d%m%Y"

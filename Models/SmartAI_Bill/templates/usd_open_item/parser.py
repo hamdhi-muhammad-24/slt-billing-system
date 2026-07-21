@@ -45,7 +45,7 @@ def _parse_filename_segments(file_path):
     this codebase parses this convention, so there's no prior implementation
     to cross-check against - flagged in BUILD_NOTE.md as a best-effort
     mapping, not a certainty)."""
-    stem = os.path.basename(file_path)
+    stem = os.path.basename(file_path).removesuffix(".processing")
     parts = stem.split('-')
     action_id = ''
     for i, p in enumerate(parts):
@@ -140,7 +140,7 @@ def parse_usd_open_item(file_path: str) -> dict:
 
         "usage_sections":        [],
 
-        "source_filename":       os.path.basename(file_path),
+        "source_filename":       os.path.basename(file_path).removesuffix(".processing"),
     }
 
     top_discounts = TopLevelDiscountCollector()
