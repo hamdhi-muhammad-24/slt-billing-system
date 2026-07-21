@@ -79,12 +79,19 @@ class VATEnterpriseRenderer(BaseRenderer):
     def _draw_customer(self, data):
         # Build address block dynamically
         addr_lines = []
-        if data.get("position"):
-            addr_lines.append(data["position"])
-        if data.get("business_name"):
-            addr_lines.append(data["business_name"])
-        if data.get("department"):
-            addr_lines.append(data["department"])
+        if data.get("address_name_not_required"):
+            top = data.get("business_name") or data.get("customer_name", "")
+            if top:
+                addr_lines.append(top)
+        else:
+            if data.get("customer_name"):
+                addr_lines.append(data["customer_name"])
+            if data.get("business_name") and data["business_name"] != data.get("customer_name"):
+                addr_lines.append(data["business_name"])
+            if data.get("position"):
+                addr_lines.append(data["position"])
+            if data.get("department"):
+                addr_lines.append(data["department"])
         
         # Add the parsed address lines
         addr_lines.extend(data.get("address_lines", []))

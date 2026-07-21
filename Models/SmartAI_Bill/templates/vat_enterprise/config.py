@@ -6,8 +6,8 @@ PAGE_H = 842.25
 COORDS = {
     # VAT Specific Headers
     # y was accidentally written in top-origin (84.8 / 76.2 from top); corrected to bottom-origin
-    "slt_vat_reg":          (273.60, 755),
-    "customer_vat_reg":     (273.60, 745),
+    "slt_vat_reg":          (273.60, 758),
+    "customer_vat_reg":     (273.60, 747),
 
     # Standard Headers (Right side)
     "telephone_number":     (180, 735),
@@ -17,8 +17,8 @@ COORDS = {
     "billing_period":       (140, 620),
 
     # Customer Address
-    "customer_business":    (285, 725),
-    "customer_addr_start":  720,
+    "customer_business":    (280.8, 725),
+    "customer_addr_start":  725,
     "customer_addr_x":      280.8,
     "customer_addr_line_h": 11,
 
