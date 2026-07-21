@@ -34,6 +34,14 @@ class NonVATCreditNoteRenderer(BaseRenderer):
         self._draw_summary(data)
         y = self._draw_adjustments(data)
         self._draw_charge_period(data, y)
+        self._draw_page_indicator()
+
+    def _draw_page_indicator(self):
+        total = len(self.canvases)
+        for idx in range(total):
+            c = self.canvases[idx][1]
+            c.setFont("Helvetica", FONTS["header"]["size"])
+            c.drawRightString(550, 750, f"{idx + 1}  of  {total}")
 
     # --------------------------------------------------
     # Header
