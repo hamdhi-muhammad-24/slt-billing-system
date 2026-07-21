@@ -11,6 +11,7 @@ TEMPLATE_PRODUCT_LABEL_GROUPING    = "product_label_grouping"
 TEMPLATE_SUBSCRIPTION_REF_GROUPING = "subscription_ref_grouping"
 TEMPLATE_SUMMARY_STATEMENT         = "summary_statement"
 TEMPLATE_INVOICE_OF_SUMMARY        = "invoice_of_summary"
+TEMPLATE_USD_OPEN_ITEM             = "usd_open_item"
 
 # Out-of-scope
 UNSUPPORTED_CREDIT_NOTE       = "credit_note"
@@ -46,11 +47,12 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
         return result
 
     if header.acc_currency_code and header.acc_currency_code.strip().upper() != "RS":
-        result.template_id = UNSUPPORTED_FOREIGN_CURRENCY
-        result.reasons.append(
-            f"ACCCURRENCYCODE={header.acc_currency_code} → Foreign currency"
-        )
-        return result
+        if header.billstyle != 21:
+            result.template_id = UNSUPPORTED_FOREIGN_CURRENCY
+            result.reasons.append(
+                f"ACCCURRENCYCODE={header.acc_currency_code} → Foreign currency"
+            )
+            return result
 
     # DOCTYPE routing
     if header.doctype == "SUMMARYSTATEMENT":
@@ -104,6 +106,11 @@ def identify_template(gmf_file_path: str) -> IdentificationResult:
     elif style == 18:
         result.template_id = TEMPLATE_INVOICE_OF_SUMMARY
         result.reasons.append("BILLSTYLE=18 → Invoice of Summary")
+        result.is_supported = True
+
+    elif style == 21:
+        result.template_id = TEMPLATE_USD_OPEN_ITEM
+        result.reasons.append("BILLSTYLE=21 → USD Open Item")
         result.is_supported = True
 
     else:

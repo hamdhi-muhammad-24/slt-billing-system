@@ -4,7 +4,8 @@ import multiprocessing
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", r"G:\My Drive\SLT_GMF_Uploads")
+# GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", r"G:\My Drive\SLT_GMF_Uploads")
+GMF_DRIVE_PATH = os.environ.get("GMF_DRIVE_PATH", os.path.join(BASE_DIR, "local_gmf_uploads"))
 
 INBOUND_DIR   = os.path.join(BASE_DIR, "data", "inbound")
 PROCESSED_DIR = os.path.join(GMF_DRIVE_PATH, "Processed")
@@ -38,6 +39,9 @@ OUTPUT_PDF_NAMES = {
     "subscription_ref_grouping": "{account_number}_SubscriptionLevel.pdf",
     "summary_statement":         "SUMMARY.pdf",
     "invoice_of_summary":        "{account_number}_InvoiceOfSummary.pdf",
+    "usd_open_item":             "{account_number}_USD_OPEN_Item.pdf",
+    "vat_creditnote":            "CreditNote_VAT.pdf",
+    "nonvat_creditnote":         "CreditNote_NONVAT.pdf",
 }
 
 OUTPUT_PDF_NAME_DEFAULT = "SLT20eBill-{account_number}.pdf"
