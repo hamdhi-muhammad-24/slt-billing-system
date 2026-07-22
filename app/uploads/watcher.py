@@ -171,15 +171,28 @@ class GmfFolderHandler(FileSystemEventHandler):
                             logger.info(f"GMF {filename} in {folder_name} is already COMPLETED. Skipping duplicate watcher registration.")
                             return
                             
-                        if existing.status == GmfUploadStatus.FAILED:
+                        if existing.status in (GmfUploadStatus.FAILED, GmfUploadStatus.REJECTED, GmfUploadStatus.PENDING_APPROVAL):
                             if is_test:
                                 new_filepath = filepath
                                 final_status = GmfUploadStatus.PENDING_APPROVAL
+                                if template_detected:
+                                    template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
+                                    if not template_obj:
+                                        template_obj = InvoiceTemplate(template_code=template_detected, name=template_detected, is_system_template=True)
+                                        db.add(template_obj)
+                                    template_obj.approval_status = TemplateApprovalStatus.PENDING
+                                    # Reset any previously REJECTED real GMFs for this template back to PENDING_APPROVAL
+                                    db.query(GmfUpload).filter(
+                                        GmfUpload.template_detected == template_detected,
+                                        GmfUpload.folder_type != TEST_FOLDER,
+                                        GmfUpload.status == GmfUploadStatus.REJECTED
+                                    ).update({"status": GmfUploadStatus.PENDING_APPROVAL, "rejection_reason": None}, synchronize_session=False)
                             else:
                                 template_obj = None
                                 if template_detected:
                                     template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
                                 is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+                                is_rejected = template_obj and template_obj.approval_status == TemplateApprovalStatus.REJECTED
                                 
                                 settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                                 settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
@@ -191,6 +204,9 @@ class GmfFolderHandler(FileSystemEventHandler):
                                 elif is_approved and billing_mode == "manual":
                                     new_filepath = settings.queue_pending_dir / filename
                                     final_status = GmfUploadStatus.APPROVED
+                                elif is_rejected:
+                                    new_filepath = settings.queue_pending_dir / filename
+                                    final_status = GmfUploadStatus.REJECTED
                                 else:
                                     new_filepath = settings.queue_pending_dir / filename
                                     final_status = GmfUploadStatus.PENDING_APPROVAL
@@ -237,7 +253,7 @@ class GmfFolderHandler(FileSystemEventHandler):
                                 )
                             db.add(notif)
                             db.commit()
-                            logger.info(f"Re-registered failed GMF (reset status to {final_status.value}): {filename}")
+                            logger.info(f"Re-registered GMF (reset status to {final_status.value}): {filename}")
                         else:
                             logger.info(f"Already registered (currently in status {existing.status.value}): {filename}")
                         return
@@ -247,10 +263,22 @@ class GmfFolderHandler(FileSystemEventHandler):
                         template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
                         
                     is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+                    is_rejected = template_obj and template_obj.approval_status == TemplateApprovalStatus.REJECTED
 
                     if is_test:
                         new_filepath = filepath
                         final_status = GmfUploadStatus.PENDING_APPROVAL
+                        if template_detected:
+                            if not template_obj:
+                                template_obj = InvoiceTemplate(template_code=template_detected, name=template_detected, is_system_template=True)
+                                db.add(template_obj)
+                            template_obj.approval_status = TemplateApprovalStatus.PENDING
+                            # Reset any previously REJECTED real GMFs for this template back to PENDING_APPROVAL
+                            db.query(GmfUpload).filter(
+                                GmfUpload.template_detected == template_detected,
+                                GmfUpload.folder_type != TEST_FOLDER,
+                                GmfUpload.status == GmfUploadStatus.REJECTED
+                            ).update({"status": GmfUploadStatus.PENDING_APPROVAL, "rejection_reason": None}, synchronize_session=False)
                     else:
                         # Ensure directories exist
                         settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
@@ -263,6 +291,9 @@ class GmfFolderHandler(FileSystemEventHandler):
                         elif is_approved and billing_mode == "manual":
                             new_filepath = settings.queue_pending_dir / filename
                             final_status = GmfUploadStatus.APPROVED
+                        elif is_rejected:
+                            new_filepath = settings.queue_pending_dir / filename
+                            final_status = GmfUploadStatus.REJECTED
                         else:
                             new_filepath = settings.queue_pending_dir / filename
                             final_status = GmfUploadStatus.PENDING_APPROVAL

@@ -1347,19 +1347,34 @@ def _background_register_staged_gmfs(staged_files: list[tuple[str, str]], folder
                 continue
 
             template_detected = _detect_template(str(source_path))
-            is_approved = (
-                templates_cache.get(template_detected) == TemplateApprovalStatus.APPROVED
-                if template_detected
-                else False
-            )
+            template_status = templates_cache.get(template_detected)
+            is_approved = (template_status == TemplateApprovalStatus.APPROVED)
+            is_rejected = (template_status == TemplateApprovalStatus.REJECTED)
 
             if is_test:
                 final_path = settings.gmf_drive_path / folder_type / filename
                 final_status = GmfUploadStatus.PENDING_APPROVAL
                 final_path.parent.mkdir(parents=True, exist_ok=True)
+                if template_detected:
+                    t_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
+                    if not t_obj:
+                        t_obj = InvoiceTemplate(template_code=template_detected, name=template_detected, is_system_template=True)
+                        db.add(t_obj)
+                    t_obj.approval_status = TemplateApprovalStatus.PENDING
+                    templates_cache[template_detected] = TemplateApprovalStatus.PENDING
+                    # Reset any REJECTED real GMFs for this template back to PENDING_APPROVAL
+                    db.query(GmfUpload).filter(
+                        GmfUpload.template_detected == template_detected,
+                        GmfUpload.folder_type != "Test_GMFs",
+                        GmfUpload.status == GmfUploadStatus.REJECTED
+                    ).update({"status": GmfUploadStatus.PENDING_APPROVAL, "rejection_reason": None}, synchronize_session=False)
+
             elif is_approved:
                 final_path = settings.queue_incoming_dir / filename
                 final_status = GmfUploadStatus.APPROVED
+            elif is_rejected:
+                final_path = settings.queue_pending_dir / filename
+                final_status = GmfUploadStatus.REJECTED
             else:
                 final_path = settings.queue_pending_dir / filename
                 final_status = GmfUploadStatus.PENDING_APPROVAL
@@ -1369,6 +1384,16 @@ def _background_register_staged_gmfs(staged_files: list[tuple[str, str]], folder
                 GmfUpload.folder_type == folder_type,
             ).first()
             if existing:
+                if existing.status == GmfUploadStatus.COMPLETED:
+                    logger.info(f"GMF {filename} in {folder_type} is already COMPLETED. Skipping duplicate invoice generation.")
+                    if source_path.exists():
+                        try:
+                            source_path.unlink()
+                        except Exception as rm_err:
+                            logger.warning(f"Could not remove duplicate staged file {source_path}: {rm_err}")
+                    registered_count += 1
+                    continue
+
                 existing.file_path = str(final_path)
                 existing.status = final_status
                 existing.error_message = None
@@ -1618,11 +1643,23 @@ def upload_gmf(
                 template_detected = _detect_template(temp_file.name)
                 template_obj = db.query(InvoiceTemplate).filter(InvoiceTemplate.template_code == template_detected).first()
                 is_approved = template_obj and template_obj.approval_status == TemplateApprovalStatus.APPROVED
+                is_rejected = template_obj and template_obj.approval_status == TemplateApprovalStatus.REJECTED
                 
                 if is_test:
                     final_path = settings.gmf_drive_path / folder_type / filename
                     final_status = GmfUploadStatus.PENDING_APPROVAL
                     final_path.parent.mkdir(parents=True, exist_ok=True)
+                    if template_detected:
+                        if not template_obj:
+                            template_obj = InvoiceTemplate(template_code=template_detected, name=template_detected, is_system_template=True)
+                            db.add(template_obj)
+                        template_obj.approval_status = TemplateApprovalStatus.PENDING
+                        # Reset any REJECTED real GMFs for this template back to PENDING_APPROVAL
+                        db.query(GmfUpload).filter(
+                            GmfUpload.template_detected == template_detected,
+                            GmfUpload.folder_type != "Test_GMFs",
+                            GmfUpload.status == GmfUploadStatus.REJECTED
+                        ).update({"status": GmfUploadStatus.PENDING_APPROVAL, "rejection_reason": None}, synchronize_session=False)
                 else:
                     settings.queue_incoming_dir.mkdir(parents=True, exist_ok=True)
                     settings.queue_pending_dir.mkdir(parents=True, exist_ok=True)
@@ -1630,6 +1667,9 @@ def upload_gmf(
                     if is_approved:
                         final_path = settings.queue_incoming_dir / filename
                         final_status = GmfUploadStatus.APPROVED
+                    elif is_rejected:
+                        final_path = settings.queue_pending_dir / filename
+                        final_status = GmfUploadStatus.REJECTED
                     else:
                         final_path = settings.queue_pending_dir / filename
                         final_status = GmfUploadStatus.PENDING_APPROVAL
@@ -1640,6 +1680,16 @@ def upload_gmf(
                     GmfUpload.folder_type == folder_type
                 ).first()
                 if existing:
+                    if existing.status == GmfUploadStatus.COMPLETED:
+                        logger.info(f"GMF {filename} in {folder_type} is already COMPLETED. Skipping duplicate single upload invoice generation.")
+                        return {
+                            "id": existing.id,
+                            "filename": existing.filename,
+                            "folder_type": existing.folder_type,
+                            "status": existing.status.value,
+                            "message": f"File '{filename}' is already processed and COMPLETED in {folder_type}. Duplicate generation skipped."
+                        }
+
                     existing.file_path = str(final_path)
                     existing.status = final_status
                     existing.error_message = None
