@@ -1,19 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { 
   FileSearch, 
   FileText, 
   CheckCircle2, 
   XCircle, 
   Zap, 
-  Bell,
-  Cloud,
-  RefreshCw
+  Bell
 } from 'lucide-react'
-import { getStats, getNotifications, scanDrive } from '../../lib/api'
+import { getStats, getNotifications } from '../../lib/api'
 import { PageHeader } from '../../components/ui-kit/PageHeader'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 function StatCard({ title, value, icon: Icon, colorClass, loading }: { title: string, value: string | number, icon: any, colorClass: string, loading: boolean }) {
   return (
@@ -91,17 +87,6 @@ export default function Admin1Dashboard() {
     queryKey: ['billing-events'],
     queryFn: () => getNotifications(false),
     refetchInterval: 1000,
-  })
-
-  const scanMutation = useMutation({
-    mutationFn: scanDrive,
-    onSuccess: () => {
-      toast.success("Google Drive scan triggered successfully!")
-      queryClient.invalidateQueries({ queryKey: ['billing-stats'] })
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to trigger scan.")
-    }
   })
 
   return (

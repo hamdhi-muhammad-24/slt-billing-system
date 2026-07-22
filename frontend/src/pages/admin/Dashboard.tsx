@@ -9,7 +9,6 @@ import {
   Bell,
   Activity,
   Eye,
-  Cloud,
   HardDrive
 } from 'lucide-react'
 import { getStats, getNotifications } from '../../lib/api'
@@ -37,37 +36,7 @@ function StatCard({ title, value, icon: Icon, colorClass, loading }: { title: st
   )
 }
 
-function CycleCard({ cycleName, data }: { cycleName: string, data: any }) {
-  let statusColor = "bg-slate-500"
-  let statusText = "No GMF"
-  
-  if (data?.status === 'completed') {
-    statusColor = "bg-emerald-500"
-    statusText = "Completed"
-  } else if (data?.status === 'generating') {
-    statusColor = "bg-amber-500 animate-pulse"
-    statusText = "Generating"
-  } else if (data?.status === 'approved') {
-    statusColor = "bg-emerald-500"
-    statusText = "Approved"
-  } else if (data?.status === 'pending') {
-    statusColor = "bg-cyan-500"
-    statusText = "Pending Review"
-  }
 
-  return (
-    <div className="glass-card flex items-center justify-between p-4">
-      <div className="flex items-center gap-3">
-        <div className={cn("size-3 rounded-full", statusColor)} />
-        <span className="font-semibold">{cycleName.replace('_', ' ')}</span>
-      </div>
-      <div className="flex flex-col items-end text-sm">
-        <span className="text-muted-foreground">{data?.received || 0} GMFs received</span>
-        <span className="font-medium">{statusText}</span>
-      </div>
-    </div>
-  )
-}
 
 function EventIcon({ type }: { type: string }) {
   switch (type) {
