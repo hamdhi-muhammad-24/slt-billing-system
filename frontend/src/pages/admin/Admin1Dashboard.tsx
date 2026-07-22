@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { 
   FileSearch, 
   FileText, 
@@ -75,8 +75,6 @@ function EventIcon({ type }: { type: string }) {
 }
 
 export default function Admin1Dashboard() {
-  const queryClient = useQueryClient()
-  
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['billing-stats'],
     queryFn: getStats,
